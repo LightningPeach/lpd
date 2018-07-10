@@ -4,3 +4,6 @@ version = "0.0.0"
 description = "The implementation of a Lightning Network node"
 license = "Apache-2.0"
 authors = ["LightningPeach <contact@lightningpeach.com>"]
+
+[dependencies]
+wire = { path = "wire" }

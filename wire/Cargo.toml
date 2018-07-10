@@ -1,0 +1,11 @@
+[package]
+name = "wire"
+version = "0.0.0"
+description = "The implementation of the Lightning Network wire protocol"
+license = "Apache-2.0"
+authors = ["LightningPeach <contact@lightningpeach.com>"]
+
+[dependencies]
+serde = "1.0.70"
+serde_derive = "1.0.70"
+bincode = "1.0.1"
