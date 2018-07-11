@@ -1,0 +1,3 @@
+[submodule "bincode"]
+	path = bincode
+	url = https://github.com/TyOverby/bincode.git
