@@ -15,6 +15,12 @@ pub struct RawFeatureVector {
 impl RawFeatureVector {
     pub const BITS: u16 = 8;
 
+    pub fn new() -> Self {
+        RawFeatureVector {
+            set: HashSet::new(),
+        }
+    }
+
     pub fn with_serialize_size(serialize_size: u16) -> Self {
         RawFeatureVector {
             set: HashSet::with_capacity((serialize_size * Self::BITS) as _),
@@ -34,6 +40,10 @@ impl RawFeatureVector {
         s.set.insert(feature_bit);
         s
     }
+
+    pub fn is_set_bit(&self, feature_bit: &FeatureBit) -> bool {
+        self.set.contains(feature_bit)
+    }
 }
 
 impl From<Vec<u8>> for RawFeatureVector {
@@ -45,14 +55,15 @@ impl From<Vec<u8>> for RawFeatureVector {
             .enumerate()
             .fold(feature_vector, |fv, (i, byte): (usize, u8)| {
                 let byte_index = i as u16;
-                (0..Self::BITS).fold(fv, |mut fv, bit_index| {
+                (0..Self::BITS).fold(fv, |fv, bit_index| {
                     let global_bit_index = byte_index * RawFeatureVector::BITS + bit_index;
                     let feature_bit = global_bit_index.into();
                     let bit = (byte & ((1 << bit_index) as u8)) != 0;
                     if bit {
-                        fv.set.insert(feature_bit);
+                        fv.set_bit(feature_bit)
+                    } else {
+                        fv
                     }
-                    fv
                 })
             })
 
@@ -73,7 +84,7 @@ impl From<RawFeatureVector> for Vec<u8> {
                             let bit_index = RawFeatureVector::BITS - bit_index - 1;
                             let global_bit_index = byte_index * RawFeatureVector::BITS + bit_index;
                             let feature_bit = FeatureBit::from(global_bit_index);
-                            let bit = feature_vector.set.contains(&feature_bit);
+                            let bit = feature_vector.is_set_bit(&feature_bit);
                             acc << 1 | (if bit { 1 } else { 0 })
                         })
                 ).collect()
