@@ -68,18 +68,19 @@ impl From<RawFeatureVector> for Vec<u8> {
         match feature_vector.serialize_size() {
             Some(len) => {
                 // map each byte index into actual byte
-                (0..(len as u16)).map(|byte_index| {
+                (0..(len as u16)).map(|byte_index|
                     // for each bit in byte check
                     // if corresponding feature_bit is contained in the set
                     // and accumulate the presence in the byte
                     (0..RawFeatureVector::BITS)
                         .fold(0u8, |acc, bit_index| {
+                            let bit_index = RawFeatureVector::BITS - bit_index - 1;
                             let global_bit_index = byte_index * RawFeatureVector::BITS + bit_index;
                             let feature_bit = FeatureBit::from(global_bit_index);
                             let bit = feature_vector.set.contains(&feature_bit);
                             acc << 1 | (if bit { 1 } else { 0 })
                         })
-                }).collect()
+                ).collect()
             },
             None => vec![],
         }
@@ -158,7 +159,8 @@ mod tests {
 
         let feature_vector = RawFeatureVector::with_serialize_size(0)
             .set_bit(FeatureBit::GossipQueriesOptional)
-            .set_bit(FeatureBit::DataLossProtectRequired);
+            .set_bit(FeatureBit::DataLossProtectRequired)
+            .set_bit(FeatureBit::Custom(15));
 
         let mut data = vec![];
         bc_config.serialize_custom_length_into(&mut data, &feature_vector, LengthSD).unwrap();
