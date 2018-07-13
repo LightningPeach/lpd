@@ -1,3 +1,5 @@
+use common::Functor;
+
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Debug)]
 pub enum FeatureBit {
     DataLossProtectRequired,
@@ -34,12 +36,6 @@ impl From<FeatureBit> for u16 {
             Custom(c) => c,
         }
     }
-}
-
-pub trait Functor {
-    type Wrapped;
-
-    fn fmap<F>(self, f: F) -> Self where F: FnOnce(Self::Wrapped) -> Self::Wrapped;
 }
 
 impl Functor for FeatureBit {

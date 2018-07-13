@@ -5,6 +5,10 @@ description = "The implementation of the Lightning Network wire protocol"
 license = "Apache-2.0"
 authors = ["LightningPeach <contact@lightningpeach.com>"]
 
+[lib]
+name = "wire"
+
 [dependencies]
 serde = "1.0.70"
 bincode = { path = "../bincode" }
+common = { path = "../common" }
