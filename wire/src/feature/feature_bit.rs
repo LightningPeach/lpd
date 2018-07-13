@@ -36,8 +36,40 @@ impl From<FeatureBit> for u16 {
     }
 }
 
+pub trait Functor {
+    type Wrapped;
+
+    fn fmap<F>(self, f: F) -> Self where F: FnOnce(Self::Wrapped) -> Self::Wrapped;
+}
+
+impl Functor for FeatureBit {
+    type Wrapped = u16;
+
+    fn fmap<F>(self, f: F) -> Self where F: FnOnce(Self::Wrapped) -> Self::Wrapped {
+        Self::from(f(Self::Wrapped::from(self)))
+    }
+}
+
 impl FeatureBit {
-    pub fn is_valid(&self) -> bool {
-        FeatureBit::from(u16::from(self.clone())) == self.clone()
+    pub fn pair(&self) -> Self {
+        self.clone().fmap(|x| x ^ 1)
+    }
+
+    pub fn is_required(&self) -> bool {
+        u16::from(self.clone()) & 1 == 0
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::FeatureBit;
+    use super::Functor;
+
+    #[test]
+    fn correct() {
+        // TODO: randomize it
+        let feature_bit = FeatureBit::GossipQueriesOptional;
+
+        assert_eq!(feature_bit.clone().fmap(|x| x), feature_bit);
     }
 }

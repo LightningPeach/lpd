@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 mod feature_bit;
 mod raw_feature_vector;
 mod feature_vector;
