@@ -9,6 +9,7 @@ authors = ["LightningPeach <contact@lightningpeach.com>"]
 name = "wire"
 
 [dependencies]
-serde = "1.0.70"
+serde = "1"
+serde_derive = "1"
 bincode = { path = "../bincode" }
 common = { path = "../common" }
