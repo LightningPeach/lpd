@@ -6,7 +6,10 @@ license = "Apache-2.0"
 authors = ["LightningPeach <contact@lightningpeach.com>"]
 
 [lib]
-name = "ldp"
+name = "lpd"
 
 [dependencies]
 wire = { path = "wire" }
+
+[dev-dependencies]
+serde_derive = "1.0.70"
