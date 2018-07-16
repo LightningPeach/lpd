@@ -1,3 +1,6 @@
+[workspace]
+members = ["../lpd", "bincode", "wire"]
+
 [package]
 name = "lpd"
 version = "0.0.0"
