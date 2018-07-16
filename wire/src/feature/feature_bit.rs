@@ -1,4 +1,3 @@
-use common::Functor;
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Debug)]
 pub enum FeatureBit {
@@ -38,7 +37,13 @@ impl From<FeatureBit> for u16 {
     }
 }
 
-impl Functor for FeatureBit {
+pub trait Wrapper {
+    type Wrapped;
+
+    fn fmap<F>(self, f: F) -> Self where F: FnOnce(Self::Wrapped) -> Self::Wrapped;
+}
+
+impl Wrapper for FeatureBit {
     type Wrapped = u16;
 
     fn fmap<F>(self, f: F) -> Self where F: FnOnce(Self::Wrapped) -> Self::Wrapped {
@@ -59,7 +64,6 @@ impl FeatureBit {
 #[cfg(test)]
 mod test {
     use super::FeatureBit;
-    use super::Functor;
 
     #[test]
     fn correct() {

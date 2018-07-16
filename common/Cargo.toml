@@ -1,8 +1,0 @@
-[package]
-name = "common"
-version = "0.0.0"
-license = "Apache-2.0"
-authors = ["LightningPeach <contact@lightningpeach.com>"]
-
-[lib]
-name = "common"
