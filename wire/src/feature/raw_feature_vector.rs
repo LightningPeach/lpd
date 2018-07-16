@@ -127,51 +127,23 @@ impl<'de> Deserialize<'de> for RawFeatureVector {
 
 #[cfg(test)]
 mod tests {
-    use bincode;
     use super::RawFeatureVector;
     use super::FeatureBit;
 
-    use serde::Deserialize;
-    use serde::de::Deserializer;
-    use serde::Serialize;
-    use serde::ser::Serializer;
-    use std::result;
-    use bincode::Result;
-
-    #[derive(Copy, Clone)]
-    struct LengthSD;
-
-    impl bincode::LengthSDOptions for LengthSD {
-        fn serialized_length_size(&self, length: u64) -> Result<usize> {
-            let _ = length;
-            Ok(2)
-        }
-
-        fn serialize_length<S: Serializer>(&self, s: S, length: usize) -> result::Result<S::Ok, S::Error> {
-            let length = length as u16;
-            Serialize::serialize(&length, s)
-        }
-
-        fn deserialize_length<'de, D: Deserializer<'de>>(&self, d: D) -> result::Result<usize, D::Error> {
-            Deserialize::deserialize(d).map(|l: u16| l as _)
-        }
-    }
+    use ::serde_facade::BinarySD;
 
     #[test]
     fn serde() {
-        let mut temp = bincode::config();
-        let bc_config = temp.big_endian();
-
         let feature_vector = RawFeatureVector::with_serialize_size(0)
             .set_bit(FeatureBit::GossipQueriesOptional)
             .set_bit(FeatureBit::DataLossProtectRequired)
             .set_bit(FeatureBit::Custom(15));
 
-        let mut data = vec![];
-        bc_config.serialize_custom_length_into(&mut data, &feature_vector, LengthSD).unwrap();
+        let mut data = Vec::<u8>::new();
+        BinarySD::serialize(&mut data, &feature_vector).unwrap();
 
         println!("{:?}", data);
-        let new_feature_vector = bc_config.deserialize_custom_length_from(&data[..], LengthSD).unwrap();
+        let new_feature_vector = BinarySD::deserialize(&data[..]).unwrap();
 
         assert_eq!(feature_vector, new_feature_vector);
     }

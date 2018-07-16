@@ -5,3 +5,5 @@ extern crate bincode;
 
 pub mod feature;
 pub mod messages;
+
+pub mod serde_facade;

@@ -64,6 +64,7 @@ impl FeatureBit {
 #[cfg(test)]
 mod test {
     use super::FeatureBit;
+    use super::Wrapper;
 
     #[test]
     fn correct() {

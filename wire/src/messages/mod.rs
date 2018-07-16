@@ -1,5 +1,75 @@
 use super::feature::RawFeatureVector;
 
+use serde::Serialize;
+use serde::Serializer;
+use serde::Deserialize;
+use serde::Deserializer;
+
+#[derive(Eq, PartialEq, Debug)]
+pub enum Message {
+    Init(Init),
+    Error(Error),
+    Ping(Ping),
+    Pong(Pong),
+}
+
+impl Message {
+    pub fn type_(&self) -> u16 {
+        use self::Message::*;
+        match self {
+            &Init(_) => 16,
+            &Error(_) => 17,
+            &Ping(_) => 18,
+            &Pong(_) => 19,
+        }
+    }
+}
+
+impl Serialize for Message {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        use serde::ser::SerializeStruct;
+        use self::Message::*;
+
+        // The names provided only foral documentation, serializer drops it
+        let mut s_struct = serializer.serialize_struct("Message", 2)?;
+        s_struct.serialize_field("type", &self.type_())?;
+        match self {
+            &Init(ref payload) => s_struct.serialize_field("payload", payload),
+            &Error(ref payload) => s_struct.serialize_field("payload", payload),
+            &Ping(ref payload) => s_struct.serialize_field("payload", payload),
+            &Pong(ref payload) => s_struct.serialize_field("payload", payload),
+        }?;
+        s_struct.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Message {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+        use serde::de;
+        use std::fmt;
+
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Message;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("s")
+            }
+
+            fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+                where
+                    A: de::MapAccess<'de>,
+            {
+                let _ = map;
+                unimplemented!()
+            }
+        }
+
+        deserializer.deserialize_struct("Message", &["type", "payload"], Visitor)
+    }
+}
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Init {
     global_features: RawFeatureVector,
@@ -15,7 +85,7 @@ impl Init {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct ChannelId {
     raw: [u8; 32],
 }
@@ -28,45 +98,34 @@ impl ChannelId {
     }
 }
 
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct Error {
+    channel_id: ChannelId,
+    data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct Ping {
+    pong_length: u16,
+    data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct Pong {
+    data: Vec<u8>,
+}
+
 #[cfg(test)]
 mod test {
-    use bincode;
-    use serde::Deserialize;
-    use serde::de::Deserializer;
-    use serde::Serialize;
-    use serde::ser::Serializer;
-    use std::result;
-    use bincode::Result;
+    use ::serde_facade::BinarySD;
 
     use super::Init;
     use ::feature::RawFeatureVector;
     use ::feature::FeatureBit;
 
-    #[derive(Copy, Clone)]
-    struct LengthSD;
-
-    impl bincode::LengthSDOptions for LengthSD {
-        fn serialized_length_size(&self, length: u64) -> Result<usize> {
-            let _ = length;
-            Ok(2)
-        }
-
-        fn serialize_length<S: Serializer>(&self, s: S, length: usize) -> result::Result<S::Ok, S::Error> {
-            let length = length as u16;
-            Serialize::serialize(&length, s)
-        }
-
-        fn deserialize_length<'de, D: Deserializer<'de>>(&self, d: D) -> result::Result<usize, D::Error> {
-            Deserialize::deserialize(d).map(|l: u16| l as _)
-        }
-    }
-
     #[test]
     fn test_init_serde() {
         use self::FeatureBit::*;
-
-        let mut temp = bincode::config();
-        let bc_config = temp.big_endian();
 
         let init = Init {
             local_features: RawFeatureVector::new()
@@ -76,11 +135,11 @@ mod test {
                 .set_bit(GossipQueriesOptional),
         };
 
-        let mut data = vec![];
-        bc_config.serialize_custom_length_into(&mut data, &init, LengthSD).unwrap();
+        let mut data = Vec::<u8>::new();
+        BinarySD::serialize(&mut data, &init).unwrap();
 
         println!("{:?}", data);
-        let new = bc_config.deserialize_custom_length_from(&data[..], LengthSD).unwrap();
+        let new = BinarySD::deserialize(&data[..]).unwrap();
 
         assert_eq!(init, new);
     }
