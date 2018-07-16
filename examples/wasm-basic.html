@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+    imports = {};
+    imports.log = x => console.log(x);
+    fetch('stripped.wasm')
+        .then(r => r.arrayBuffer())
+        .then(bytes => WebAssembly.instantiate(bytes, { env: imports }))
+        .then(results => {
+            let exports = results.instance.exports;
+            exports.main();
+        })
+</script>
+</body>
+</html>>

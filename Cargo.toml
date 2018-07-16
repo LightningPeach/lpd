@@ -12,6 +12,9 @@ name = "lpd"
 name = "wasm-basic"
 crate-type = ["cdylib"]
 
+[[example]]
+name = "wasm-runner"
+
 [dependencies]
 wire = { path = "wire" }
 

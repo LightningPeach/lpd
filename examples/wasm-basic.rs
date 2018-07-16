@@ -6,6 +6,10 @@ use wire::feature::RawFeatureVector;
 use wire::feature::FeatureBit;
 use wire::serde_facade::BinarySD;
 
+extern "C" {
+    fn log(x: std::os::raw::c_int);
+}
+
 #[no_mangle]
 pub extern "C" fn main() {
     use self::FeatureBit::*;
@@ -21,4 +25,6 @@ pub extern "C" fn main() {
     let mut data = Vec::<u8>::new();
     BinarySD::serialize(&mut data, &init).unwrap();
     println!("{:?}", data);
+
+    unsafe { log(data.len() as _) }
 }
