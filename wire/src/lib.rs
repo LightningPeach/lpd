@@ -14,10 +14,9 @@ mod messages;
 mod serde_facade;
 
 pub use self::messages::Message;
-pub use self::messages::types::RawFeatureVector;
-pub use self::messages::types::FeatureBit;
-pub use self::messages::types::FeatureVector;
-pub use self::messages::channel::OpenChannel;
-pub use self::messages::setup::Init;
+pub use self::messages::types::*;
+pub use self::messages::channel::*;
+pub use self::messages::setup::*;
+pub use self::messages::control::*;
 
 pub use self::serde_facade::BinarySD;

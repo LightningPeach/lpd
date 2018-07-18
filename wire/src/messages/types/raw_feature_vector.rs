@@ -126,7 +126,7 @@ impl<'de> Deserialize<'de> for RawFeatureVector {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use super::RawFeatureVector;
     use super::FeatureBit;
 
