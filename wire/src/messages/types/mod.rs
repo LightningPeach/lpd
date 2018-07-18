@@ -14,6 +14,7 @@ pub use self::raw_feature_vector::RawFeatureVector;
 pub use self::feature_vector::FeatureVector;
 pub use self::hash::Hash;
 pub use self::public_key::PublicKey;
+pub use self::public_key::Signature;
 pub use self::units::Satoshi;
 pub use self::units::MilliSatoshi;
 pub use self::units::SatoshiPerKiloWeight;

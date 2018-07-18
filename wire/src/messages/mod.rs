@@ -2,11 +2,17 @@ pub mod types;
 pub mod setup;
 pub mod channel;
 pub mod control;
+pub mod funding;
 
 use self::setup::Init;
 use self::setup::Error;
 use self::control::Ping;
 use self::control::Pong;
+use self::channel::OpenChannel;
+use self::channel::AcceptChannel;
+use self::funding::FundingCreated;
+use self::funding::FundingSigned;
+use self::funding::FundingLocked;
 
 use serde::Serialize;
 use serde::Serializer;
@@ -19,6 +25,11 @@ pub enum Message {
     Error(Error),
     Ping(Ping),
     Pong(Pong),
+    OpenChannel(OpenChannel),
+    AcceptChannel(AcceptChannel),
+    FundingCreated(FundingCreated),
+    FundingSigned(FundingSigned),
+    FundingLocked(FundingLocked),
 }
 
 impl Message {
@@ -29,6 +40,11 @@ impl Message {
             &Error(_) => 17,
             &Ping(_) => 18,
             &Pong(_) => 19,
+            &OpenChannel(_) => 32,
+            &AcceptChannel(_) => 33,
+            &FundingCreated(_) => 34,
+            &FundingSigned(_) => 35,
+            &FundingLocked(_) => 36,
         }
     }
 }
@@ -46,6 +62,11 @@ impl Serialize for Message {
             &Error(ref payload) => s_struct.serialize_field("payload", payload),
             &Ping(ref payload) => s_struct.serialize_field("payload", payload),
             &Pong(ref payload) => s_struct.serialize_field("payload", payload),
+            &OpenChannel(ref payload) => s_struct.serialize_field("payload", payload),
+            &AcceptChannel(ref payload) => s_struct.serialize_field("payload", payload),
+            &FundingCreated(ref payload) => s_struct.serialize_field("payload", payload),
+            &FundingSigned(ref payload) => s_struct.serialize_field("payload", payload),
+            &FundingLocked(ref payload) => s_struct.serialize_field("payload", payload),
         }?;
         s_struct.end()
     }
