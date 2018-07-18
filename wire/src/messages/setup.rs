@@ -1,5 +1,5 @@
 use super::types::RawFeatureVector;
-use super::types::ChannelId;
+use super::channel::ChannelId;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Init {

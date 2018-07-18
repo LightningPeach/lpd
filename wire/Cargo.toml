@@ -12,3 +12,6 @@ name = "wire"
 serde = "1"
 serde_derive = "1"
 bincode = { path = "../bincode" }
+
+[dev-dependencies]
+rand = "0.5"

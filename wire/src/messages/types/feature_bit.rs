@@ -1,3 +1,4 @@
+use super::Wrapper;
 
 #[derive(Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Debug)]
 pub enum FeatureBit {
@@ -35,12 +36,6 @@ impl From<FeatureBit> for u16 {
             Custom(c) => c,
         }
     }
-}
-
-pub trait Wrapper {
-    type Wrapped;
-
-    fn fmap<F>(self, f: F) -> Self where F: FnOnce(Self::Wrapped) -> Self::Wrapped;
 }
 
 impl Wrapper for FeatureBit {

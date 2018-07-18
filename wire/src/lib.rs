@@ -1,7 +1,13 @@
+#![forbid(unsafe_code)]
+#![allow(non_shorthand_field_patterns)]
+
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate bincode;
+
+#[cfg(test)]
+extern crate rand;
 
 mod messages;
 
@@ -11,5 +17,7 @@ pub use self::messages::Message;
 pub use self::messages::types::RawFeatureVector;
 pub use self::messages::types::FeatureBit;
 pub use self::messages::types::FeatureVector;
+pub use self::messages::channel::OpenChannel;
+pub use self::messages::setup::Init;
 
 pub use self::serde_facade::BinarySD;
