@@ -3,7 +3,13 @@ extern crate serde;
 extern crate serde_derive;
 extern crate bincode;
 
-pub mod feature;
-pub mod messages;
+mod messages;
 
-pub mod serde_facade;
+mod serde_facade;
+
+pub use self::messages::Message;
+pub use self::messages::types::RawFeatureVector;
+pub use self::messages::types::FeatureBit;
+pub use self::messages::types::FeatureVector;
+
+pub use self::serde_facade::BinarySD;

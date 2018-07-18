@@ -1,10 +1,7 @@
 extern crate lpd;
 extern crate wire;
 
-use wire::messages::Init;
-use wire::feature::RawFeatureVector;
-use wire::feature::FeatureBit;
-use wire::serde_facade::BinarySD;
+use wire::*;
 
 extern "C" {
     fn log(x: std::os::raw::c_int);
@@ -19,7 +16,8 @@ pub extern "C" fn main() {
             .set_bit(DataLossProtectOptional),
         RawFeatureVector::new()
             .set_bit(GossipQueriesOptional)
-            .set_bit(DataLossProtectRequired),
+            .set_bit(DataLossProtectRequired)
+            .set_bit(Custom(100500)),
     );
 
     let mut data = Vec::<u8>::new();

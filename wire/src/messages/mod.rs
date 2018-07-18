@@ -1,4 +1,12 @@
-use super::feature::RawFeatureVector;
+pub mod types;
+pub mod setup;
+pub mod channel;
+pub mod control;
+
+use self::setup::Init;
+use self::setup::Error;
+use self::control::Ping;
+use self::control::Pong;
 
 use serde::Serialize;
 use serde::Serializer;
@@ -30,7 +38,7 @@ impl Serialize for Message {
         use serde::ser::SerializeStruct;
         use self::Message::*;
 
-        // The names provided only foral documentation, serializer drops it
+        // The names provided only for documentation, serializer drops it
         let mut s_struct = serializer.serialize_struct("Message", 2)?;
         s_struct.serialize_field("type", &self.type_())?;
         match self {
@@ -67,80 +75,5 @@ impl<'de> Deserialize<'de> for Message {
         }
 
         deserializer.deserialize_struct("Message", &["type", "payload"], Visitor)
-    }
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct Init {
-    global_features: RawFeatureVector,
-    local_features: RawFeatureVector,
-}
-
-impl Init {
-    pub fn new(global_features: RawFeatureVector, local_features: RawFeatureVector) -> Self {
-        Init {
-            global_features: global_features as _,
-            local_features: local_features as _,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct ChannelId {
-    raw: [u8; 32],
-}
-
-impl ChannelId {
-    pub fn all() -> Self {
-        ChannelId {
-            raw: [0; 32],
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct Error {
-    channel_id: ChannelId,
-    data: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct Ping {
-    pong_length: u16,
-    data: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct Pong {
-    data: Vec<u8>,
-}
-
-#[cfg(test)]
-mod test {
-    use ::serde_facade::BinarySD;
-
-    use super::Init;
-    use ::feature::RawFeatureVector;
-    use ::feature::FeatureBit;
-
-    #[test]
-    fn test_init_serde() {
-        use self::FeatureBit::*;
-
-        let init = Init {
-            local_features: RawFeatureVector::new()
-                .set_bit(DataLossProtectRequired),
-            global_features: RawFeatureVector::new()
-                .set_bit(DataLossProtectOptional)
-                .set_bit(GossipQueriesOptional),
-        };
-
-        let mut data = Vec::<u8>::new();
-        BinarySD::serialize(&mut data, &init).unwrap();
-
-        println!("{:?}", data);
-        let new = BinarySD::deserialize(&data[..]).unwrap();
-
-        assert_eq!(init, new);
     }
 }
