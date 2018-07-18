@@ -18,8 +18,16 @@ mod serde {
     // TODO:
     impl Serialize for Signature {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-            let _ = serializer;
-            unimplemented!()
+            use serde::ser::SerializeTuple;
+
+            (0..64)
+                .fold(serializer.serialize_tuple(64), |tuple, index|
+                    tuple.and_then(|mut tuple|
+                        SerializeTuple::serialize_element(&mut tuple, &self.data[index])
+                            .map(|_| tuple)
+                    )
+                )
+                .and_then(|tuple| tuple.end())
         }
     }
 
