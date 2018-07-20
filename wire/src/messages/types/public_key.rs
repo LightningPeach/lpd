@@ -14,27 +14,56 @@ mod serde {
     use serde::Serializer;
     use serde::Deserialize;
     use serde::Deserializer;
+    use serde::de::Visitor;
+    use serde::de::SeqAccess;
+    use serde::de::Error;
+    use std::fmt;
+
+    const SIGNATURE_SIZE: usize = 64;
 
     // TODO:
     impl Serialize for Signature {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
             use serde::ser::SerializeTuple;
 
-            (0..64)
-                .fold(serializer.serialize_tuple(64), |tuple, index|
-                    tuple.and_then(|mut tuple|
-                        SerializeTuple::serialize_element(&mut tuple, &self.data[index])
-                            .map(|_| tuple)
-                    )
-                )
-                .and_then(|tuple| tuple.end())
+            let mut tuple = serializer.serialize_tuple(SIGNATURE_SIZE)?;
+            for i in 0..SIGNATURE_SIZE {
+                tuple.serialize_element(&self.data[i])?;
+            }
+
+            tuple.end()
         }
     }
 
     impl<'de> Deserialize<'de> for Signature {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-            let _ = deserializer;
-            unimplemented!()
+            struct V;
+
+            impl<'de> Visitor<'de> for V {
+                type Value = Signature;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    write!(formatter, "s")
+                }
+
+                fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
+                    let mut seq = seq;
+                    let mut signature = Signature {
+                        data: [0; SIGNATURE_SIZE],
+                    };
+                    for i in 0..SIGNATURE_SIZE {
+                        if let Some(value) =  seq.next_element()? {
+                            signature.data[i] = value;
+                        } else {
+                            return Err(Error::custom("unexpected ended"));
+                        }
+                    }
+
+                    Ok(signature)
+                }
+            }
+
+            deserializer.deserialize_tuple(64, V)
         }
     }
 }
