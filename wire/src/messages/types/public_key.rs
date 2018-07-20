@@ -21,7 +21,6 @@ mod serde {
 
     const SIGNATURE_SIZE: usize = 64;
 
-    // TODO:
     impl Serialize for Signature {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
             use serde::ser::SerializeTuple;
@@ -43,7 +42,7 @@ mod serde {
                 type Value = Signature;
 
                 fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    write!(formatter, "s")
+                    write!(formatter, "64 bytes")
                 }
 
                 fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
@@ -55,7 +54,7 @@ mod serde {
                         if let Some(value) =  seq.next_element()? {
                             signature.data[i] = value;
                         } else {
-                            return Err(Error::custom("unexpected ended"));
+                            return Err(Error::custom("unexpected end"));
                         }
                     }
 
