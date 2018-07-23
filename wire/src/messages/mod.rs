@@ -13,12 +13,14 @@ use self::channel::FundingCreated;
 use self::channel::FundingSigned;
 use self::channel::FundingLocked;
 use self::channel::ShutdownChannel;
+use self::channel::ClosingNegotiation;
 
 use serde::Serialize;
 use serde::Serializer;
 use serde::Deserialize;
 use serde::Deserializer;
 
+// TODO: get rid of repeats using macros
 #[derive(Eq, PartialEq, Debug)]
 pub enum Message {
     Init(Init),
@@ -31,6 +33,7 @@ pub enum Message {
     FundingSigned(FundingSigned),
     FundingLocked(FundingLocked),
     ShutdownChannel(ShutdownChannel),
+    ClosingNegotiation(ClosingNegotiation),
 }
 
 impl Message {
@@ -46,6 +49,45 @@ impl Message {
             &FundingCreated(_) => 34,
             &FundingSigned(_) => 35,
             &FundingLocked(_) => 36,
+            &ShutdownChannel(_) => 38,
+            &ClosingNegotiation(_) => 39,
+        }
+    }
+}
+
+macro_rules! new_message {
+    ($type_:expr, $payload:expr) => {
+        match $type_ {
+            16 => Some(Message::Init($payload)),
+            17 => Some(Message::Error($payload)),
+            18 => Some(Message::Ping($payload)),
+            19 => Some(Message::Pong($payload)),
+            32 => Some(Message::OpenChannel($payload)),
+            33 => Some(Message::AcceptChannel($payload)),
+            34 => Some(Message::FundingCreated($payload)),
+            35 => Some(Message::FundingSigned($payload)),
+            36 => Some(Message::FundingLocked($payload)),
+            38 => Some(Message::ShutdownChannel($payload)),
+            39 => Some(Message::ClosingNegotiation($payload)),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! consume_from_message {
+    ($message:expr, $consume:expr) => {
+        match $message {
+            &Init(ref payload) => $consume(payload),
+            &Error(ref payload) => $consume(payload),
+            &Ping(ref payload) => $consume(payload),
+            &Pong(ref payload) => $consume(payload),
+            &OpenChannel(ref payload) => $consume(payload),
+            &AcceptChannel(ref payload) => $consume(payload),
+            &FundingCreated(ref payload) => $consume(payload),
+            &FundingSigned(ref payload) => $consume(payload),
+            &FundingLocked(ref payload) => $consume(payload),
+            &ShutdownChannel(ref payload) => $consume(payload),
+            &ClosingNegotiation(ref payload) => $consume(payload),
         }
     }
 }
@@ -58,17 +100,7 @@ impl Serialize for Message {
         // The names provided only for documentation, serializer drops it
         let mut s_struct = serializer.serialize_struct("Message", 2)?;
         s_struct.serialize_field("type", &self.type_())?;
-        match self {
-            &Init(ref payload) => s_struct.serialize_field("payload", payload),
-            &Error(ref payload) => s_struct.serialize_field("payload", payload),
-            &Ping(ref payload) => s_struct.serialize_field("payload", payload),
-            &Pong(ref payload) => s_struct.serialize_field("payload", payload),
-            &OpenChannel(ref payload) => s_struct.serialize_field("payload", payload),
-            &AcceptChannel(ref payload) => s_struct.serialize_field("payload", payload),
-            &FundingCreated(ref payload) => s_struct.serialize_field("payload", payload),
-            &FundingSigned(ref payload) => s_struct.serialize_field("payload", payload),
-            &FundingLocked(ref payload) => s_struct.serialize_field("payload", payload),
-        }?;
+        consume_from_message!(self, |p| s_struct.serialize_field("payload", p))?;
         s_struct.end()
     }
 }
@@ -87,15 +119,16 @@ impl<'de> Deserialize<'de> for Message {
                 formatter.write_str("s")
             }
 
-            fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
-                where
-                    A: de::MapAccess<'de>,
+            fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: de::SeqAccess<'de>,
             {
-                let _ = map;
-                unimplemented!()
+                let mut seq = seq;
+                let type_ = seq.next_element()?
+                    .ok_or(<A::Error as de::Error>::custom("message type expected"))?;
+                new_message!(type_, seq.next_element()?.unwrap())
+                    .ok_or(<A::Error as de::Error>::custom(""))
             }
         }
 
-        deserializer.deserialize_struct("Message", &["type", "payload"], Visitor)
+        deserializer.deserialize_tuple(2, Visitor)
     }
 }
