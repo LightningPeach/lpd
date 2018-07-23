@@ -5,6 +5,7 @@ mod feature_vector;
 mod hash;
 mod public_key;
 mod units;
+mod output_index;
 
 pub use self::common::Wrapper;
 pub use self::common::BiWrapper;
@@ -19,3 +20,4 @@ pub use self::units::Satoshi;
 pub use self::units::MilliSatoshi;
 pub use self::units::SatoshiPerKiloWeight;
 pub use self::units::CsvDelay;
+pub use self::output_index::OutputIndex;

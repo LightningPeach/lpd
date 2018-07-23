@@ -1,15 +1,11 @@
-use super::channel::ChannelId;
-use super::types::Signature;
-use super::types::PublicKey;
+use super::ChannelId;
+use super::Signature;
+use super::PublicKey;
+use super::OutputIndex;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct FundingTxid {
     data: [u8; 32],
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct OutputIndex {
-    index: u16,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]

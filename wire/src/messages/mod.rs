@@ -2,7 +2,6 @@ pub mod types;
 pub mod setup;
 pub mod channel;
 pub mod control;
-pub mod funding;
 
 use self::setup::Init;
 use self::setup::Error;
@@ -10,9 +9,10 @@ use self::control::Ping;
 use self::control::Pong;
 use self::channel::OpenChannel;
 use self::channel::AcceptChannel;
-use self::funding::FundingCreated;
-use self::funding::FundingSigned;
-use self::funding::FundingLocked;
+use self::channel::FundingCreated;
+use self::channel::FundingSigned;
+use self::channel::FundingLocked;
+use self::channel::ShutdownChannel;
 
 use serde::Serialize;
 use serde::Serializer;
@@ -30,6 +30,7 @@ pub enum Message {
     FundingCreated(FundingCreated),
     FundingSigned(FundingSigned),
     FundingLocked(FundingLocked),
+    ShutdownChannel(ShutdownChannel),
 }
 
 impl Message {

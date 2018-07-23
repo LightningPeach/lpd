@@ -4,6 +4,17 @@ use super::types::MilliSatoshi;
 use super::types::SatoshiPerKiloWeight;
 use super::types::CsvDelay;
 use super::types::PublicKey;
+use super::types::Signature;
+use super::types::OutputIndex;
+
+mod funding;
+pub use self::funding::*;
+
+mod close;
+pub use self::close::*;
+
+mod operation;
+pub use self::operation::*;
 
 // TODO: use crate for bitflags
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -45,6 +56,7 @@ pub struct OpenChannel {
     htlc_basepoint: PublicKey,
     first_per_commitment_point: PublicKey,
     flags: u8,
+    script: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -68,6 +80,7 @@ pub struct AcceptChannel {
     delayed_payment_point: PublicKey,
     htlc_point: PublicKey,
     first_per_commitment_point: PublicKey,
+    script: Vec<u8>,
 }
 
 #[cfg(test)]
@@ -122,6 +135,7 @@ mod test {
             htlc_basepoint: rng.gen(),
             first_per_commitment_point: rng.gen(),
             flags: ChannelFlags::FFAnnounceChannel as _,
+            script: vec![],
         };
 
         // try to estimate size without aligning
