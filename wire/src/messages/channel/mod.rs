@@ -1,4 +1,4 @@
-use super::types::Hash;
+use super::types::Hash256;
 use super::types::Satoshi;
 use super::types::MilliSatoshi;
 use super::types::SatoshiPerKiloWeight;
@@ -6,6 +6,7 @@ use super::types::CsvDelay;
 use super::types::PublicKey;
 use super::types::Signature;
 use super::types::OutputIndex;
+use super::types::OnionBlob;
 
 mod funding;
 pub use self::funding::*;
@@ -38,7 +39,7 @@ impl ChannelId {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct OpenChannel {
-    chain_hash: Hash,
+    chain_hash: Hash256,
     temporary_channel_id: ChannelId,
     funding: Satoshi,
     push: MilliSatoshi,
@@ -139,10 +140,11 @@ mod test {
         };
 
         // try to estimate size without aligning
-        let estimated_size = size_of::<Hash>() + size_of::<ChannelId>()
+        let estimated_size = size_of::<Hash256>() + size_of::<ChannelId>()
             + size_of::<Satoshi>() * 3 + size_of::<MilliSatoshi>() * 3
             + size_of::<SatoshiPerKiloWeight>() + size_of::<CsvDelay>()
-            + size_of::<u16>() + size_of::<PublicKey>() * 6 + size_of::<u8>();
+            + size_of::<u16>() + size_of::<PublicKey>() * 6 + size_of::<u8>()
+            + 2 + msg.script.len();
 
         let _ = BinarySD::serialize(&mut vec, &msg).unwrap();
         println!("{:?} == {:?}", vec.len(), estimated_size);

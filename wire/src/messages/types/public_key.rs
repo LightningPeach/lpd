@@ -1,3 +1,5 @@
+pub const SIGNATURE_SIZE: usize = 64;
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct PublicKey {
     data: [u8; 32],
@@ -9,6 +11,7 @@ pub struct Signature {
 
 mod serde {
     use super::Signature;
+    use super::SIGNATURE_SIZE;
 
     use serde::Serialize;
     use serde::Serializer;
@@ -18,8 +21,6 @@ mod serde {
     use serde::de::SeqAccess;
     use serde::de::Error;
     use std::fmt;
-
-    const SIGNATURE_SIZE: usize = 64;
 
     impl Serialize for Signature {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
@@ -42,7 +43,7 @@ mod serde {
                 type Value = Signature;
 
                 fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    write!(formatter, "64 bytes")
+                    write!(formatter, "{} bytes", SIGNATURE_SIZE)
                 }
 
                 fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
@@ -62,20 +63,22 @@ mod serde {
                 }
             }
 
-            deserializer.deserialize_tuple(64, V)
+            deserializer.deserialize_tuple(SIGNATURE_SIZE, V)
         }
     }
 }
 
 mod eq {
     use super::Signature;
+    use super::SIGNATURE_SIZE;
 
     use std::cmp::Eq;
     use std::cmp::PartialEq;
 
     impl PartialEq for Signature {
         fn eq(&self, other: &Self) -> bool {
-            (0..64).fold(true, |acc, index| acc && self.data[index] == other.data[index])
+            (0..SIGNATURE_SIZE)
+                .fold(true, |acc, index| acc && self.data[index] == other.data[index])
         }
     }
 
