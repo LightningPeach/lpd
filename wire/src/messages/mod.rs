@@ -19,88 +19,67 @@ use serde::Serialize;
 use serde::Serializer;
 use serde::Deserialize;
 use serde::Deserializer;
+use serde::de::SeqAccess;
+use serde::ser::SerializeStruct;
 
-// TODO: get rid of repeats using macros
-#[derive(Eq, PartialEq, Debug)]
-pub enum Message {
-    Init(Init),
-    Error(Error),
-    Ping(Ping),
-    Pong(Pong),
-    OpenChannel(OpenChannel),
-    AcceptChannel(AcceptChannel),
-    FundingCreated(FundingCreated),
-    FundingSigned(FundingSigned),
-    FundingLocked(FundingLocked),
-    ShutdownChannel(ShutdownChannel),
-    ClosingNegotiation(ClosingNegotiation),
-}
+macro_rules! message {
+    (pub enum $name:ident { $($variant:ident($rtt:expr)),* }) => {
+        #[derive(Eq, PartialEq, Debug)]
+        pub enum $name {
+            $($variant($variant),)*
+        }
 
-impl Message {
-    pub fn type_(&self) -> u16 {
-        use self::Message::*;
-        match self {
-            &Init(_) => 16,
-            &Error(_) => 17,
-            &Ping(_) => 18,
-            &Pong(_) => 19,
-            &OpenChannel(_) => 32,
-            &AcceptChannel(_) => 33,
-            &FundingCreated(_) => 34,
-            &FundingSigned(_) => 35,
-            &FundingLocked(_) => 36,
-            &ShutdownChannel(_) => 38,
-            &ClosingNegotiation(_) => 39,
+        impl $name {
+            pub fn new<'de, A>(runtime_type: u16, payload: A) -> Result<Option<Self>, A::Error> where A: SeqAccess<'de> {
+                let mut payload = payload;
+                use self::$name::*;
+                match runtime_type {
+                    $($rtt => payload.next_element().map(|i| i.map(|x| Init(x))),)*
+                    _ => Ok(None),
+                }
+            }
+
+            pub fn runtime_type(&self) -> u16 {
+                use self::$name::*;
+                match self {
+                    $(&$variant(_) => $rtt,)*
+                }
+            }
+
+            pub fn consume<A>(&self, consumer: &mut A) -> Result<(), A::Error> where A: SerializeStruct {
+                use self::$name::*;
+                match self {
+                    $(&$variant(ref payload) => consumer.serialize_field("payload", payload),)*
+                }
+            }
         }
     }
 }
 
-macro_rules! new_message {
-    ($type_:expr, $payload:expr) => {
-        match $type_ {
-            16 => Some(Message::Init($payload)),
-            17 => Some(Message::Error($payload)),
-            18 => Some(Message::Ping($payload)),
-            19 => Some(Message::Pong($payload)),
-            32 => Some(Message::OpenChannel($payload)),
-            33 => Some(Message::AcceptChannel($payload)),
-            34 => Some(Message::FundingCreated($payload)),
-            35 => Some(Message::FundingSigned($payload)),
-            36 => Some(Message::FundingLocked($payload)),
-            38 => Some(Message::ShutdownChannel($payload)),
-            39 => Some(Message::ClosingNegotiation($payload)),
-            _ => None,
-        }
-    }
-}
-
-macro_rules! consume_from_message {
-    ($message:expr, $consume:expr) => {
-        match $message {
-            &Init(ref payload) => $consume(payload),
-            &Error(ref payload) => $consume(payload),
-            &Ping(ref payload) => $consume(payload),
-            &Pong(ref payload) => $consume(payload),
-            &OpenChannel(ref payload) => $consume(payload),
-            &AcceptChannel(ref payload) => $consume(payload),
-            &FundingCreated(ref payload) => $consume(payload),
-            &FundingSigned(ref payload) => $consume(payload),
-            &FundingLocked(ref payload) => $consume(payload),
-            &ShutdownChannel(ref payload) => $consume(payload),
-            &ClosingNegotiation(ref payload) => $consume(payload),
-        }
+message! {
+    pub enum Message {
+        Init(16),
+        Error(17),
+        Ping(18),
+        Pong(19),
+        OpenChannel(32),
+        AcceptChannel(33),
+        FundingCreated(34),
+        FundingSigned(35),
+        FundingLocked(36),
+        ShutdownChannel(38),
+        ClosingNegotiation(39)
     }
 }
 
 impl Serialize for Message {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         use serde::ser::SerializeStruct;
-        use self::Message::*;
 
         // The names provided only for documentation, serializer drops it
         let mut s_struct = serializer.serialize_struct("Message", 2)?;
-        s_struct.serialize_field("type", &self.type_())?;
-        consume_from_message!(self, |p| s_struct.serialize_field("payload", p))?;
+        s_struct.serialize_field("type", &self.runtime_type())?;
+        self.consume(&mut s_struct)?;
         s_struct.end()
     }
 }
@@ -124,7 +103,7 @@ impl<'de> Deserialize<'de> for Message {
                 let mut seq = seq;
                 let type_ = seq.next_element()?
                     .ok_or(<A::Error as de::Error>::custom("message type expected"))?;
-                new_message!(type_, seq.next_element()?.unwrap())
+                Message::new(type_, seq)?
                     .ok_or(<A::Error as de::Error>::custom(""))
             }
         }
