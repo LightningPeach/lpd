@@ -7,13 +7,7 @@ use self::setup::Init;
 use self::setup::Error;
 use self::control::Ping;
 use self::control::Pong;
-use self::channel::OpenChannel;
-use self::channel::AcceptChannel;
-use self::channel::FundingCreated;
-use self::channel::FundingSigned;
-use self::channel::FundingLocked;
-use self::channel::ShutdownChannel;
-use self::channel::ClosingNegotiation;
+use self::channel::*;
 
 use serde::Serialize;
 use serde::Serializer;
@@ -68,7 +62,11 @@ message! {
         FundingSigned(35),
         FundingLocked(36),
         ShutdownChannel(38),
-        ClosingNegotiation(39)
+        ClosingNegotiation(39),
+        UpdateAddHtlc(128),
+        UpdateFulfillHtlc(130),
+        UpdateFailHtlc(131),
+        UpdateFailMalformedHtlc(135)
     }
 }
 
