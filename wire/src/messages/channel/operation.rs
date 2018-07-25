@@ -2,6 +2,9 @@ use super::ChannelId;
 use super::Hash256;
 use super::MilliSatoshi;
 use super::OnionBlob;
+use super::Signature;
+use super::PublicKey;
+use super::SatoshiPerKiloWeight;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct HtlcId {
@@ -52,4 +55,24 @@ pub struct UpdateFailMalformedHtlc {
     id: HtlcId,
     sha256_of_onion: Hash256,
     failure_code: u16,
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct CommitmentSigned {
+    channel_id: ChannelId,
+    signature: Signature,
+    htlc_signatures: Vec<Signature>,
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct RevokeAndAck {
+    channel_id: ChannelId,
+    revocation_preimage: [u8; 32],
+    next_per_commitment_point: PublicKey,
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct UpdateFee {
+    channel_id: ChannelId,
+    fee: SatoshiPerKiloWeight,
 }

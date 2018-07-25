@@ -66,7 +66,11 @@ message! {
         UpdateAddHtlc(128),
         UpdateFulfillHtlc(130),
         UpdateFailHtlc(131),
-        UpdateFailMalformedHtlc(135)
+        UpdateFailMalformedHtlc(135),
+        CommitmentSigned(132),
+        RevokeAndAck(133),
+        UpdateFee(134),
+        ReestablishChannel(136)
     }
 }
 

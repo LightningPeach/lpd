@@ -84,6 +84,15 @@ pub struct AcceptChannel {
     script: Vec<u8>,
 }
 
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct ReestablishChannel {
+    channel_id: ChannelId,
+    next_local_commitment_number: u64,
+    next_remote_revocation_number: u64,
+    last_remote_commit_secret: [u8; 32],
+    local_unrevoked_commit_point: PublicKey,
+}
+
 #[cfg(test)]
 mod rand {
     use super::ChannelId;
