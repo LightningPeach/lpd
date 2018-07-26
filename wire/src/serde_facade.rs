@@ -4,43 +4,46 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 
-use std::result;
+use std::result::Result;
 use std::io;
 
-use bincode::Result;
+use bincode::Error;
 use bincode::LengthSDOptions;
 use bincode::config;
 
+/// LengthSDOptions is the delegate that overrides
+/// serialization/deserialization of the length of some sequence
 #[derive(Copy, Clone)]
 struct LengthSD;
 
 impl LengthSDOptions for LengthSD {
-    fn serialized_length_size(&self, length: u64) -> Result<usize> {
+    fn serialized_length_size(&self, length: u64) -> Result<usize, Error> {
         let _ = length;
         Ok(2)
     }
 
-    fn serialize_length<S: Serializer>(&self, s: S, length: usize) -> result::Result<S::Ok, S::Error> {
+    fn serialize_length<S: Serializer>(&self, s: S, length: usize) -> Result<S::Ok, S::Error> {
         let length = length as u16;
         Serialize::serialize(&length, s)
     }
 
-    fn deserialize_length<'de, D: Deserializer<'de>>(&self, d: D) -> result::Result<usize, D::Error> {
+    fn deserialize_length<'de, D: Deserializer<'de>>(&self, d: D) -> Result<usize, D::Error> {
         Deserialize::deserialize(d).map(|l: u16| l as _)
     }
 }
 
+/// Public facade object, provides serde interface with the proper configuration applied
 pub struct BinarySD;
 
 impl BinarySD {
-    pub fn serialize<T: Serialize, W: io::Write>(w: W, value: &T) -> Result<()> {
+    pub fn serialize<T: Serialize, W: io::Write>(w: W, value: &T) -> Result<(), Error> {
         let mut temp = config();
         let bc_config = temp.big_endian();
 
         bc_config.serialize_custom_length_into(w, value, LengthSD)
     }
 
-    pub fn deserialize<T: DeserializeOwned, R: io::Read>(r: R) -> Result<T> {
+    pub fn deserialize<T: DeserializeOwned, R: io::Read>(r: R) -> Result<T, Error> {
         let mut temp = config();
         let bc_config = temp.big_endian();
 
