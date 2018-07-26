@@ -11,6 +11,8 @@ use bincode::Error;
 use bincode::LengthSDOptions;
 use bincode::config;
 
+use super::message::MessageSize;
+
 /// LengthSDOptions is the delegate that overrides
 /// serialization/deserialization of the length of some sequence
 #[derive(Copy, Clone)]
@@ -23,12 +25,12 @@ impl LengthSDOptions for LengthSD {
     }
 
     fn serialize_length<S: Serializer>(&self, s: S, length: usize) -> Result<S::Ok, S::Error> {
-        let length = length as u16;
+        let length = length as MessageSize;
         Serialize::serialize(&length, s)
     }
 
     fn deserialize_length<'de, D: Deserializer<'de>>(&self, d: D) -> Result<usize, D::Error> {
-        Deserialize::deserialize(d).map(|l: u16| l as _)
+        Deserialize::deserialize(d).map(|l: MessageSize| l as _)
     }
 }
 

@@ -9,14 +9,14 @@ extern crate bincode;
 #[cfg(test)]
 extern crate rand;
 
-mod messages;
+mod message;
 
 mod serde_facade;
 
-pub use self::messages::Message;
-pub use self::messages::types::*;
-pub use self::messages::channel::*;
-pub use self::messages::setup::*;
-pub use self::messages::control::*;
+pub use self::message::Message;
+pub use self::message::types::*;
+pub use self::message::channel::*;
+pub use self::message::setup::*;
+pub use self::message::control::*;
 
 pub use self::serde_facade::BinarySD;

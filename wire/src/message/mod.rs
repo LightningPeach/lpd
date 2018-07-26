@@ -16,6 +16,10 @@ use serde::Deserializer;
 use serde::ser;
 use serde::de;
 
+use std::u16;
+
+pub type MessageSize = u16;
+
 macro_rules! message {
     (pub enum $name:ident { $($variant:ident($rtt:expr)),* }) => {
         /// Tagged union, the variant name equals to the type name witch the variant contains
@@ -25,6 +29,8 @@ macro_rules! message {
         }
 
         impl $name {
+            pub const SIZE_LIMIT: usize = (u16::MAX as usize) - 2;
+
             fn read_from<'de, A>(payload: A) -> Result<Self, A::Error> where
                 A: de::SeqAccess<'de>
             {
