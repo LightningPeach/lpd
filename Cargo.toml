@@ -1,5 +1,5 @@
 [workspace]
-members = ["../lpd", "bincode", "wire", "brontide"]
+members = ["../lpd", "bincode", "wire", "brontide", "shachain"]
 
 [package]
 name = "lpd"
@@ -21,6 +21,7 @@ name = "wasm-runner"
 [dependencies]
 wire = { path = "wire" }
 brontide = { path = "brontide" }
+shachain = { path = "shachain" }
 
 rand = "0.5.4"
 secp256k1 = "0.9.2"
