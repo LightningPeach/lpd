@@ -108,8 +108,12 @@ mod debug {
 mod secp256k1 {
     use super::PublicKey as LpdPublicKey;
     use super::PUBLIC_KEY_SIZE;
-    use secp256k1::PublicKey;
+
+    use super::Signature as LpdSignature;
+
     use secp256k1::Secp256k1;
+    use secp256k1::PublicKey;
+    use secp256k1::Signature;
 
     impl From<PublicKey> for LpdPublicKey {
         fn from(v: PublicKey) -> Self {
@@ -131,6 +135,21 @@ mod secp256k1 {
             v_array[0] = v.header;
             v_array[1..].copy_from_slice(&v.data[..]);
             PublicKey::from_slice(&Secp256k1::new(), &v_array[..]).unwrap()
+        }
+    }
+
+    impl From<Signature> for LpdSignature {
+        fn from(v: Signature) -> Self {
+            let v_array = v.serialize_compact(&Secp256k1::new());
+            LpdSignature {
+                data: v_array,
+            }
+        }
+    }
+
+    impl From<LpdSignature> for Signature {
+        fn from(v: LpdSignature) -> Self {
+            Signature::from_compact(&Secp256k1::new(), &v.data).unwrap()
         }
     }
 }
