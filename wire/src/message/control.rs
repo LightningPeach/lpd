@@ -18,14 +18,14 @@ pub struct Ping {
 }
 
 impl Ping {
-    pub fn new(length: MessageSize, pong_length: MessageSize) -> Self {
+    pub fn new(length: MessageSize, pong_length: MessageSize) -> Result<Self, ()> {
         Ping {
             pong_length: pong_length as _,
             data: thread_rng().sample_iter(&Standard).take(length as usize).collect(),
-        }
+        }.validate()
     }
 
-    pub fn validate(&self) -> Result<(), ()> {
+    pub fn validate(self) -> Result<Self, ()> {
         use std::u16;
 
         // 16-bit runtime type information and 16-bit actual size of the pong
@@ -34,12 +34,12 @@ impl Ping {
         type PingEmbellishment = (MessageSize, MessageSize, MessageSize);
 
         let pong_limit =
-            self.pong_length + (mem::size_of::<PongEmbellishment>() as MessageSize) <= u16::MAX;
+            self.pong_length() + (mem::size_of::<PongEmbellishment>() as MessageSize) <= u16::MAX;
         let ping_limit =
             self.length() + (mem::size_of::<PingEmbellishment>() as MessageSize) <= u16::MAX;
 
         if pong_limit && ping_limit {
-            Ok(())
+            Ok(self)
         } else {
             Err(())
         }
@@ -47,6 +47,10 @@ impl Ping {
 
     pub fn length(&self) -> MessageSize {
         self.data.len() as _
+    }
+
+    pub fn pong_length(&self) -> MessageSize {
+        self.pong_length
     }
 }
 
@@ -62,7 +66,7 @@ pub struct Pong {
 
 impl Pong {
     pub fn new(ping: &Ping) -> Self {
-        let length = ping.pong_length;
+        let length = ping.pong_length();
         Pong {
             data: thread_rng().sample_iter(&Standard).take(length as usize).collect(),
         }

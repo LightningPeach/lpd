@@ -51,7 +51,7 @@ macro_rules! message {
                     <A::Error as de::Error>::custom(temp)
                 };
 
-                let runtime_type: u16 = payload.next_element()?.ok_or(notype_err)?;
+                let runtime_type = payload.next_element()?.ok_or(notype_err)?;
 
                 use self::$name::*;
                 match runtime_type {
@@ -90,25 +90,25 @@ macro_rules! message {
 /// Implements `Eq`, `Debug`, `Serialize`, `Deserialize`
 message! {
     pub enum Message {
-        Init(16),
-        Error(17),
-        Ping(18),
-        Pong(19),
-        OpenChannel(32),
-        AcceptChannel(33),
-        FundingCreated(34),
-        FundingSigned(35),
-        FundingLocked(36),
-        ShutdownChannel(38),
-        ClosingNegotiation(39),
-        UpdateAddHtlc(128),
-        UpdateFulfillHtlc(130),
-        UpdateFailHtlc(131),
-        UpdateFailMalformedHtlc(135),
-        CommitmentSigned(132),
-        RevokeAndAck(133),
-        UpdateFee(134),
-        ReestablishChannel(136)
+        Init(16u16),
+        Error(17u16),
+        Ping(18u16),
+        Pong(19u16),
+        OpenChannel(32u16),
+        AcceptChannel(33u16),
+        FundingCreated(34u16),
+        FundingSigned(35u16),
+        FundingLocked(36u16),
+        ShutdownChannel(38u16),
+        ClosingNegotiation(39u16),
+        UpdateAddHtlc(128u16),
+        UpdateFulfillHtlc(130u16),
+        UpdateFailHtlc(131u16),
+        UpdateFailMalformedHtlc(135u16),
+        CommitmentSigned(132u16),
+        RevokeAndAck(133u16),
+        UpdateFee(134u16),
+        ReestablishChannel(136u16)
     }
 }
 
