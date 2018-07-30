@@ -51,7 +51,7 @@ macro_rules! message {
                     <A::Error as de::Error>::custom(temp)
                 };
 
-                let runtime_type = payload.next_element()?.ok_or(notype_err)?;
+                let runtime_type: u16 = payload.next_element()?.ok_or(notype_err)?;
 
                 use self::$name::*;
                 match runtime_type {
@@ -147,5 +147,20 @@ impl<'de> Deserialize<'de> for Message {
         }
 
         deserializer.deserialize_tuple(2, Visitor)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ::BinarySD;
+    use super::Message;
+
+    #[test]
+    fn deserialize_init() {
+        let data = vec![0, 16, 0, 0, 0, 1, 138];
+
+        let msg: Result<Message, _> = BinarySD::deserialize(&data[..]);
+        println!("{:?}", msg);
+        assert!(msg.is_ok());
     }
 }
