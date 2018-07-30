@@ -12,7 +12,7 @@ use serde::ser::Serialize;
 use std::net::{TcpStream, SocketAddr};
 
 use brontide::tcp_communication::{Stream, NetAddress};
-use wire::{BinarySD, Init, RawFeatureVector};
+use wire::{Message, BinarySD, Init, RawFeatureVector};
 
 fn main() {
 //    let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
@@ -62,6 +62,6 @@ fn main() {
     println!("{}", raw_init_msg_resp.len());
     println!("{:?}", raw_init_msg_resp);
 
-    let init_msg_resp: Init = BinarySD::deserialize(&raw_init_msg_resp[..]).unwrap();
+    let init_msg_resp: Message = BinarySD::deserialize(&raw_init_msg_resp[..]).unwrap();
     println!("{:?}", init_msg_resp);
 }
