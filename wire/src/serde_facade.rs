@@ -32,6 +32,20 @@ impl LengthSDOptions for LengthSD {
     fn deserialize_length<'de, D: Deserializer<'de>>(&self, d: D) -> Result<usize, D::Error> {
         Deserialize::deserialize(d).map(|l: MessageSize| l as _)
     }
+
+    fn serialized_variant_size(&self, variant: u32) -> Result<usize, Error> {
+        let _ = variant;
+        Ok(2)
+    }
+
+    fn serialize_variant<S: Serializer>(&self, s: S, variant: u32) -> Result<S::Ok, S::Error> {
+        let variant = variant as u16;
+        Serialize::serialize(&variant, s)
+    }
+
+    fn deserialize_variant<'de, D: Deserializer<'de>>(&self, d: D) -> Result<u32, D::Error> {
+        Deserialize::deserialize(d).map(|variant: u16| variant as _)
+    }
 }
 
 /// Public facade object, provides serde interface with the proper configuration applied
