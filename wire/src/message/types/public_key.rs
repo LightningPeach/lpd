@@ -1,12 +1,14 @@
+pub const PUBLIC_KEY_SIZE: usize = 33;
 pub const SIGNATURE_SIZE: usize = 64;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct PublicKey {
-    data: [u8; 32],
-    last: u8,
+    header: u8,
+    data: [u8; PUBLIC_KEY_SIZE - 1],
 }
+
 pub struct Signature {
-    data: [u8; 64],
+    data: [u8; SIGNATURE_SIZE],
 }
 
 mod serde {
@@ -103,10 +105,43 @@ mod debug {
     }
 }
 
+mod secp256k1 {
+    use super::PublicKey as LpdPublicKey;
+    use super::PUBLIC_KEY_SIZE;
+    use secp256k1::PublicKey;
+    use secp256k1::Secp256k1;
+
+    impl From<PublicKey> for LpdPublicKey {
+        fn from(v: PublicKey) -> Self {
+            let mut pk = LpdPublicKey {
+                header: 0,
+                data: [0; PUBLIC_KEY_SIZE - 1],
+            };
+            let v_array = v.serialize();
+            pk.header = v_array[0];
+            pk.data.copy_from_slice(&v_array[1..]);
+            pk
+        }
+    }
+
+    impl From<LpdPublicKey> for PublicKey {
+        fn from(v: LpdPublicKey) -> Self {
+            // TODO: use TryFrom
+            let mut v_array = [0u8; PUBLIC_KEY_SIZE];
+            v_array[0] = v.header;
+            v_array[1..].copy_from_slice(&v.data[..]);
+            PublicKey::from_slice(&Secp256k1::new(), &v_array[..]).unwrap()
+        }
+    }
+}
+
 #[cfg(test)]
 mod rand {
     use super::PublicKey;
     use super::Signature;
+
+    use super::PUBLIC_KEY_SIZE;
+    use super::SIGNATURE_SIZE;
 
     use rand::distributions::Distribution;
     use rand::distributions::Standard;
@@ -115,8 +150,8 @@ mod rand {
     impl Distribution<PublicKey> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> PublicKey {
             let mut rng = rng;
-            let rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(32).collect();
-            let mut this = PublicKey { data: [0u8; 32], last: rng.gen() };
+            let rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(PUBLIC_KEY_SIZE - 1).collect();
+            let mut this = PublicKey { header: rng.gen(), data: [0u8; PUBLIC_KEY_SIZE - 1] };
             this.data.copy_from_slice(rnd_bytes.as_slice());
             this
         }
@@ -125,8 +160,8 @@ mod rand {
     impl Distribution<Signature> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Signature {
             let mut rng = rng;
-            let rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(64).collect();
-            let mut this = Signature { data: [0u8; 64] };
+            let rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(SIGNATURE_SIZE).collect();
+            let mut this = Signature { data: [0u8; SIGNATURE_SIZE] };
             this.data.copy_from_slice(rnd_bytes.as_slice());
             this
         }
