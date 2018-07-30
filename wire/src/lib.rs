@@ -6,11 +6,8 @@ extern crate serde;
 extern crate serde_derive;
 extern crate bincode;
 extern crate secp256k1;
-
 #[macro_use]
 extern crate bitflags;
-
-#[cfg(test)]
 extern crate rand;
 
 mod message;

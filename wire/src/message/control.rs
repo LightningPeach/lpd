@@ -1,5 +1,9 @@
 use std::mem;
 
+use rand::thread_rng;
+use rand::Rng;
+use rand::distributions::Standard;
+
 use super::MessageSize;
 
 /// Keep alive message. Two purposes:
@@ -14,6 +18,13 @@ pub struct Ping {
 }
 
 impl Ping {
+    pub fn new(length: MessageSize, pong_length: MessageSize) -> Self {
+        Ping {
+            pong_length: pong_length as _,
+            data: thread_rng().sample_iter(&Standard).take(length as usize).collect(),
+        }
+    }
+
     pub fn validate(&self) -> Result<(), ()> {
         use std::u16;
 
@@ -50,6 +61,13 @@ pub struct Pong {
 }
 
 impl Pong {
+    pub fn new(ping: &Ping) -> Self {
+        let length = ping.pong_length;
+        Pong {
+            data: thread_rng().sample_iter(&Standard).take(length as usize).collect(),
+        }
+    }
+
     pub fn length(&self) -> MessageSize {
         self.data.len() as _
     }
