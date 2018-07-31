@@ -18,6 +18,9 @@ crate-type = ["cdylib"]
 [[example]]
 name = "wasm-runner"
 
+[[example]]
+name = "run-lnd"
+
 [dependencies]
 wire = { path = "wire" }
 
