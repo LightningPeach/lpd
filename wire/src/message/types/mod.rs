@@ -21,5 +21,6 @@ pub use self::units::Satoshi;
 pub use self::units::MilliSatoshi;
 pub use self::units::SatoshiPerKiloWeight;
 pub use self::units::CsvDelay;
+pub use self::units::SatoshiPerVByte;
 pub use self::output_index::OutputIndex;
 pub use self::onion_blob::OnionBlob;
