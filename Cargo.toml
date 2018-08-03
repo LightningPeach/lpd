@@ -1,5 +1,5 @@
 [workspace]
-members = ["../lpd", "bincode", "wire"]
+members = ["../lpd", "bincode", "wire", "brontide", "shachain", "hdkeychain"]
 
 [package]
 name = "lpd"
@@ -23,6 +23,14 @@ name = "run-lnd"
 
 [dependencies]
 wire = { path = "wire" }
+brontide = { path = "brontide" }
+shachain = { path = "shachain" }
+hdkeychain = { path = "hdkeychain" }
+
+rand = "0.5.4"
+secp256k1 = "0.9.2"
+hex = "0.3.2"
+serde = "1"
 
 [dev-dependencies]
 serde_derive = "1.0.70"

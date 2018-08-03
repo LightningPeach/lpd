@@ -1,0 +1,367 @@
+use hex;
+
+use store::RevocationStore;
+use element::Index;
+
+struct TestInsert<'a> {
+	index:      Index,
+	secret:     &'a str,
+	successful: bool,
+}
+
+struct TestData<'a> {
+    name:    &'a str,
+    inserts: &'a [TestInsert<'a>],
+}
+
+// TESTS encodes the test vectors specified in BOLT-03, Appendix D,
+// Storage Tests.
+const TESTS: [TestData; 9] = [
+	TestData{
+		name:    "insert_secret correct sequence",
+		inserts: &[
+			TestInsert{
+				index:      Index(281474976710655),
+				secret:     "7cc854b54e3e0dcdb010d7a3fee464a9687be6e8db3be6854c475621e007a5dc",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710654),
+				secret:     "c7518c8ae4660ed02894df8976fa1a3659c1a8b4b5bec0c4b872abeba4cb8964",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710653),
+				secret:     "2273e227a5b7449b6e70f1fb4652864038b1cbf9cd7c043a7d6456b7fc275ad8",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710652),
+				secret:     "27cddaa5624534cb6cb9d7da077cf2b22ab21e9b506fd4998a51d54502e99116",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710651),
+				secret:     "c65716add7aa98ba7acb236352d665cab17345fe45b55fb879ff80e6bd0c41dd",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710650),
+				secret:     "969660042a28f32d9be17344e09374b379962d03db1574df5a8a5a47e19ce3f2",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710649),
+				secret:     "a5a64476122ca0925fb344bdc1854c1c0a59fc614298e50a33e331980a220f32",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710648),
+				secret:     "05cde6323d949933f7f7b78776bcc1ea6d9b31447732e3802e1f7ac44b650e17",
+				successful: true,
+			},
+        ],
+	},
+	TestData{
+		name:    "insert_secret #1 incorrect",
+		inserts: &[
+			TestInsert{
+				index:      Index(281474976710655),
+				secret:     "02a40c85b6f28da08dfdbe0926c53fab2de6d28c10301f8f7c4073d5e42e3148",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710654),
+				secret:     "c7518c8ae4660ed02894df8976fa1a3659c1a8b4b5bec0c4b872abeba4cb8964",
+				successful: false,
+			},
+		],
+	},
+	TestData{
+		name:    "insert_secret #2 incorrect (#1 derived from incorrect)",
+		inserts: &[
+			TestInsert{
+				index:      Index(281474976710655),
+				secret:     "02a40c85b6f28da08dfdbe0926c53fab2de6d28c10301f8f7c4073d5e42e3148",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710654),
+				secret:     "dddc3a8d14fddf2b68fa8c7fbad2748274937479dd0f8930d5ebb4ab6bd866a3",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710653),
+				secret:     "2273e227a5b7449b6e70f1fb4652864038b1cbf9cd7c043a7d6456b7fc275ad8",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710652),
+				secret:     "27cddaa5624534cb6cb9d7da077cf2b22ab21e9b506fd4998a51d54502e99116",
+				successful: false,
+			},
+		],
+	},
+	TestData{
+		name:    "insert_secret #3 incorrect",
+		inserts: &[
+			TestInsert{
+				index:      Index(281474976710655),
+				secret:     "7cc854b54e3e0dcdb010d7a3fee464a9687be6e8db3be6854c475621e007a5dc",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710654),
+				secret:     "c7518c8ae4660ed02894df8976fa1a3659c1a8b4b5bec0c4b872abeba4cb8964",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710653),
+				secret:     "c51a18b13e8527e579ec56365482c62f180b7d5760b46e9477dae59e87ed423a",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710652),
+				secret:     "27cddaa5624534cb6cb9d7da077cf2b22ab21e9b506fd4998a51d54502e99116",
+				successful: false,
+			},
+		],
+	},
+	TestData{
+		name:    "insert_secret #4 incorrect (1,2,3 derived from incorrect)",
+		inserts: &[
+			TestInsert{
+				index:      Index(281474976710655),
+				secret:     "02a40c85b6f28da08dfdbe0926c53fab2de6d28c10301f8f7c4073d5e42e3148",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710654),
+				secret:     "dddc3a8d14fddf2b68fa8c7fbad2748274937479dd0f8930d5ebb4ab6bd866a3",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710653),
+				secret:     "c51a18b13e8527e579ec56365482c62f180b7d5760b46e9477dae59e87ed423a",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710652),
+				secret:     "ba65d7b0ef55a3ba300d4e87af29868f394f8f138d78a7011669c79b37b936f4",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710651),
+				secret:     "c65716add7aa98ba7acb236352d665cab17345fe45b55fb879ff80e6bd0c41dd",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710650),
+				secret:     "969660042a28f32d9be17344e09374b379962d03db1574df5a8a5a47e19ce3f2",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710649),
+				secret:     "a5a64476122ca0925fb344bdc1854c1c0a59fc614298e50a33e331980a220f32",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710649),
+				secret:     "05cde6323d949933f7f7b78776bcc1ea6d9b31447732e3802e1f7ac44b650e17",
+				successful: false,
+			},
+		],
+	},
+	TestData{
+		name:    "insert_secret #5 incorrect",
+		inserts: &[
+			TestInsert{
+				index:      Index(281474976710655),
+				secret:     "7cc854b54e3e0dcdb010d7a3fee464a9687be6e8db3be6854c475621e007a5dc",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710654),
+				secret:     "c7518c8ae4660ed02894df8976fa1a3659c1a8b4b5bec0c4b872abeba4cb8964",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710653),
+				secret:     "2273e227a5b7449b6e70f1fb4652864038b1cbf9cd7c043a7d6456b7fc275ad8",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710652),
+				secret:     "27cddaa5624534cb6cb9d7da077cf2b22ab21e9b506fd4998a51d54502e99116",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710651),
+				secret:     "631373ad5f9ef654bb3dade742d09504c567edd24320d2fcd68e3cc47e2ff6a6",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710650),
+				secret:     "969660042a28f32d9be17344e09374b379962d03db1574df5a8a5a47e19ce3f2",
+				successful: false,
+			},
+		],
+	},
+	TestData{
+		name:    "insert_secret #6 incorrect (5 derived from incorrect)",
+		inserts: &[
+			TestInsert{
+				index:      Index(281474976710655),
+				secret:     "7cc854b54e3e0dcdb010d7a3fee464a9687be6e8db3be6854c475621e007a5dc",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710654),
+				secret:     "c7518c8ae4660ed02894df8976fa1a3659c1a8b4b5bec0c4b872abeba4cb8964",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710653),
+				secret:     "2273e227a5b7449b6e70f1fb4652864038b1cbf9cd7c043a7d6456b7fc275ad8",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710652),
+				secret:     "27cddaa5624534cb6cb9d7da077cf2b22ab21e9b506fd4998a51d54502e99116",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710651),
+				secret:     "631373ad5f9ef654bb3dade742d09504c567edd24320d2fcd68e3cc47e2ff6a6",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710650),
+				secret:     "b7e76a83668bde38b373970155c868a653304308f9896692f904a23731224bb1",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710649),
+				secret:     "a5a64476122ca0925fb344bdc1854c1c0a59fc614298e50a33e331980a220f32",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710648),
+				secret:     "05cde6323d949933f7f7b78776bcc1ea6d9b31447732e3802e1f7ac44b650e17",
+				successful: false,
+			},
+		],
+	},
+	TestData{
+		name:    "insert_secret #7 incorrect",
+		inserts: &[
+			TestInsert{
+				index:      Index(281474976710655),
+				secret:     "7cc854b54e3e0dcdb010d7a3fee464a9687be6e8db3be6854c475621e007a5dc",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710654),
+				secret:     "c7518c8ae4660ed02894df8976fa1a3659c1a8b4b5bec0c4b872abeba4cb8964",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710653),
+				secret:     "2273e227a5b7449b6e70f1fb4652864038b1cbf9cd7c043a7d6456b7fc275ad8",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710652),
+				secret:     "27cddaa5624534cb6cb9d7da077cf2b22ab21e9b506fd4998a51d54502e99116",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710651),
+				secret:     "c65716add7aa98ba7acb236352d665cab17345fe45b55fb879ff80e6bd0c41dd",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710650),
+				secret:     "969660042a28f32d9be17344e09374b379962d03db1574df5a8a5a47e19ce3f2",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710649),
+				secret:     "e7971de736e01da8ed58b94c2fc216cb1dca9e326f3a96e7194fe8ea8af6c0a3",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710648),
+				secret:     "05cde6323d949933f7f7b78776bcc1ea6d9b31447732e3802e1f7ac44b650e17",
+				successful: false,
+			},
+		],
+	},
+	TestData{
+		name: "insert_secret #8 incorrect",
+		inserts: &[
+			TestInsert{
+				index:      Index(281474976710655),
+				secret:     "7cc854b54e3e0dcdb010d7a3fee464a9687be6e8db3be6854c475621e007a5dc",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710654),
+				secret:     "c7518c8ae4660ed02894df8976fa1a3659c1a8b4b5bec0c4b872abeba4cb8964",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710653),
+				secret:     "2273e227a5b7449b6e70f1fb4652864038b1cbf9cd7c043a7d6456b7fc275ad8",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710652),
+				secret:     "27cddaa5624534cb6cb9d7da077cf2b22ab21e9b506fd4998a51d54502e99116",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710651),
+				secret:     "c65716add7aa98ba7acb236352d665cab17345fe45b55fb879ff80e6bd0c41dd",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710650),
+				secret:     "969660042a28f32d9be17344e09374b379962d03db1574df5a8a5a47e19ce3f2",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710649),
+				secret:     "a5a64476122ca0925fb344bdc1854c1c0a59fc614298e50a33e331980a220f32",
+				successful: true,
+			},
+			TestInsert{
+				index:      Index(281474976710648),
+				secret:     "a7efbc61aac46d34f77778bac22c8a20c6a46ca460addc49009bda875ec88fa4",
+				successful: false,
+			},
+		],
+	},
+];
+
+// test_specification_sha_chain_insert is used to check the consistency with
+// specification hash insert function.
+#[test]
+fn test_specification_sha_chain_insert() {
+	for test in &TESTS {
+		let mut receiver = RevocationStore::new();
+
+		for insert in test.inserts {
+            let mut secret = [0; 32];
+            secret.copy_from_slice(&hex::decode(insert.secret).unwrap());
+
+            let resp = receiver.add_next_entry(secret);
+
+            if resp.is_err() && insert.successful {
+                panic!("Failed ({}): error was received but it shouldn't: {}", test.name, resp.unwrap_err())
+            } else if resp.is_ok() && !insert.successful {
+                panic!("Failed ({}): error wasn't received", test.name)
+            }
+		}
+	}
+}
