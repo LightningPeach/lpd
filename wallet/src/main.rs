@@ -7,7 +7,9 @@ mod scoped_manager;
 mod account_manager;
 
 use bitcoin::util::bip32::ChildNumber;
-use secp256k1::PublicKey;
+use bitcoin::util::hash::{Hash160, Sha256dHash};
+use bitcoin::util::base58;
+use secp256k1::{Secp256k1, PublicKey};
 
 use std::error::Error;
 
@@ -36,6 +38,24 @@ impl HDWallet {
             key_manager: KeyManager::from_seed(seed)?,
         })
     }
+
+    // BIP0142 format
+    fn p2wkh_addr_from_public_key(pk: PublicKey) -> String {
+        let pk_hash160 = Hash160::from_data(&pk.serialize_uncompressed()[..]);
+
+        let mut addr = [0; 23];
+        // [1-byte address version]
+        addr[0] = 0x06;
+        // [1-byte witness program version]
+        addr[1] = 0x00;
+        // padding
+        addr[2] = 0x00;
+        addr[3..].clone_from_slice(&pk_hash160[..]);
+
+        base58::check_encode_slice(&addr)
+    }
+
+    // TODO(evg): add BIP0173(bech32) format support
 
     /*
     fn new_public_key(&self, change: bool) -> Result<PublicKey, Box<Error>> {
@@ -74,6 +94,12 @@ fn test_bip0084() {
     let pk = account_manager.next_external_pk().unwrap();
     let pk_hex = hex::encode(&pk.serialize()[..]);
     assert_eq!(pk_hex, "0330d54fd0dd420a6e5f8d3624f5f3482cae350f79d5f0753bf5beef9c2d91af3c");
+
+    let pk_hex = "0450863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B23522CD470243453A299FA9E77237716103ABC11A1DF38855ED6F2EE187E9C582BA6";
+    let pk_bytes = hex::decode(pk_hex).unwrap();
+    let pk = PublicKey::from_slice(&Secp256k1::new(), &pk_bytes).unwrap();
+    let p2wkh_addr= HDWallet::p2wkh_addr_from_public_key(pk);
+    assert_eq!(p2wkh_addr, "p2xtZoXeX5X8BP8JfFhQK2nD3emtjch7UeFm");
 
     let pk = account_manager.next_external_pk().unwrap();
     let pk_hex = hex::encode(&pk.serialize()[..]);
