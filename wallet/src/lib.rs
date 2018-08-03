@@ -45,6 +45,7 @@ impl HDWallet {
 
         let mut addr = [0; 23];
         // [1-byte address version]
+        // TODO(evg): use constant instead
         addr[0] = 0x06;
         // [1-byte witness program version]
         addr[1] = 0x00;
@@ -108,8 +109,4 @@ fn test_bip0084() {
     let pk = account_manager.next_internal_pk().unwrap();
     let pk_hex = hex::encode(&pk.serialize()[..]);
     assert_eq!(pk_hex, "03025324888e429ab8e3dbaf1f7802648b9cd01e9b418485c5fa4c1b9b5700e1a6");
-}
-
-fn main() {
-    println!("Hello, world!");
 }
