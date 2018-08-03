@@ -1,10 +1,12 @@
 extern crate bitcoin;
 extern crate secp256k1;
 extern crate hex;
+extern crate wire;
 
 mod key_manager;
 mod scoped_manager;
 mod account_manager;
+mod fee_estimator;
 
 use bitcoin::util::bip32::ChildNumber;
 use bitcoin::util::hash::{Hash160, Sha256dHash};
