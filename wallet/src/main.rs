@@ -36,7 +36,7 @@ impl HDWallet {
             key_manager: KeyManager::from_seed(seed)?,
         })
     }
-    
+
     /*
     fn new_public_key(&self, change: bool) -> Result<PublicKey, Box<Error>> {
         let key_scope = KeyScope {
@@ -79,7 +79,9 @@ fn test_bip0084() {
     let pk_hex = hex::encode(&pk.serialize()[..]);
     assert_eq!(pk_hex, "03e775fd51f0dfb8cd865d9ff1cca2a158cf651fe997fdc9fee9c1d3b5e995ea77");
 
-    // "03025324888e429ab8e3dbaf1f7802648b9cd01e9b418485c5fa4c1b9b5700e1a6"
+    let pk = account_manager.next_internal_pk().unwrap();
+    let pk_hex = hex::encode(&pk.serialize()[..]);
+    assert_eq!(pk_hex, "03025324888e429ab8e3dbaf1f7802648b9cd01e9b418485c5fa4c1b9b5700e1a6");
 }
 
 fn main() {
