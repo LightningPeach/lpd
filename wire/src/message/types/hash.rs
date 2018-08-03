@@ -1,6 +1,26 @@
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Hash256 {
     data: [u8; 32],
+}
+
+mod sha2 {
+    use sha2::Sha256;
+    use super::Hash256;
+
+    impl From<Sha256> for Hash256 {
+        fn from(v: Sha256) -> Self {
+            let _ = v;
+            unimplemented!()
+        }
+    }
+
+    impl From<Hash256> for Sha256 {
+        fn from(v: Hash256) -> Self {
+            let _ = v;
+            unimplemented!()
+        }
+    }
 }
 
 #[cfg(test)]

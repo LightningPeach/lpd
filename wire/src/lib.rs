@@ -9,6 +9,7 @@ extern crate secp256k1;
 #[macro_use]
 extern crate bitflags;
 extern crate rand;
+extern crate sha2;
 
 mod message;
 
