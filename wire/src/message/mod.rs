@@ -171,9 +171,10 @@ mod tests {
     fn deserialize_init() {
         let data = vec![0, 16, 0, 0, 0, 1, 138];
 
-        let msg: Result<Message, _> = BinarySD::deserialize(&data[..]);
-        println!("{:?}", msg);
-        assert!(msg.is_ok());
+        let restored: Result<Message, _> = BinarySD::deserialize(&data[..]);
+        let message = restored.unwrap();
+        let init = message.as_init();
+        assert!(init.is_some());
     }
 
     #[test]
