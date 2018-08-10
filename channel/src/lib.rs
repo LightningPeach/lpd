@@ -3,10 +3,7 @@ extern crate hex;
 extern crate secp256k1;
 extern crate crypto;
 
-extern crate wire;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn empty() {}
-}
+pub mod bip69;
+pub mod tools;
+pub mod commit;
+pub mod spec_example;
