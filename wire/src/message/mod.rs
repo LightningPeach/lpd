@@ -153,7 +153,9 @@ impl<'de> Deserialize<'de> for Message {
 #[cfg(test)]
 mod tests {
     use ::BinarySD;
-    use super::Message;
+    use super::*;
+
+    use hex;
 
     #[test]
     fn deserialize_init() {
@@ -162,5 +164,12 @@ mod tests {
         let msg: Result<Message, _> = BinarySD::deserialize(&data[..]);
         println!("{:?}", msg);
         assert!(msg.is_ok());
+    }
+
+    #[test]
+    fn foo(){
+        let msg_bytes = hex::decode("002006226e46111a0b59caaf126043eb5bbf28c34f3a5e332a1fc7b2b73cf188910f3283054b8d351cfd58a790cb502069a64c40e226a0d228eae7e83e316dd2791700000000000186a00000000000000000000000000000023d0000000005e69ec000000000000003e800000000000003e8000030d4009001e302d254a0bc14d7c990d4c40e806bcaffc022ead28ba88eaa5450ef90565119020102859c2c7c7c0495198371dc0cb1329fdeca223972aeb089af2895c33b180cc6a20265ae921bd8cd25b7c62eda488b0f87955b3df36ccdb72cb0c75336cc8d5dc7030363b7cea6090e2f78a67a29a7cc5b351695a0dc6c0f2bbf14dc9098ed6074a3230213f314dcc6dbdaea4fac352277f55d53f873901477d80b8d2da794b411e5102202e19840efe9d300361f2624dfb5516f254bc6381be106c85ba0d3c429a54166c201").unwrap();
+        let restored: Result<Message, _> = BinarySD::deserialize(msg_bytes.as_slice());
+        assert!(restored.is_ok());
     }
 }

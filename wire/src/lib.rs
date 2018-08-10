@@ -11,6 +11,9 @@ extern crate bitflags;
 extern crate rand;
 extern crate sha2;
 
+#[cfg(test)]
+extern crate hex;
+
 mod message;
 
 mod serde_facade;
