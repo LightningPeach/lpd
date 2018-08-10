@@ -118,7 +118,8 @@ message! {
         CommitmentSigned(132u16, as_commitment_signed),
         RevokeAndAck(133u16, as_revoke_and_ack),
         UpdateFee(134u16, as_update_fee),
-        ReestablishChannel(136u16, as_reestablish_channel)
+        ReestablishChannel(136u16, as_reestablish_channel),
+        AnnouncementChannel(256u16, as_announcement_channel)
     }
 }
 

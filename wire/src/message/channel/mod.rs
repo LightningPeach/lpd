@@ -12,6 +12,9 @@ pub use self::operation::*;
 mod open;
 pub use self::open::*;
 
+mod announcement;
+pub use self::announcement::*;
+
 bitflags! {
     #[derive(Serialize, Deserialize)]
     struct ChannelFlags: u8 {
