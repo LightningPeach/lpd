@@ -27,7 +27,6 @@ pub struct OpenChannel {
     htlc_basepoint: PublicKey,
     first_per_commitment_point: PublicKey,
     flags: ChannelFlags,
-    script: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -51,7 +50,6 @@ pub struct AcceptChannel {
     delayed_payment_point: PublicKey,
     htlc_point: PublicKey,
     first_per_commitment_point: PublicKey,
-    script: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -94,15 +92,13 @@ mod test {
             htlc_basepoint: rng.gen(),
             first_per_commitment_point: rng.gen(),
             flags: ChannelFlags::FF_ANNOUNCE_CHANNEL,
-            script: vec![],
         };
 
         // try to estimate size without aligning
         let estimated_size = size_of::<Hash256>() + size_of::<ChannelId>()
             + size_of::<Satoshi>() * 3 + size_of::<MilliSatoshi>() * 3
             + size_of::<SatoshiPerKiloWeight>() + size_of::<CsvDelay>()
-            + size_of::<u16>() + size_of::<PublicKey>() * 6 + size_of::<u8>()
-            + 2 + msg.script.len();
+            + size_of::<u16>() + size_of::<PublicKey>() * 6 + size_of::<u8>();
 
         let _ = BinarySD::serialize(&mut vec, &msg).unwrap();
         println!("{:?} == {:?}", vec.len(), estimated_size);
