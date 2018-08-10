@@ -60,6 +60,7 @@ pub struct ReestablishChannel {
     last_remote_commit_secret: [u8; 32],
     local_unrevoked_commit_point: PublicKey,
 }
+
 #[cfg(test)]
 mod test {
     use super::*;
