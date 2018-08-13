@@ -9,7 +9,7 @@ use bitcoin::blockdata::opcodes::All::*;
 use bitcoin::network::encodable::{ConsensusDecodable};
 use bitcoin::network::serialize::{RawDecoder};
 
-use secp256k1::{Secp256k1, SecretKey, PublicKey};
+use secp256k1::{Secp256k1, SecretKey, PublicKey, Signature};
 
 use crypto::sha2::Sha256;
 use crypto::digest::Digest;
@@ -121,6 +121,13 @@ pub fn s2tx(s: &str) -> Transaction {
     let tx_bytes = hex::decode(s).unwrap();
     let tx = Transaction::consensus_decode(&mut RawDecoder::new(&tx_bytes[..])).unwrap();
     return tx;
+}
+
+pub fn s2sig(s: &str) -> Signature {
+    let ctx = Secp256k1::new();
+    let sig_bytes = hex::decode(s).unwrap();
+    let sig = Signature::from_der(&ctx, &sig_bytes).unwrap();
+    sig
 }
 
 // Get sequence number from obscured commit number
@@ -315,12 +322,41 @@ pub fn assert_tx_eq(tx1: &Transaction, tx2: &Transaction, ignore_witness: bool) 
     assert_eq!(tx1.lock_time, tx2.lock_time);
 }
 
+// Creates spending witness for 2x2 multisig
+// Assumes tha signatures are SIGHASH_ALL
+pub fn spending_witness_2x2_multisig(pk1: &PublicKey, pk2: &PublicKey, sig1: &Signature, sig2: &Signature) -> Vec<Vec<u8>> {
+    let ctx = Secp256k1::new();
+
+    // signatures should be ordered in the same order as public keys
+    let mut witness = vec![];
+    // Empy element due to a bug(now a consensus feature) of OP_CHECKMULTISIG
+    witness.push(vec![]);
+
+    // We need to add SIGHASH_ALL to signatures
+    let mut sig1_ser = sig1.serialize_der(&ctx);
+    sig1_ser.push(1);
+    let mut sig2_ser = sig2.serialize_der(&ctx);
+    sig2_ser.push(1);
+
+    if pk1.serialize()[..] < pk2.serialize()[..] {
+        witness.push(sig1_ser);
+        witness.push(sig2_ser);
+    } else {
+        witness.push(sig2_ser);
+        witness.push(sig1_ser);
+    }
+
+    witness.push(new_2x2_multisig(&pk1.serialize(), &pk2.serialize()).data());
+
+    witness
+}
+
 
 #[cfg(test)]
 mod tests {
 
     use hex;
-    use tools::{sha256, accepted_htlc, offered_htlc, assert_tx_eq, to_local_script, s2script, s2tx, new_2x2_multisig, new_2x2_wsh_lock_script, s2pubkey, v0_p2wpkh, s2dh256, p2pkh, p2pkh_unlock_script, get_obscuring_number, get_locktime, get_sequence};
+    use tools::{spending_witness_2x2_multisig, s2sig, sha256, accepted_htlc, offered_htlc, assert_tx_eq, to_local_script, s2script, s2tx, new_2x2_multisig, new_2x2_wsh_lock_script, s2pubkey, v0_p2wpkh, s2dh256, p2pkh, p2pkh_unlock_script, get_obscuring_number, get_locktime, get_sequence};
     use spec_example::get_example;
     use secp256k1::{Secp256k1, SecretKey, PublicKey, Message};
     use bitcoin::util::hash::Hash160;
@@ -356,6 +392,27 @@ mod tests {
         // it is change output of the funding transaction from the spec
         let sc_change = v0_p2wpkh(&pk);
         assert_eq!(hex::encode(&sc_change.data()), "00143ca33c2e4446f4a305f23c80df8ad1afdcf652f9");
+    }
+
+    #[test]
+    fn test_spending_witness_2x2_multisig() {
+        let ex = get_example();
+        // Taken from spec example: simple commitment tx with no HTLCs
+        let local_sig = s2sig("3044022051b75c73198c6deee1a875871c3961832909acd297c6b908d59e3319e5185a46022055c419379c5051a78d00dbbce11b5b664a0c22815fbcc6fcef6b1937c3836939");
+        let remote_sig = s2sig("3045022100f51d2e566a70ba740fc5d8c0f07b9b93d2ed741c3c0860c613173de7d39e7968022041376d520e9c0e1ad52248ddf4b22e12be8763007df977253ef45a4ca3bdb7c0");
+        let expected_witness = vec![
+            vec![],
+            hex::decode("3044022051b75c73198c6deee1a875871c3961832909acd297c6b908d59e3319e5185a46022055c419379c5051a78d00dbbce11b5b664a0c22815fbcc6fcef6b1937c383693901").unwrap(),
+            hex::decode("3045022100f51d2e566a70ba740fc5d8c0f07b9b93d2ed741c3c0860c613173de7d39e7968022041376d520e9c0e1ad52248ddf4b22e12be8763007df977253ef45a4ca3bdb7c001").unwrap(),
+            hex::decode("5221023da092f6980e58d2c037173180e9a465476026ee50f96695963e8efe436f54eb21030e9f7b623d2ccc7c9bd44d66d5ce21ce504c0acf6385a132cec6d3c39fa711c152ae").unwrap()
+        ];
+        let witness = spending_witness_2x2_multisig(
+            &ex.local_funding_pubkey,
+            &ex.remote_funding_pubkey,
+            &local_sig,
+            &remote_sig,
+        );
+        assert_eq!(witness, expected_witness);
     }
 
     #[test]
