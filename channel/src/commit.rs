@@ -1,9 +1,10 @@
-use secp256k1::{PublicKey};
+use secp256k1::{PublicKey, SecretKey, Signature, Secp256k1, Message};
 use bitcoin::util::hash::{Sha256dHash};
 use bitcoin::blockdata::script::{Script};
 use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
+use bitcoin::util::bip143;
 use bip69;
-use tools::{get_sequence, get_locktime, accepted_htlc, offered_htlc, to_local_script, v0_p2wpkh};
+use tools::{get_sequence, get_locktime, accepted_htlc, offered_htlc, to_local_script, v0_p2wpkh, new_2x2_multisig};
 
 pub const HTLC_TIMEOUT_WEIGHT: i64 = 663;
 pub const HTLC_SUCCESS_WEIGHT: i64 = 703;
@@ -24,6 +25,8 @@ pub struct HTLC {
 
 pub struct CommitTx {
     pub funding_amount: i64,
+    pub local_funding_pubkey: PublicKey,
+    pub remote_funding_pubkey: PublicKey,
 
     pub local_feerate_per_kw: i64,
     pub dust_limit_satoshi: i64,
@@ -136,13 +139,40 @@ impl CommitTx {
         };
         return (h.amount_msat / 1000) < required;
     }
+
+    pub fn sign(&self, priv_key: &SecretKey) -> Signature {
+        let sec = Secp256k1::new();
+        let tx = self.get_tx();
+
+        let funding_lock_script = new_2x2_multisig(
+            &self.local_funding_pubkey.serialize(),
+            &self.remote_funding_pubkey.serialize()
+        );
+        let tx_sig_hash = bip143::SighashComponents::new(&tx)
+            .sighash_all(
+                &tx.input[0],
+                &funding_lock_script,
+                self.funding_amount as u64
+            );
+        // TODO(mkl): maybe do not use unwrap
+        let sig = sec.sign(
+            &Message::from(tx_sig_hash.data()),
+            priv_key
+        ).unwrap();
+        sig
+    }
+
+    // TODO(mkl): add signature validation
+
 }
 
 #[cfg(test)]
 mod tests {
     use spec_example::get_example;
-    use tools::{s2tx, assert_tx_eq};
+    use tools::{s2tx, assert_tx_eq, spending_witness_2x2_multisig};
     use commit::CommitTx;
+    use secp256k1::Secp256k1;
+    use hex;
 
     #[test]
     fn test_simple_commitment_tx_with_no_htlcs() {
@@ -153,6 +183,8 @@ mod tests {
 
         let commit_tx = CommitTx{
             funding_amount: ex.funding_amount_satoshi,
+            local_funding_pubkey: ex.local_funding_pubkey,
+            remote_funding_pubkey: ex.remote_funding_pubkey,
 
             local_feerate_per_kw: 15000,
             dust_limit_satoshi: 546,
@@ -176,8 +208,31 @@ mod tests {
             htlcs: vec![],
         };
 
-        let tx = commit_tx.get_tx();
+        // Validate that transaction without witness is correct
+        let mut tx = commit_tx.get_tx();
         assert_tx_eq(&tx, &example_tx, true);
+
+        // Validate signing
+        let ctx = Secp256k1::new();
+        let local_sig = commit_tx.sign(&ex.local_funding_privkey);
+        assert_eq!(
+            hex::encode(local_sig.serialize_der(&ctx)),
+            "3044022051b75c73198c6deee1a875871c3961832909acd297c6b908d59e3319e5185a46022055c419379c5051a78d00dbbce11b5b664a0c22815fbcc6fcef6b1937c3836939"
+        );
+
+        let remote_sig = commit_tx.sign(&ex.internal.remote_funding_privkey);
+        assert_eq!(
+            hex::encode(remote_sig.serialize_der(&ctx)),
+            "3045022100f51d2e566a70ba740fc5d8c0f07b9b93d2ed741c3c0860c613173de7d39e7968022041376d520e9c0e1ad52248ddf4b22e12be8763007df977253ef45a4ca3bdb7c0",
+        );
+
+        tx.input[0].witness = spending_witness_2x2_multisig(
+            &ex.local_funding_pubkey,
+            &ex.remote_funding_pubkey,
+            &local_sig,
+            &remote_sig,
+        );
+        assert_tx_eq(&tx, &example_tx, false);
     }
 
     // Most of spec examples use the same commit transaction but with different fee
@@ -185,6 +240,8 @@ mod tests {
         let ex = get_example();
         let mut commit_tx = CommitTx{
             funding_amount: ex.funding_amount_satoshi,
+            local_funding_pubkey: ex.local_funding_pubkey,
+            remote_funding_pubkey: ex.remote_funding_pubkey,
 
             local_feerate_per_kw: local_feerate_per_kw,
             dust_limit_satoshi: 546,
