@@ -11,6 +11,12 @@ pub struct Signature {
     data: [u8; SIGNATURE_SIZE],
 }
 
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct Signed<T> {
+    pub signature: Signature,
+    pub value: T,
+}
+
 mod serde {
     use super::Signature;
     use super::SIGNATURE_SIZE;
