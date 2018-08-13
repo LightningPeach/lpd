@@ -17,7 +17,7 @@ pub use self::announcement::*;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]
-    struct ChannelFlags: u8 {
+    pub struct ChannelFlags: u8 {
         const FF_ANNOUNCE_CHANNEL = 0b00000001;
     }
 }

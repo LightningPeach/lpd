@@ -99,7 +99,7 @@ mod debug {
         fn fmt(&self, f: &mut Formatter) -> Result {
             let (mut _0, mut _1) = ([0u8; 32], [0u8; 32]);
             _0.copy_from_slice(&self.data[0..32]);
-            _1.copy_from_slice(&self.data[32..32]);
+            _1.copy_from_slice(&self.data[32..64]);
             write!(f, "Signature [{:?}, {:?}]", _0, _1)
         }
     }
