@@ -2,12 +2,14 @@ pub mod types;
 pub mod setup;
 pub mod channel;
 pub mod control;
+pub mod node;
 
 use self::setup::Init;
 use self::setup::Error;
 use self::control::Ping;
 use self::control::Pong;
 use self::channel::*;
+use self::node::AnnouncementNode;
 
 use serde::Serialize;
 use serde::Serializer;
@@ -119,7 +121,9 @@ message! {
         RevokeAndAck(133u16, as_revoke_and_ack),
         UpdateFee(134u16, as_update_fee),
         ReestablishChannel(136u16, as_reestablish_channel),
-        AnnouncementChannel(256u16, as_announcement_channel)
+        AnnouncementChannel(256u16, as_announcement_channel),
+        AnnouncementNode(257u16, as_announcement_node),
+        UpdateChannel(258u16, as_update_channel)
     }
 }
 
