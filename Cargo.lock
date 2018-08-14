@@ -266,6 +266,7 @@ version = "0.0.0"
 dependencies = [
  "bitcoin 0.13.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "brontide 0.1.0",
+ "channel 0.0.0",
  "hdkeychain 0.1.0",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -1,5 +1,5 @@
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct Hash256 {
     data: [u8; 32],
 }

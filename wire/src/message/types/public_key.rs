@@ -1,7 +1,7 @@
 pub const PUBLIC_KEY_SIZE: usize = 33;
 pub const SIGNATURE_SIZE: usize = 64;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct PublicKey {
     header: u8,
     data: [u8; PUBLIC_KEY_SIZE - 1],
