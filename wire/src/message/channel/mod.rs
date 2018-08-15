@@ -1,5 +1,3 @@
-use super::types::*;
-
 mod funding;
 pub use self::funding::*;
 
@@ -17,6 +15,9 @@ pub use self::announcement::*;
 
 mod update;
 pub use self::update::*;
+
+use super::types::*;
+use ::UncompressedData;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]
@@ -36,6 +37,26 @@ impl ChannelId {
             data: [0; 32],
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct ShortChannelId {
+    block_height: u32,
+    tx_index: u32,
+    tx_position: u16,
+}
+
+// TODO: custom serde, variant should be 1 byte
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub enum ShortChannelIdEncoding {
+    StoredPlain(Vec<ShortChannelId>),
+    StoredZlib(UncompressedData<ShortChannelId>),
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct QueryShortChannelIds {
+    chain_hash: Hash256,
+    ids: ShortChannelIdEncoding,
 }
 
 #[cfg(test)]

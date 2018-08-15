@@ -6,6 +6,8 @@ use super::Signature;
 use super::PublicKey;
 use super::SatoshiPerKiloWeight;
 
+use ::SerdeVec;
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct HtlcId {
     id: u64,
@@ -61,7 +63,7 @@ pub struct UpdateFailMalformedHtlc {
 pub struct CommitmentSigned {
     channel_id: ChannelId,
     signature: Signature,
-    htlc_signatures: Vec<Signature>,
+    htlc_signatures: SerdeVec<Signature>,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]

@@ -128,7 +128,8 @@ message! {
         AnnouncementChannel(256u16, as_announcement_channel),
         AnnouncementNode(257u16, as_announcement_node),
         UpdateChannel(258u16, as_update_channel),
-        AnnounceSignatures(259u16, as_announce_signatures)
+        AnnounceSignatures(259u16, as_announce_signatures),
+        QueryShortChannelIds(261u16, as_query_short_channel_ids)
     }
 }
 
