@@ -3,7 +3,7 @@ use super::ShortChannelId;
 use super::types::Signature;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct AnnounceSignature {
+pub struct AnnounceSignatures {
     channel_id: ChannelId,
     short_channel_id: ShortChannelId,
     node_signature: Signature,
