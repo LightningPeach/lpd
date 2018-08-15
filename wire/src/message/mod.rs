@@ -3,6 +3,7 @@ pub mod setup;
 pub mod channel;
 pub mod control;
 pub mod node;
+pub mod announce_signatures;
 
 use self::setup::Init;
 use self::setup::Error;
@@ -10,6 +11,7 @@ use self::control::Ping;
 use self::control::Pong;
 use self::channel::*;
 use self::node::AnnouncementNode;
+use self::announce_signatures::AnnounceSignature;
 
 use serde::Serialize;
 use serde::Serializer;
@@ -123,7 +125,8 @@ message! {
         ReestablishChannel(136u16, as_reestablish_channel),
         AnnouncementChannel(256u16, as_announcement_channel),
         AnnouncementNode(257u16, as_announcement_node),
-        UpdateChannel(258u16, as_update_channel)
+        UpdateChannel(258u16, as_update_channel),
+        AnnounceSignature(259u16, as_announce_signatures)
     }
 }
 

@@ -1,9 +1,8 @@
 mod announcement;
-mod alias;
+pub use self::announcement::*;
 
-pub use self::announcement::AnnouncementNodeData;
-pub use self::announcement::AnnouncementNode;
-pub use self::alias::NodeAlias;
+mod alias;
+pub use self::alias::*;
 
 use super::types::*;
 
