@@ -1,17 +1,19 @@
 pub mod types;
-pub mod setup;
-pub mod channel;
-pub mod control;
-pub mod node;
-pub mod announce_signatures;
 
-use self::setup::Init;
-use self::setup::Error;
-use self::control::Ping;
-use self::control::Pong;
-use self::channel::*;
-use self::node::AnnouncementNode;
-use self::announce_signatures::AnnounceSignatures;
+mod setup;
+pub use self::setup::*;
+
+mod control;
+pub use self::control::*;
+
+mod channel;
+pub use self::channel::*;
+
+mod node;
+pub use self::node::*;
+
+mod announce_signatures;
+pub use self::announce_signatures::*;
 
 use serde::Serialize;
 use serde::Serializer;
