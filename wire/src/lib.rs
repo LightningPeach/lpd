@@ -18,12 +18,7 @@ mod message;
 
 mod serde_facade;
 
-pub use self::message::Message;
+pub use self::message::*;
 pub use self::message::types::*;
-pub use self::message::channel::*;
-pub use self::message::setup::*;
-pub use self::message::control::*;
-pub use self::message::node::*;
-pub use self::message::announce_signatures::*;
 
 pub use self::serde_facade::BinarySD;

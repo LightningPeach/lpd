@@ -11,7 +11,9 @@ mod color;
 
 pub use self::common::Wrapper;
 pub use self::common::BiWrapper;
+pub use self::common::Module;
 
+// let's export without wildcard
 pub use self::feature_bit::FeatureBit;
 pub use self::raw_feature_vector::RawFeatureVector;
 pub use self::feature_vector::FeatureVector;
