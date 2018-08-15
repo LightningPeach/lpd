@@ -11,7 +11,7 @@ use self::control::Ping;
 use self::control::Pong;
 use self::channel::*;
 use self::node::AnnouncementNode;
-use self::announce_signatures::AnnounceSignature;
+use self::announce_signatures::AnnounceSignatures;
 
 use serde::Serialize;
 use serde::Serializer;
@@ -126,7 +126,7 @@ message! {
         AnnouncementChannel(256u16, as_announcement_channel),
         AnnouncementNode(257u16, as_announcement_node),
         UpdateChannel(258u16, as_update_channel),
-        AnnounceSignature(259u16, as_announce_signatures)
+        AnnounceSignatures(259u16, as_announce_signatures)
     }
 }
 
