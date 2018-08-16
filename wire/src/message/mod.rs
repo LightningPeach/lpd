@@ -15,6 +15,9 @@ pub use self::node::*;
 mod announce_signatures;
 pub use self::announce_signatures::*;
 
+mod gossip_timestamp_range;
+pub use self::gossip_timestamp_range::*;
+
 use serde::Serialize;
 use serde::Serializer;
 use serde::Deserialize;
@@ -132,7 +135,8 @@ message! {
         QueryShortChannelIds(261u16, as_query_short_channel_ids),
         ReplyShortChannelIdsEnd(262u16, as_reply_short_channel_ids_end),
         QueryChannelRange(263u16, as_query_channel_range),
-        ReplyChannelRange(264u16, as_reply_channel_range)
+        ReplyChannelRange(264u16, as_reply_channel_range),
+        GossipTimestampRange(265u16, as_gossip_timestamp_range)
     }
 }
 
