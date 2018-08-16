@@ -129,7 +129,10 @@ message! {
         AnnouncementNode(257u16, as_announcement_node),
         UpdateChannel(258u16, as_update_channel),
         AnnounceSignatures(259u16, as_announce_signatures),
-        QueryShortChannelIds(261u16, as_query_short_channel_ids)
+        QueryShortChannelIds(261u16, as_query_short_channel_ids),
+        ReplyShortChannelIdsEnd(262u16, as_reply_short_channel_ids_end),
+        QueryChannelRange(263u16, as_query_channel_range),
+        ReplyChannelRange(264u16, as_reply_channel_range)
     }
 }
 

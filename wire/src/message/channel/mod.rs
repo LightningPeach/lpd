@@ -19,6 +19,9 @@ pub use self::update::*;
 mod query_short_channel_ids;
 pub use self::query_short_channel_ids::*;
 
+mod query_channel_range;
+pub use self::query_channel_range::*;
+
 use super::types::*;
 
 bitflags! {

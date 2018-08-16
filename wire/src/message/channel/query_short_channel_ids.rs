@@ -15,6 +15,12 @@ pub struct QueryShortChannelIds {
     ids: ShortChannelIdEncoding,
 }
 
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct ReplyShortChannelIdsEnd {
+    chain_hash: Hash256,
+    complete: bool,
+}
+
 mod serde {
     use super::ShortChannelIdEncoding;
 
