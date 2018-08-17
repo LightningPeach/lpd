@@ -4,6 +4,12 @@ pub struct Hash256 {
     data: [u8; 32],
 }
 
+impl From<Hash256> for [u8; 32] {
+    fn from(h: Hash256) -> Self {
+        return h.data;
+    }
+}
+
 mod sha2 {
     use sha2::Sha256;
     use super::Hash256;

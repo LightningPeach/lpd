@@ -24,8 +24,8 @@ pub struct FundingSigned {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct FundingLocked {
-    channel_id: ChannelId,
-    next_per_commitment_point: PublicKey,
+    pub channel_id: ChannelId,
+    pub next_per_commitment_point: PublicKey,
 }
 
 impl From<FundingTxid> for [u8; 32] {
