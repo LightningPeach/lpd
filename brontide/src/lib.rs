@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![allow(non_shorthand_field_patterns)]
+
 extern crate rand;
 extern crate secp256k1;
 extern crate sha2;
@@ -6,6 +9,7 @@ extern crate chacha20_poly1305_aead;
 extern crate hkdf;
 extern crate hex;
 extern crate crossbeam;
+extern crate wire;
 
 mod test_bolt0008;
 mod test_tcp_communication;
@@ -794,4 +798,69 @@ impl Machine {
     }
 }
 
-fn main() {}
+pub struct MachineRead<'a, R> where R: Read {
+    noise: &'a mut Machine,
+    read: R,
+}
+
+pub struct MachineWrite<'a, W> where W: Write {
+    noise: &'a mut Machine,
+    write: W,
+}
+
+pub use wire_adapter::MessageConsumer;
+
+mod wire_adapter {
+    use wire::BinarySD;
+    use wire::Message;
+    use std::iter::Iterator;
+    use std::error::Error;
+    use std::io;
+    use super::MachineRead;
+    use super::MachineWrite;
+
+    pub trait MessageConsumer {
+        fn send(&mut self, message: Message) -> Result<(), Box<Error>>;
+    }
+
+    impl<'a, W> MessageConsumer for MachineWrite<'a, W> where W: io::Write {
+        fn send(&mut self, message: Message) -> Result<(), Box<Error>> {
+            let mut vec = Vec::new();
+            BinarySD::serialize(&mut vec, &message)?;
+            self.noise.write_message(&mut self.write, vec.as_slice())
+        }
+    }
+
+    impl<'a, R> Iterator for MachineRead<'a, R> where R: io::Read {
+        type Item = Result<Message, Box<Error>>;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            // this function from std is not stable yet
+            fn transpose<T, E>(s: Result<Option<T>, E>) -> Option<Result<T, E>> {
+                match s {
+                    Ok(Some(x)) => Some(Ok(x)),
+                    Ok(None) => None,
+                    Err(e) => Some(Err(e)),
+                }
+            }
+
+            transpose(self.noise
+                .read_message(&mut self.read)
+                .and_then(|data|
+                    BinarySD::deserialize::<Message, _>(data.as_slice())
+                        .map_err(|e| e.into())
+                        .map(|message| Some(message))
+                )
+                .or_else(|e| {
+                    let end_of_file = e.downcast_ref()
+                        .map(|io_error: &Box<io::Error>| io_error.kind() == io::ErrorKind::UnexpectedEof)
+                        .unwrap_or(false);
+                    if end_of_file {
+                        Ok(None)
+                    } else {
+                        Err(e)
+                    }
+                }))
+        }
+    }
+}

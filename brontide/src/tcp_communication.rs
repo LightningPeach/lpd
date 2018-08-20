@@ -2,7 +2,7 @@ use secp256k1::{Secp256k1, SecretKey, PublicKey};
 use std::net::{TcpListener, TcpStream, SocketAddr};
 use std::error::Error;
 use std::io::{self, Read, Write};
-use super::{Machine, ACT_ONE_SIZE, ACT_TWO_SIZE, ACT_THREE_SIZE};
+use super::{Machine, ACT_ONE_SIZE, ACT_TWO_SIZE, ACT_THREE_SIZE, MachineRead, MachineWrite};
 
 // Listener is an implementation of a net.Conn which executes an authenticated
 // key exchange and message encryption protocol dubbed "Machine" after
@@ -184,6 +184,30 @@ impl Stream {
 
     pub fn read_and_decrypt_message(&mut self) -> Result<Vec<u8>, Box<Error>> {
         self.noise.read_message(&mut self.stream)
+    }
+
+    pub fn as_read(&mut self) -> MachineRead<&mut TcpStream> {
+        let &mut Stream {
+            stream: ref mut stream,
+            noise: ref mut noise,
+        } = self;
+
+        MachineRead {
+            noise: noise,
+            read: stream,
+        }
+    }
+
+    pub fn as_write(&mut self) -> MachineWrite<&mut TcpStream> {
+        let &mut Stream {
+            stream: ref mut stream,
+            noise: ref mut noise,
+        } = self;
+
+        MachineWrite {
+            noise: noise,
+            write: stream,
+        }
     }
 }
 
