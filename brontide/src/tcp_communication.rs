@@ -245,3 +245,39 @@ pub struct NetAddress {
 	// general so that multiple implementations can be used.
 	pub address: SocketAddr,
 }
+
+#[cfg(feature = "testing")]
+mod convenient_conversion {
+    use super::*;
+    use rand;
+    use hex;
+
+    // sweep under the rug
+    impl Stream {
+        pub fn from_pair(socket_str: &'static str, public_key_str: &'static str) -> Self {
+            use secp256k1::constants::SECRET_KEY_SIZE;
+
+            let local_priv = {
+                let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
+                SecretKey::from_slice(&Secp256k1::new(), &local_priv_bytes).unwrap()
+            };
+
+            let net_address = {
+                let remote_pub = {
+                    let remote_pub_hex = public_key_str;
+                    let remote_pub_bytes = hex::decode(remote_pub_hex).unwrap();
+                    PublicKey::from_slice(&Secp256k1::new(), &remote_pub_bytes).unwrap()
+                };
+
+                let socket_addr = socket_str.parse().unwrap();
+
+                NetAddress {
+                    identity_key: remote_pub,
+                    address: socket_addr,
+                }
+            };
+
+            Stream::dial(local_priv, net_address).unwrap()
+        }
+    }
+}
