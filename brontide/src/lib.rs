@@ -808,9 +808,10 @@ pub struct MachineWrite<'a, W> where W: Write {
     write: W,
 }
 
-pub use wire_adapter::MessageConsumer;
+pub use wire_tool::MessageConsumer;
+pub use wire_tool::MessageSource;
 
-mod wire_adapter {
+mod wire_tool {
     use wire::BinarySD;
     use wire::Message;
     use std::iter::Iterator;
@@ -831,36 +832,18 @@ mod wire_adapter {
         }
     }
 
-    impl<'a, R> Iterator for MachineRead<'a, R> where R: io::Read {
-        type Item = Result<Message, Box<Error>>;
+    pub trait MessageSource {
+        fn receive(&mut self) -> Result<Message, Box<Error>>;
+    }
 
-        fn next(&mut self) -> Option<Self::Item> {
-            // this function from std is not stable yet
-            fn transpose<T, E>(s: Result<Option<T>, E>) -> Option<Result<T, E>> {
-                match s {
-                    Ok(Some(x)) => Some(Ok(x)),
-                    Ok(None) => None,
-                    Err(e) => Some(Err(e)),
-                }
-            }
-
-            transpose(self.noise
+    impl<'a, R> MessageSource for MachineRead<'a, R> where R: io::Read {
+        fn receive(&mut self) -> Result<Message, Box<Error>> {
+            self.noise
                 .read_message(&mut self.read)
                 .and_then(|data|
                     BinarySD::deserialize::<Message, _>(data.as_slice())
                         .map_err(|e| e.into())
-                        .map(|message| Some(message))
                 )
-                .or_else(|e| {
-                    let end_of_file = e.downcast_ref()
-                        .map(|io_error: &Box<io::Error>| io_error.kind() == io::ErrorKind::UnexpectedEof)
-                        .unwrap_or(false);
-                    if end_of_file {
-                        Ok(None)
-                    } else {
-                        Err(e)
-                    }
-                }))
         }
     }
 }
