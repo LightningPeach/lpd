@@ -814,7 +814,6 @@ pub use wire_tool::MessageSource;
 mod wire_tool {
     use wire::BinarySD;
     use wire::Message;
-    use std::iter::Iterator;
     use std::error::Error;
     use std::io;
     use super::MachineRead;

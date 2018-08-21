@@ -34,7 +34,7 @@ impl Listener {
     }
 
     pub fn accept(&self) -> Result<Stream, Box<Error>> {
-        let (tcp_stream, socket_addr) = self.tcp.accept().unwrap();
+        let (tcp_stream, _socket_addr) = self.tcp.accept().unwrap();
 
         self.do_handshake(tcp_stream)
     }
@@ -131,7 +131,7 @@ impl Stream {
     pub fn dial(local_priv: SecretKey, net_addr: NetAddress,
         /* dialer: fn(String, String)  -> Result<Stream, Box<Error>> */) -> Result<Stream, Box<Error>> {
 
-        let mut stream = TcpStream::connect(net_addr.address)?;
+        let stream = TcpStream::connect(net_addr.address)?;
 //        ipAddr := netAddr.Address.String()
 //        var conn net.Conn
 //        var err error
@@ -148,7 +148,7 @@ impl Stream {
         // Initiate the handshake by sending the first act to the receiver.
         let act_one = brontide_stream.noise.gen_act_one()?;
 
-        brontide_stream.stream.write_all(&act_one[..]);
+        brontide_stream.stream.write_all(&act_one[..])?;
 //
 //        // We'll ensure that we get ActTwo from the remote peer in a timely
 //        // manner. If they don't respond within 1s, then we'll kill the

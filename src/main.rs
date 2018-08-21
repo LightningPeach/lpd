@@ -7,12 +7,11 @@ extern crate serde;
 
 use secp256k1::{SecretKey, PublicKey, Secp256k1};
 use secp256k1::constants::SECRET_KEY_SIZE;
-use serde::ser::Serialize;
 
 use std::net::{TcpStream, SocketAddr};
 
 use brontide::tcp_communication::{Stream, NetAddress};
-use wire::{Message, BinarySD, Init, RawFeatureVector, FeatureBit, Ping, Pong};
+use wire::{Message, BinarySD, Init, RawFeatureVector, FeatureBit, Ping};
 
 fn main() {
 //    let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
