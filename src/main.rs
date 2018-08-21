@@ -120,6 +120,7 @@ fn main() {
     let mut open_channel_b : Option<OpenChannel> = None;
     let mut your_commit_tx : Option<CommitTx> = None;
     let mut your_add_htlc : Option<UpdateAddHtlc> = None;
+    let mut your_funding_locked : Option<FundingLocked> = None;
 
     let (funding_sk, funding_pk) = get_key_pair();
     let (revocation_sk, revocation_pk) = get_key_pair();
@@ -127,6 +128,7 @@ fn main() {
     let (delayed_payment_sk, delayed_payment_pk) = get_key_pair();
     let (htlc_sk, htlc_pk) = get_key_pair();
     let (first_per_commitment_sk, first_per_commitment_pk) = get_key_pair();
+    let (fl_commit_point_sk, fl_commit_point_pk) = get_key_pair();
 
     let mut obscuring_factor : u64 = 0;
     while true {
@@ -235,11 +237,13 @@ fn main() {
             },
             Ok(Message::FundingLocked(funding_locked)) => {
                 println!("FUNDING_LOCKED: {:?}", &funding_locked);
-                let (commit_point_sk, commit_point_pk) = get_key_pair();
+
                 let my_funding_locked = FundingLocked {
                     channel_id: funding_locked.channel_id,
-                    next_per_commitment_point: LpdPublicKey::from(commit_point_pk),
+                    next_per_commitment_point: LpdPublicKey::from(fl_commit_point_pk),
                 };
+
+                your_funding_locked = Some(funding_locked);
                 write_msg(&mut brontide_stream, &Message::FundingLocked(my_funding_locked)).unwrap();
                 println!(
                     "sendpayment --dest {} --amt {} --payment_hash {} --final_cltv_delta={}",
@@ -267,10 +271,26 @@ fn main() {
                 };
                 write_msg(&mut brontide_stream, &Message::RevokeAndAck(revoke_and_ack));
 
+                let open_channel = open_channel_b.unwrap();
+                let your_fl = your_funding_locked.unwrap();
+                let your_fl_next_per_commitment_point = your_fl.next_per_commitment_point;
+                your_funding_locked = Some(your_fl);
+
                 let remote_pubkey = derive_pubkey(
                     &payment_pk, &new_commit_point_pk
                 );
+                let local_revocation_pubkey = derive_revocation_pubkey(
+                    &revocation_pk,
+                    &PublicKey::from(your_fl_next_per_commitment_point)
+                );
+                let local_delayed_pubkey = derive_pubkey(
+                    &PublicKey::from(open_channel.delayed_payment_basepoint),
+                    &PublicKey::from(your_fl_next_per_commitment_point)
+                );
+
                 let mut commit_tx = your_commit_tx.unwrap();
+                commit_tx.local_revocation_pubkey = local_revocation_pubkey;
+                commit_tx.local_delayedpubkey = local_delayed_pubkey;
                 commit_tx.htlcs.push(HTLC{
                     amount_msat: u64::from(add_htlc.amount) as i64,
                     direction: HTLCDirection::Offered,
@@ -280,6 +300,10 @@ fn main() {
                 commit_tx.to_local_msat -= u64::from(add_htlc.amount) as i64;
                 commit_tx.obscured_commit_number = 1 ^ obscuring_factor;
                 commit_tx.remotepubkey = remote_pubkey;
+
+                println!("commit_tx::local_delayed_pubkey: {}", hex::encode(&commit_tx.local_delayedpubkey.serialize()[..]));
+                println!("commit_tx::local_revocation_pubkey: {}", hex::encode(&commit_tx.local_revocation_pubkey.serialize()[..]));
+
 
                 let tx = commit_tx.get_tx();
                 let mut a = vec![];
