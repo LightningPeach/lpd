@@ -4,6 +4,12 @@ pub struct Hash256 {
     data: [u8; 32],
 }
 
+impl Hash256 {
+    pub const BITCOIN_CHAIN_HASH: Self = Hash256 {
+        data: hex!("6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000"),
+    };
+}
+
 mod sha2 {
     use sha2::Sha256;
     use super::Hash256;

@@ -1,5 +1,5 @@
 [workspace]
-members = ["../lpd", "bincode", "wire", "brontide", "shachain", "hdkeychain"]
+members = ["../lpd", "bincode", "wire", "brontide", "shachain", "hdkeychain", "routing"]
 
 [package]
 name = "lpd"

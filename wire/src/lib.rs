@@ -11,6 +11,8 @@ extern crate bitflags;
 extern crate rand;
 extern crate sha2;
 extern crate flate2;
+#[macro_use]
+extern crate hex_literal;
 
 #[cfg(test)]
 extern crate hex;
