@@ -1,0 +1,15 @@
+[package]
+name = "routing"
+version = "0.0.0"
+authors = ["LightningPeach <contact@lightningpeach.com>"]
+
+[dependencies]
+secp256k1 = "0.9.2"
+wire = { path = "../wire" }
+brontide = { path = "../brontide" }
+bitcoin-types = { path = "../bitcoin-types" }
+
+[dev-dependencies]
+rand = "0.5.4"
+hex = "0.3.2"
+brontide = { path = "../brontide", features = ["testing"] }
