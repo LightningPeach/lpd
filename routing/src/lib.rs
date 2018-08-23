@@ -8,6 +8,7 @@ extern crate secp256k1;
 extern crate wire;
 extern crate brontide;
 extern crate bitcoin_types;
+extern crate common_types;
 
 #[cfg(test)]
 extern crate rand;

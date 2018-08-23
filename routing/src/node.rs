@@ -1,4 +1,6 @@
 use bitcoin_types::ChannelPoint;
+use common_types::Hash256;
+
 use secp256k1::PublicKey;
 use std::net::SocketAddr;
 
@@ -8,7 +10,6 @@ use wire::RawFeatureVector;
 use wire::AnnouncementNodeData;
 use wire::AnnouncementNode;
 use wire::ShortChannelId;
-use wire::Hash256;
 use wire::PublicKey;
 use wire::RawFeatureVector;
 use wire::Satoshi;
