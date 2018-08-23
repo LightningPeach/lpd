@@ -11,8 +11,8 @@ extern crate bitflags;
 extern crate rand;
 extern crate sha2;
 extern crate flate2;
-#[macro_use]
-extern crate hex_literal;
+extern crate common_types;
+extern crate bitcoin_types;
 
 #[cfg(test)]
 extern crate hex;
