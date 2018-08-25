@@ -5,6 +5,7 @@
 // Its structure will change.
 
 extern crate secp256k1;
+extern crate chrono;
 extern crate wire;
 extern crate brontide;
 extern crate bitcoin_types;
@@ -15,7 +16,6 @@ extern crate rand;
 #[cfg(test)]
 extern crate hex;
 
-pub mod node;
 pub mod discovery;
 pub mod topology;
 

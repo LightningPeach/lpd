@@ -9,6 +9,7 @@ wire = { path = "../wire" }
 brontide = { path = "../brontide" }
 common-types = { path = "../common-types" }
 bitcoin-types = { path = "../bitcoin-types" }
+chrono = "0.4.5"
 
 [dev-dependencies]
 rand = "0.5.4"

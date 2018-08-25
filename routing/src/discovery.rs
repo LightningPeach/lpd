@@ -1,5 +1,5 @@
 use wire::Hash256;
-use super::node::LightningNode;
+use super::topology::LightningNode;
 use super::topology::ChannelGraph;
 
 use std::error::Error;
