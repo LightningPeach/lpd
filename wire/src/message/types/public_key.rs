@@ -1,20 +1,26 @@
+use ::PackSized;
+
 pub const PUBLIC_KEY_SIZE: usize = 33;
 pub const SIGNATURE_SIZE: usize = 64;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct PublicKey {
     header: u8,
     data: [u8; PUBLIC_KEY_SIZE - 1],
 }
 
+#[derive(Clone)]
 pub struct Signature {
     data: [u8; SIGNATURE_SIZE],
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Signed<T> {
     pub signature: Signature,
     pub value: T,
+}
+
+impl PackSized for Signature {
 }
 
 mod serde {

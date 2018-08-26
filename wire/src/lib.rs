@@ -28,3 +28,4 @@ pub use self::message::types::*;
 pub use self::serde_facade::BinarySD;
 pub use self::compression_facade::UncompressedData;
 pub use self::compression_facade::SerdeVec;
+pub use self::compression_facade::PackSized;
