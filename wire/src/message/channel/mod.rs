@@ -23,6 +23,7 @@ mod query_channel_range;
 pub use self::query_channel_range::*;
 
 use super::types::*;
+use ::PackSized;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]
@@ -49,6 +50,9 @@ pub struct ShortChannelId {
     block_height: u32,
     tx_index: u32,
     tx_position: u16,
+}
+
+impl PackSized for ShortChannelId {
 }
 
 impl From<u64> for ShortChannelId {
