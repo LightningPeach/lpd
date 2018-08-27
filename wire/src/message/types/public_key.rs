@@ -23,6 +23,15 @@ pub struct Signed<T> {
 impl PackSized for Signature {
 }
 
+impl PublicKey {
+    pub fn new(header: u8, data: [u8; 32]) -> Self {
+        PublicKey {
+            header: header,
+            data: data,
+        }
+    }
+}
+
 mod serde {
     use super::Signature;
     use super::SIGNATURE_SIZE;
@@ -166,7 +175,7 @@ mod secp256k1 {
     }
 }
 
-#[cfg(test)]
+#[cfg(feature = "testing")]
 mod rand {
     use super::PublicKey;
     use super::Signature;
@@ -196,5 +205,16 @@ mod rand {
             this.data.copy_from_slice(rnd_bytes.as_slice());
             this
         }
+    }
+}
+
+#[cfg(feature = "testing")]
+mod literal {
+    use hex_literal;
+    use super::PublicKey;
+
+    #[macro_export]
+    macro_rules! public_key {
+        ($header:expr, $value:expr) => { PublicKey::new($header, hex!($value)) }
     }
 }

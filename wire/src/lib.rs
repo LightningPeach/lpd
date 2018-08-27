@@ -14,8 +14,12 @@ extern crate flate2;
 extern crate common_types;
 extern crate bitcoin_types;
 
-#[cfg(test)]
+#[cfg(feature = "testing")]
 extern crate hex;
+
+#[cfg(feature = "testing")]
+#[macro_use]
+extern crate hex_literal;
 
 mod message;
 
