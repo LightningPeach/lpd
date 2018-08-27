@@ -12,8 +12,6 @@ use wire::ChannelUpdateFlags;
 use chrono::Utc;
 use chrono::DateTime;
 
-use std::iter::Iterator;
-
 pub trait ChannelGraph {
     type Error;
 

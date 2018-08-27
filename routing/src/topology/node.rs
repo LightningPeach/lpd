@@ -20,16 +20,25 @@ use wire::ChannelUpdateFlags;
 use wire::MilliSatoshi;
 
 pub struct LightningNode {
+    auth_signature: Signature,
     public_key: PublicKey,
     have_node_announcement: bool,
     last_update: u32,
     address: SocketAddr,
     color: Color,
     alias: NodeAlias,
-    auth_signature_key: PublicKey,
     features: RawFeatureVector,
     // TODO(vlad):
     db: (),
+}
+
+impl LightningNode {
+    pub fn announcement_node(&self) -> AnnouncementNode {
+        Signed {
+            signature: self.auth_signature.clone(),
+            value: unimplemented!(),
+        }
+    }
 }
 
 pub struct ChannelAuthProof {
