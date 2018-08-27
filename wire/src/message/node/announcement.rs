@@ -86,6 +86,13 @@ impl Address {
             _ => Err(self),
         }
     }
+
+    pub fn localhost(port: u16) -> Self {
+        Address::IpV4(IpV4 {
+            ip: [127, 0, 0, 1],
+            port: port,
+        })
+    }
 }
 
 impl PackSized for Address {
