@@ -29,7 +29,7 @@ mod sha2 {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 mod rand {
     use super::Hash256;
 
