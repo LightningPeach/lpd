@@ -175,7 +175,7 @@ mod secp256k1 {
     }
 }
 
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 mod rand {
     use super::PublicKey;
     use super::Signature;

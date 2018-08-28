@@ -14,7 +14,6 @@ extern crate flate2;
 extern crate common_types;
 extern crate bitcoin_types;
 
-#[cfg(feature = "testing")]
 extern crate hex;
 
 #[cfg(feature = "testing")]
@@ -30,6 +29,7 @@ pub use self::message::*;
 pub use self::message::types::*;
 
 pub use self::serde_facade::BinarySD;
+pub use self::serde_facade::WireError;
 pub use self::compression_facade::UncompressedData;
 pub use self::compression_facade::SerdeVec;
 pub use self::compression_facade::PackSized;

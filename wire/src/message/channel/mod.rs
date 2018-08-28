@@ -140,6 +140,13 @@ mod rand {
             this
         }
     }
+
+    impl Distribution<ShortChannelId> for Standard {
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ShortChannelId {
+            let mut rng = rng;
+            From::<u64>::from(self.sample(&mut rng))
+        }
+    }
 }
 
 #[cfg(test)]
