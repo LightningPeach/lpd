@@ -11,25 +11,88 @@ extern crate hex;
 extern crate crossbeam;
 extern crate wire;
 
+#[cfg(test)]
 mod test_bolt0008;
+#[cfg(test)]
 mod test_tcp_communication;
 
 // TODO(evg): should be private?
 pub mod tcp_communication;
 
-use std::time::Duration;
 use std::error::Error;
-use std::io::{Read, Write};
+use std::io::{Read, Write, Error as IoError};
 use std::fmt;
-use std::collections::HashMap;
 use secp256k1::constants::SECRET_KEY_SIZE;
-use secp256k1::{Secp256k1, SecretKey, PublicKey};
-
-use secp256k1::ecdh::SharedSecret;
+use secp256k1::{Secp256k1, SecretKey, PublicKey, Error as CryptoError};
+use wire::WireError;
 
 use sha2::{Sha256, Digest};
 
 use byteorder::{ByteOrder, BigEndian, LittleEndian};
+
+#[derive(Debug)]
+pub enum HandshakeError {
+    Io(IoError),
+    Crypto(CryptoError),
+    UnknownHandshakeVersion(String),
+    NotInitializedYet,
+}
+
+impl fmt::Display for HandshakeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::HandshakeError::*;
+
+        match self {
+            &Io(ref e) => write!(f, "io error: {}", e),
+            &Crypto(ref e) => write!(f, "crypto error: {}", e),
+            &UnknownHandshakeVersion(ref msg) => write!(f, "{}", msg),
+            &NotInitializedYet => write!(f, "not initialized yet")
+        }
+    }
+}
+
+impl Error for HandshakeError {
+    fn cause(&self) -> Option<&Error> {
+        use self::HandshakeError::*;
+
+        match self {
+            &Io(ref e) => Some(e),
+            &Crypto(ref e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum BrontideError {
+    Io(IoError),
+    WireError(WireError),
+    MaxMessageLengthExceeded,
+}
+
+impl fmt::Display for BrontideError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::BrontideError::*;
+
+        match self {
+            &Io(ref e) => write!(f, "io error: {}", e),
+            &WireError(ref e) => write!(f, "wire error: {}", e),
+            &MaxMessageLengthExceeded => write!(f, "{}", ERR_MAX_MESSAGE_LENGTH_EXCEEDED)
+        }
+    }
+}
+
+impl Error for BrontideError {
+    fn cause(&self) -> Option<&Error> {
+        use self::BrontideError::*;
+
+        match self {
+            &Io(ref e) => Some(e),
+            &WireError(ref e) => Some(e),
+            _ => None,
+        }
+    }
+}
 
 // PROTOCOL_NAME is the precise instantiation of the Noise protocol
 // handshake at the center of Brontide. This value will be used as part
@@ -61,7 +124,7 @@ static ERR_MAX_MESSAGE_LENGTH_EXCEEDED: &'static str = "the generated payload ex
 
 // ecdh performs an ECDH operation between pub and priv. The returned value is
 // the sha256 of the compressed shared point.
-fn ecdh(pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], Box<Error>> {
+fn ecdh(pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], CryptoError> {
     let mut pk_cloned = pk.clone();
     pk_cloned.mul_assign(&Secp256k1::new(), sk)?;
 
@@ -126,7 +189,7 @@ impl CipherState {
 
     // encrypt returns a ciphertext which is the encryption of the plainText
     // observing the passed associatedData within the AEAD construction.
-    fn encrypt(&mut self, associated_data: &[u8], cipher_text: &mut Vec<u8>, plain_text: &[u8]) -> Result<[u8; MAC_SIZE], Box<Error>> {
+    fn encrypt(&mut self, associated_data: &[u8], cipher_text: &mut Vec<u8>, plain_text: &[u8]) -> Result<[u8; MAC_SIZE], IoError> {
         let mut nonce: [u8; 12] = [0; 12];
         LittleEndian::write_u64(&mut nonce[4..], self.nonce);
         let tag = chacha20_poly1305_aead::encrypt(
@@ -142,7 +205,7 @@ impl CipherState {
     // decrypt attempts to decrypt the passed ciphertext observing the specified
     // associatedData within the AEAD construction. In the case that the final MAC
     // check fails, then a non-nil error will be returned.
-    fn decrypt<W: Write>(&mut self, associated_data: &[u8], plain_text: &mut W, cipher_text: &[u8], tag: [u8; MAC_SIZE]) -> Result<(), Box<Error>> {
+    fn decrypt<W: Write>(&mut self, associated_data: &[u8], plain_text: &mut W, cipher_text: &[u8], tag: [u8; MAC_SIZE]) -> Result<(), IoError> {
         let mut nonce: [u8; 12] = [0; 12];
         LittleEndian::write_u64(&mut nonce[4..], self.nonce);
         chacha20_poly1305_aead::decrypt(
@@ -271,7 +334,7 @@ impl SymmetricState {
     // encrypt_and_hash returns the authenticated encryption of the passed plaintext.
     // When encrypting the handshake digest (h) is used as the associated data to
     // the AEAD cipher
-    fn encrypt_and_hash(&mut self, plaintext: &[u8], cipher_text: &mut Vec<u8>) -> Result<[u8; MAC_SIZE], Box<Error>> {
+    fn encrypt_and_hash(&mut self, plaintext: &[u8], cipher_text: &mut Vec<u8>) -> Result<[u8; MAC_SIZE], IoError> {
         let tag = self.cipher_state.encrypt(
             &self.handshake_digest, cipher_text, plaintext)?;
 
@@ -293,7 +356,7 @@ impl SymmetricState {
     // decrypt_and_hash returns the authenticated decryption of the passed
     // ciphertext.  When encrypting the handshake digest (h) is used as the
     // associated data to the AEAD cipher.
-    fn decrypt_and_hash(&mut self, ciphertext: &[u8], tag: [u8; MAC_SIZE]) -> Result<Vec<u8>, Box<Error>> {
+    fn decrypt_and_hash(&mut self, ciphertext: &[u8], tag: [u8; MAC_SIZE]) -> Result<Vec<u8>, IoError> {
         let mut plaintext: Vec<u8> = Vec::new();
         self.cipher_state.decrypt(&self.handshake_digest, &mut plaintext, ciphertext, tag)?;
 
@@ -371,7 +434,7 @@ impl HandshakeState {
     // with the prologue and protocol name. If this is the responder's handshake
     // state, then the remotePub can be nil.
     fn new(initiator: bool, prologue: &[u8],
-        local_priv: SecretKey, remote_pub: PublicKey) -> Result<Self, Box<Error>> {
+        local_priv: SecretKey, remote_pub: PublicKey) -> Result<Self, CryptoError> {
 
         let mut h = HandshakeState{
             symmetric_state: SymmetricState::empty(),
@@ -408,7 +471,7 @@ pub struct Machine {
 	send_cipher: CipherState,
 	recv_cipher: CipherState,
 
-    ephemeral_gen: fn() -> Result<SecretKey, Box<Error>>,
+    ephemeral_gen: fn() -> Result<SecretKey, CryptoError>,
 
 	handshake_state: HandshakeState,
 
@@ -447,7 +510,7 @@ impl Machine {
     // initialization.
     // TODO(evg): should F be FnMut instead of Fn?
     fn new(initiator: bool, local_priv: SecretKey,
-    	remote_pub: PublicKey, options: &[fn(&Machine)]) -> Result<Self, Box<Error>> {
+    	remote_pub: PublicKey, options: &[fn(&Machine)]) -> Result<Self, CryptoError> {
 
     	let handshake = HandshakeState::new(
             initiator, "lightning".as_bytes(), local_priv, remote_pub)?;
@@ -513,24 +576,25 @@ impl Machine {
     // derived from this result.
     //
     //    -> e, es
-    fn gen_act_one(&mut self) -> Result<[u8; ACT_ONE_SIZE], Box<Error>> {
+    fn gen_act_one(&mut self) -> Result<[u8; ACT_ONE_SIZE], HandshakeError> {
     	// e
-    	self.handshake_state.local_ephemeral = Some((self.ephemeral_gen)()?);
-        // TODO(evg): remove this line it only for debug purposes
-//        let local_ephemeral_debug = SecretKey::from_slice(
-//        &Secp256k1::new(), hex::decode("1212121212121212121212121212121212121212121212121212121212121212")?.as_slice())?;
-//        self.handshake_state.local_ephemeral = Some(local_ephemeral_debug);
+    	let local_ephemeral_priv = (self.ephemeral_gen)()
+            .map_err(HandshakeError::Crypto)?;
+        self.handshake_state.local_ephemeral = Some(local_ephemeral_priv);
 
-        let local_ephemeral_priv = self.handshake_state.local_ephemeral.ok_or("not initialized yet")?;
-        let local_ephemeral_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_ephemeral_priv)?;
+        let local_ephemeral_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_ephemeral_priv)
+            .map_err(HandshakeError::Crypto)?;
         let ephemeral = local_ephemeral_pub.serialize();
     	self.handshake_state.symmetric_state.mix_hash(&ephemeral);
 
     	// es
-        let s = ecdh(&self.handshake_state.remote_static, &local_ephemeral_priv)?;
+        let s = ecdh(&self.handshake_state.remote_static, &local_ephemeral_priv)
+            .map_err(HandshakeError::Crypto)?;
         self.handshake_state.symmetric_state.mix_key(&s);
 
-    	let auth_payload = self.handshake_state.symmetric_state.encrypt_and_hash(&[], &mut Vec::new())?;
+    	let auth_payload = self.handshake_state.symmetric_state
+            .encrypt_and_hash(&[], &mut Vec::new())
+            .map_err(HandshakeError::Io)?;
 
         let mut act_one: [u8; ACT_ONE_SIZE] = [0; ACT_ONE_SIZE];
         act_one[0] = HANDSHAKE_VERSION;
@@ -544,12 +608,13 @@ impl Machine {
     // executes the mirrored actions to that of the initiator extending the
     // handshake digest and deriving a new shared secret based on an ECDH with the
     // initiator's ephemeral key and responder's static key.
-    fn recv_act_one(&mut self, act_one: [u8; ACT_ONE_SIZE]) -> Result<(), Box<Error>> {
+    fn recv_act_one(&mut self, act_one: [u8; ACT_ONE_SIZE]) -> Result<(), HandshakeError> {
     	// If the handshake version is unknown, then the handshake fails
     	// immediately.
     	if act_one[0] != HANDSHAKE_VERSION {
-    		return Err(From::from(format!("Act One: invalid handshake version: {}, only {} is valid, msg={:?}",
-                                          act_one[0], HANDSHAKE_VERSION, &act_one[..])))
+            let msg = format!("Act One: invalid handshake version: {}, only {} is valid, msg={:?}",
+                              act_one[0], HANDSHAKE_VERSION, &act_one[..]);
+    		return Err(HandshakeError::UnknownHandshakeVersion(msg))
     	}
 
         let mut e: [u8; 33] = [0; 33];
@@ -559,17 +624,20 @@ impl Machine {
         p.copy_from_slice(&act_one[34..]);
 
     	// e
-        let remote_ephemeral = PublicKey::from_slice(&Secp256k1::new(), &e)?;
+        let remote_ephemeral = PublicKey::from_slice(&Secp256k1::new(), &e)
+            .map_err(HandshakeError::Crypto)?;
         self.handshake_state.remote_ephemeral = Some(remote_ephemeral);
     	self.handshake_state.symmetric_state.mix_hash(&remote_ephemeral.serialize());
 
     	// es
-    	let s = ecdh(&remote_ephemeral, &self.handshake_state.local_static)?;
+    	let s = ecdh(&remote_ephemeral, &self.handshake_state.local_static)
+            .map_err(HandshakeError::Crypto)?;
     	self.handshake_state.symmetric_state.mix_key(&s);
 
     	// If the initiator doesn't know our static key, then this operation
     	// will fail.
-        self.handshake_state.symmetric_state.decrypt_and_hash(&[], p)?;
+        self.handshake_state.symmetric_state.decrypt_and_hash(&[], p)
+            .map_err(HandshakeError::Io)?;
 
         Ok(())
     }
@@ -580,21 +648,24 @@ impl Machine {
     // initiator's and responder's ephemeral keys.
     //
     //    <- e, ee
-    fn gen_act_two(&mut self) -> Result<[u8; ACT_TWO_SIZE], Box<Error>> {
+    fn gen_act_two(&mut self) -> Result<[u8; ACT_TWO_SIZE], HandshakeError> {
     	// e
-        let local_ephemeral_priv = (self.ephemeral_gen)()?;
+        let local_ephemeral_priv = (self.ephemeral_gen)().map_err(HandshakeError::Crypto)?;
         self.handshake_state.local_ephemeral = Some(local_ephemeral_priv);
 
         let local_ephemeral_pub = PublicKey::from_secret_key(
-            &Secp256k1::new(), &local_ephemeral_priv)?;
+            &Secp256k1::new(), &local_ephemeral_priv).map_err(HandshakeError::Crypto)?;
         let ephemeral = local_ephemeral_pub.serialize();
     	self.handshake_state.symmetric_state.mix_hash(&ephemeral);
 
     	// ee
-    	let s = ecdh(&self.handshake_state.remote_ephemeral.ok_or("not initialized yet")?, &local_ephemeral_priv)?;
+    	let s = ecdh(&self.handshake_state.remote_ephemeral.ok_or(HandshakeError::NotInitializedYet)?, &local_ephemeral_priv)
+            .map_err(HandshakeError::Crypto)?;
     	self.handshake_state.symmetric_state.mix_key(&s);
 
-        let auth_payload = self.handshake_state.symmetric_state.encrypt_and_hash(&[], &mut Vec::new())?;
+        let auth_payload = self.handshake_state.symmetric_state
+            .encrypt_and_hash(&[], &mut Vec::new())
+            .map_err(HandshakeError::Io)?;
 
         let mut act_two: [u8; ACT_TWO_SIZE] = [0; ACT_TWO_SIZE];
     	act_two[0] = HANDSHAKE_VERSION;
@@ -607,12 +678,13 @@ impl Machine {
     // recv_act_two processes the second packet (act two) sent from the responder to
     // the initiator. A successful processing of this packet authenticates the
     // initiator to the responder.
-    fn recv_act_two(&mut self, act_two: [u8; ACT_TWO_SIZE]) -> Result<(), Box<Error>> {
+    fn recv_act_two(&mut self, act_two: [u8; ACT_TWO_SIZE]) -> Result<(), HandshakeError> {
     	// If the handshake version is unknown, then the handshake fails
     	// immediately.
     	if act_two[0] != HANDSHAKE_VERSION {
-    		return Err(From::from(format!("Act Two: invalid handshake version: {}, only {} is valid, msg={:?}",
-                                          act_two[0], HANDSHAKE_VERSION, &act_two[..])))
+            let msg = format!("Act Two: invalid handshake version: {}, only {} is valid, msg={:?}",
+                              act_two[0], HANDSHAKE_VERSION, &act_two[..]);
+    		return Err(HandshakeError::UnknownHandshakeVersion(msg))
     	}
 
         let mut e: [u8; 33] = [0; 33];
@@ -622,15 +694,18 @@ impl Machine {
         p.copy_from_slice(&act_two[34..]);
 
     	// e
-        let remote_ephemeral = PublicKey::from_slice(&Secp256k1::new(), &e)?;
+        let remote_ephemeral = PublicKey::from_slice(&Secp256k1::new(), &e)
+            .map_err(HandshakeError::Crypto)?;
         self.handshake_state.remote_ephemeral = Some(remote_ephemeral);
     	self.handshake_state.symmetric_state.mix_hash(&remote_ephemeral.serialize());
 
     	// ee
-    	let s = ecdh(&remote_ephemeral, &self.handshake_state.local_ephemeral.ok_or("not initialized yet")?)?;
+    	let s = ecdh(&remote_ephemeral, &self.handshake_state.local_ephemeral.ok_or(HandshakeError::NotInitializedYet)?)
+            .map_err(HandshakeError::Crypto)?;
         self.handshake_state.symmetric_state.mix_key(&s);
 
-        self.handshake_state.symmetric_state.decrypt_and_hash(&mut Vec::new(), p)?;
+        self.handshake_state.symmetric_state.decrypt_and_hash(&mut Vec::new(), p)
+            .map_err(HandshakeError::Io)?;
         Ok(())
     }
 
@@ -641,16 +716,20 @@ impl Machine {
     // the final session.
     //
     //    -> s, se
-    fn gen_act_three(&mut self) -> Result<[u8; ACT_THREE_SIZE], Box<Error>> {
-        let local_static_pub = PublicKey::from_secret_key(&Secp256k1::new(), &self.handshake_state.local_static)?;
+    fn gen_act_three(&mut self) -> Result<[u8; ACT_THREE_SIZE], HandshakeError> {
+        let local_static_pub = PublicKey::from_secret_key(&Secp256k1::new(), &self.handshake_state.local_static)
+            .map_err(HandshakeError::Crypto)?;
     	let our_pubkey = local_static_pub.serialize();
         let mut ciphertext = Vec::new();
-        let tag = self.handshake_state.symmetric_state.encrypt_and_hash(&our_pubkey, &mut ciphertext)?;
+        let tag = self.handshake_state.symmetric_state.encrypt_and_hash(&our_pubkey, &mut ciphertext)
+            .map_err(HandshakeError::Io)?;
 
-    	let s = ecdh(&self.handshake_state.remote_ephemeral.ok_or("not initialized yet")?, &self.handshake_state.local_static)?;
+    	let s = ecdh(&self.handshake_state.remote_ephemeral.ok_or(HandshakeError::NotInitializedYet)?, &self.handshake_state.local_static)
+            .map_err(HandshakeError::Crypto)?;
     	self.handshake_state.symmetric_state.mix_key(&s);
 
-        let auth_payload = self.handshake_state.symmetric_state.encrypt_and_hash(&[], &mut Vec::new())?;
+        let auth_payload = self.handshake_state.symmetric_state.encrypt_and_hash(&[], &mut Vec::new())
+            .map_err(HandshakeError::Io)?;
 
         let mut act_three: [u8; ACT_THREE_SIZE] = [0; ACT_THREE_SIZE];
         act_three[0] = HANDSHAKE_VERSION;
@@ -669,12 +748,13 @@ impl Machine {
     // the responder. After processing this act, the responder learns of the
     // initiator's static public key. Decryption of the static key serves to
     // authenticate the initiator to the responder.
-    fn recv_act_three(&mut self, act_three: [u8; ACT_THREE_SIZE]) -> Result<(), Box<Error>> {
+    fn recv_act_three(&mut self, act_three: [u8; ACT_THREE_SIZE]) -> Result<(), HandshakeError> {
         // If the handshake version is unknown, then the handshake fails
         // immediately.
         if act_three[0] != HANDSHAKE_VERSION {
-            return Err(From::from(format!("Act Three: invalid handshake version: {}, only {} is valid, msg={:?}",
-                           act_three[0], HANDSHAKE_VERSION, &act_three[..])))
+            let msg = format!("Act Three: invalid handshake version: {}, only {} is valid, msg={:?}",
+                              act_three[0], HANDSHAKE_VERSION, &act_three[..]);
+            return Err(HandshakeError::UnknownHandshakeVersion(msg))
         }
 
         let mut ciphertext: [u8; 33] = [0; 33];
@@ -688,14 +768,18 @@ impl Machine {
         p.copy_from_slice(&act_three[33+16+1..]);
 
         // s
-        let remote_pub = self.handshake_state.symmetric_state.decrypt_and_hash(&ciphertext, tag)?;
-        self.handshake_state.remote_static = PublicKey::from_slice(&Secp256k1::new(), &remote_pub)?;
+        let remote_pub = self.handshake_state.symmetric_state.decrypt_and_hash(&ciphertext, tag)
+            .map_err(HandshakeError::Io)?;
+        self.handshake_state.remote_static = PublicKey::from_slice(&Secp256k1::new(), &remote_pub)
+            .map_err(HandshakeError::Crypto)?;
 
         // se
-        let se = ecdh(&self.handshake_state.remote_static, &self.handshake_state.local_ephemeral.ok_or("not initialized yet")?)?;
+        let se = ecdh(&self.handshake_state.remote_static, &self.handshake_state.local_ephemeral.ok_or(HandshakeError::NotInitializedYet)?)
+            .map_err(HandshakeError::Crypto)?;
         self.handshake_state.symmetric_state.mix_key(&se);
 
-        self.handshake_state.symmetric_state.decrypt_and_hash(&[], p)?;
+        self.handshake_state.symmetric_state.decrypt_and_hash(&[], p)
+            .map_err(HandshakeError::Io)?;
 
         // With the final ECDH operation complete, derive the session sending
         // and receiving keys.
@@ -738,12 +822,12 @@ impl Machine {
     // ciphertext of the message is prepended with an encrypt+auth'd length which
     // must be used as the AD to the AEAD construction when being decrypted by the
     // other side.
-    fn write_message<W: Write>(&mut self, w: &mut W, p: &[u8]) -> Result<(), Box<Error>> {
+    fn write_message<W: Write>(&mut self, w: &mut W, p: &[u8]) -> Result<(), BrontideError> {
     	// The total length of each message payload including the MAC size
     	// payload exceed the largest number encodable within a 16-bit unsigned
     	// integer.
         if p.len() > std::u16::MAX as usize {
-            return Err(From::from(ERR_MAX_MESSAGE_LENGTH_EXCEEDED));
+            return Err(BrontideError::MaxMessageLengthExceeded);
         }
 
     	// The full length of the packet is only the packet length, and does
@@ -755,36 +839,42 @@ impl Machine {
 
     	// First, write out the encrypted+MAC'd length prefix for the packet.
         let mut cipher_len = Vec::new();
-        let tag = self.send_cipher.encrypt(&[], &mut cipher_len, &pkt_len)?;
-        w.write_all(&cipher_len)?;
-        w.write_all(&tag)?;
+        let tag = self.send_cipher.encrypt(&[], &mut cipher_len, &pkt_len)
+            .map_err(BrontideError::Io)?;
+        w.write_all(&cipher_len).map_err(BrontideError::Io)?;
+        w.write_all(&tag).map_err(BrontideError::Io)?;
 
     	// Finally, write out the encrypted packet itself. We only write out a
     	// single packet, as any fragmentation should have taken place at a
     	// higher level.
         let mut cipher_text = Vec::new();
-        let tag = self.send_cipher.encrypt(&[], &mut cipher_text, p)?;
-        w.write_all(&cipher_text)?;
-        w.write_all(&tag)?;
+        let tag = self.send_cipher.encrypt(&[], &mut cipher_text, p)
+            .map_err(BrontideError::Io)?;
+        w.write_all(&cipher_text).map_err(BrontideError::Io)?;
+        w.write_all(&tag).map_err(BrontideError::Io)?;
         Ok(())
     }
 
     // read_message attempts to read the next message from the passed io.Reader. In
     // the case of an authentication error, a non-nil error is returned.
-    fn read_message<R: Read>(&mut self, r: &mut R) -> Result<Vec<u8>, Box<Error>> {
-        r.read_exact(&mut self.next_cipher_header)?;
+    fn read_message<R: Read>(&mut self, r: &mut R) -> Result<Vec<u8>, BrontideError> {
+        r.read_exact(&mut self.next_cipher_header).map_err(BrontideError::Io)?;
 
         // Attempt to decrypt+auth the packet length present in the stream.
         let mut pkt_len_bytes = Vec::new();
         let mut tag: [u8; MAC_SIZE] = [0; MAC_SIZE];
         tag.copy_from_slice(&self.next_cipher_header[LENGTH_HEADER_SIZE..]);
         self.recv_cipher.decrypt(
-            &[], &mut pkt_len_bytes, &self.next_cipher_header[..LENGTH_HEADER_SIZE], tag)?;
+            &[],
+            &mut pkt_len_bytes,
+            &self.next_cipher_header[..LENGTH_HEADER_SIZE],
+            tag
+        ).map_err(BrontideError::Io)?;
 
     	// Next, using the length read from the packet header, read the
     	// encrypted packet itself.
         let pkt_len = BigEndian::read_u16(&pkt_len_bytes) as usize + MAC_SIZE;
-        r.read_exact(&mut self.next_cipher_text[..pkt_len])?;
+        r.read_exact(&mut self.next_cipher_text[..pkt_len]).map_err(BrontideError::Io)?;
 
         let mut plaintext = Vec::new();
         let mut tag = [0; MAC_SIZE];
@@ -792,7 +882,8 @@ impl Machine {
         self.recv_cipher.decrypt(
             &[], &mut plaintext,
             &self.next_cipher_text[..pkt_len - MAC_SIZE],
-            tag)?;
+            tag
+        ).map_err(BrontideError::Io)?;
 
         Ok(plaintext)
     }
@@ -814,34 +905,34 @@ pub use wire_tool::MessageSource;
 mod wire_tool {
     use wire::BinarySD;
     use wire::Message;
-    use std::error::Error;
     use std::io;
+    use super::BrontideError;
     use super::MachineRead;
     use super::MachineWrite;
 
     pub trait MessageConsumer {
-        fn send(&mut self, message: Message) -> Result<(), Box<Error>>;
+        fn send(&mut self, message: Message) -> Result<(), BrontideError>;
     }
 
     impl<'a, W> MessageConsumer for MachineWrite<'a, W> where W: io::Write {
-        fn send(&mut self, message: Message) -> Result<(), Box<Error>> {
+        fn send(&mut self, message: Message) -> Result<(), BrontideError> {
             let mut vec = Vec::new();
-            BinarySD::serialize(&mut vec, &message)?;
+            BinarySD::serialize(&mut vec, &message).map_err(BrontideError::WireError)?;
             self.noise.write_message(&mut self.write, vec.as_slice())
         }
     }
 
     pub trait MessageSource {
-        fn receive(&mut self) -> Result<Message, Box<Error>>;
+        fn receive(&mut self) -> Result<Message, BrontideError>;
     }
 
     impl<'a, R> MessageSource for MachineRead<'a, R> where R: io::Read {
-        fn receive(&mut self) -> Result<Message, Box<Error>> {
+        fn receive(&mut self) -> Result<Message, BrontideError> {
             self.noise
                 .read_message(&mut self.read)
                 .and_then(|data|
                     BinarySD::deserialize::<Message, _>(data.as_slice())
-                        .map_err(|e| e.into())
+                        .map_err(BrontideError::WireError)
                 )
         }
     }

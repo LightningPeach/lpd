@@ -1,8 +1,10 @@
-use secp256k1::{Secp256k1, SecretKey, PublicKey};
+use secp256k1::{SecretKey, PublicKey};
 use std::net::{TcpListener, TcpStream, SocketAddr};
-use std::error::Error;
 use std::io::{self, Read, Write};
 use super::{Machine, ACT_ONE_SIZE, ACT_TWO_SIZE, ACT_THREE_SIZE, MachineRead, MachineWrite};
+use super::HandshakeError;
+use super::BrontideError;
+use super::IoError;
 
 // Listener is an implementation of a net.Conn which executes an authenticated
 // key exchange and message encryption protocol dubbed "Machine" after
@@ -11,20 +13,19 @@ use super::{Machine, ACT_ONE_SIZE, ACT_TWO_SIZE, ACT_THREE_SIZE, MachineRead, Ma
 // connection.
 pub struct Listener {
     local_static: SecretKey,
-
     tcp: TcpListener,
 }
 
 impl Listener {
     // new returns a new net.Listener which enforces the Brontide scheme
     // during both initial connection establishment and data transfer.
-    pub fn new(local_static: SecretKey, listen_addr: String) -> Result<Self, Box<Error>> {
+    pub fn new(local_static: SecretKey, listen_addr: String) -> Result<Self, IoError> {
         // TODO(evg): call something like golang's net.ResolveTCPAddr("tcp", listenAddr)
 
         let listener = TcpListener::bind(listen_addr)?;
 
-        let brontide_listener = Listener{
-            local_static,
+        let brontide_listener = Listener {
+            local_static: local_static,
             tcp: listener,
         };
 
@@ -33,8 +34,8 @@ impl Listener {
         Ok(brontide_listener)
     }
 
-    pub fn accept(&self) -> Result<Stream, Box<Error>> {
-        let (tcp_stream, _socket_addr) = self.tcp.accept().unwrap();
+    pub fn accept(&self) -> Result<Stream, HandshakeError> {
+        let (tcp_stream, _socket_address) = self.tcp.accept().map_err(HandshakeError::Io)?;
 
         self.do_handshake(tcp_stream)
     }
@@ -42,7 +43,7 @@ impl Listener {
     // doHandshake asynchronously performs the brontide handshake, so that it does
     // not block the main accept loop. This prevents peers that delay writing to the
     // connection from block other connection attempts.
-    pub fn do_handshake(&self, tcp_stream: TcpStream) -> Result<Stream, Box<Error>> {
+    pub fn do_handshake(&self, tcp_stream: TcpStream) -> Result<Stream, HandshakeError> {
 //        defer func() { l.handshakeSema <- struct{}{} }()
 //
 //        select {
@@ -55,7 +56,8 @@ impl Listener {
         // receive(from remote peer) and implicitly verify one.
         let mut brontide_stream = Stream::new(
             tcp_stream,
-            Machine::new(false, self.local_static, PublicKey::new(), &[])?,
+            Machine::new(false, self.local_static, PublicKey::new(), &[])
+                .map_err(HandshakeError::Crypto)?,
         );
 //
 //        // We'll ensure that we get ActOne from the remote peer in a timely
@@ -67,14 +69,16 @@ impl Listener {
         // connecting node doesn't know our long-term static public key, then
         // this portion will fail with a non-nil error.
         let mut act_one: [u8; ACT_ONE_SIZE] = [0; ACT_ONE_SIZE];
-        brontide_stream.read_exact(&mut act_one[..])?;
+        brontide_stream.read_exact(&mut act_one[..])
+            .map_err(HandshakeError::Io)?;
 
         brontide_stream.noise.recv_act_one(act_one)?;
 
         // Next, progress the handshake processes by sending over our ephemeral
         // key for the session along with an authenticating tag.
         let act_two = brontide_stream.noise.gen_act_two()?;
-        brontide_stream.write_all(&act_two[..])?;
+        brontide_stream.write_all(&act_two[..])
+            .map_err(HandshakeError::Io)?;
 
 //
 //        // We'll ensure that we get ActTwo from the remote peer in a timely
@@ -86,7 +90,8 @@ impl Listener {
         // the connection peer's static public key. If this succeeds then both
         // sides have mutually authenticated each other.
         let mut act_three: [u8; ACT_THREE_SIZE] = [0; ACT_THREE_SIZE];
-        brontide_stream.read_exact(&mut act_three[..])?;
+        brontide_stream.read_exact(&mut act_three[..])
+            .map_err(HandshakeError::Io)?;
 
         brontide_stream.noise.recv_act_three(act_three)?;
 
@@ -112,7 +117,6 @@ impl Listener {
 // TODO(evg): both fields must be private
 pub struct Stream {
     stream: TcpStream,
-
     noise: Machine,
 }
 
@@ -129,9 +133,10 @@ impl Stream {
     // public key. In the case of a handshake failure, the connection is closed and
     // a non-nil error is returned.
     pub fn dial(local_priv: SecretKey, net_addr: NetAddress,
-        /* dialer: fn(String, String)  -> Result<Stream, Box<Error>> */) -> Result<Stream, Box<Error>> {
+        /* dialer: fn(String, String)  -> Result<Stream, Box<Error>> */) -> Result<Stream, HandshakeError> {
 
-        let stream = TcpStream::connect(net_addr.address)?;
+        let stream = TcpStream::connect(net_addr.address)
+            .map_err(HandshakeError::Io)?;
 //        ipAddr := netAddr.Address.String()
 //        var conn net.Conn
 //        var err error
@@ -142,13 +147,15 @@ impl Stream {
 //
         let mut brontide_stream = Stream{
             stream,
-            noise: Machine::new(true, local_priv, net_addr.identity_key, &[])?,
+            noise: Machine::new(true, local_priv, net_addr.identity_key, &[])
+                .map_err(HandshakeError::Crypto)?,
         };
 
         // Initiate the handshake by sending the first act to the receiver.
         let act_one = brontide_stream.noise.gen_act_one()?;
 
-        brontide_stream.stream.write_all(&act_one[..])?;
+        brontide_stream.stream.write_all(&act_one[..])
+            .map_err(HandshakeError::Io)?;
 //
 //        // We'll ensure that we get ActTwo from the remote peer in a timely
 //        // manner. If they don't respond within 1s, then we'll kill the
@@ -160,7 +167,8 @@ impl Stream {
         // send our static public key to the remote peer with strong forward
         // secrecy.
         let mut act_two: [u8; ACT_TWO_SIZE] = [0; ACT_TWO_SIZE];
-        brontide_stream.stream.read_exact(&mut act_two[..])?;
+        brontide_stream.stream.read_exact(&mut act_two[..])
+            .map_err(HandshakeError::Io)?;
 
         brontide_stream.noise.recv_act_two(act_two)?;
 
@@ -168,7 +176,8 @@ impl Stream {
         // key and execute the final ECDH operation.
         let act_three = brontide_stream.noise.gen_act_three()?;
 
-        brontide_stream.stream.write_all(&act_three[..])?;
+        brontide_stream.stream.write_all(&act_three[..])
+            .map_err(HandshakeError::Io)?;
 //
 //        // We'll reset the deadline as it's no longer critical beyond the
 //        // initial handshake.
@@ -178,11 +187,11 @@ impl Stream {
         Ok(brontide_stream)
     }
 
-    pub fn encrypt_and_write_message(&mut self, msg: &[u8]) -> Result<(), Box<Error>> {
+    pub fn encrypt_and_write_message(&mut self, msg: &[u8]) -> Result<(), BrontideError> {
         self.noise.write_message(&mut self.stream, msg)
     }
 
-    pub fn read_and_decrypt_message(&mut self) -> Result<Vec<u8>, Box<Error>> {
+    pub fn read_and_decrypt_message(&mut self) -> Result<Vec<u8>, BrontideError> {
         self.noise.read_message(&mut self.stream)
     }
 
@@ -244,40 +253,4 @@ pub struct NetAddress {
 	// address is the IP address and port of the node. This is left
 	// general so that multiple implementations can be used.
 	pub address: SocketAddr,
-}
-
-#[cfg(feature = "testing")]
-mod convenient_conversion {
-    use super::*;
-    use rand;
-    use hex;
-
-    // sweep under the rug
-    impl Stream {
-        pub fn from_pair(socket_str: &'static str, public_key_str: &'static str) -> Self {
-            use secp256k1::constants::SECRET_KEY_SIZE;
-
-            let local_priv = {
-                let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
-                SecretKey::from_slice(&Secp256k1::new(), &local_priv_bytes).unwrap()
-            };
-
-            let net_address = {
-                let remote_pub = {
-                    let remote_pub_hex = public_key_str;
-                    let remote_pub_bytes = hex::decode(remote_pub_hex).unwrap();
-                    PublicKey::from_slice(&Secp256k1::new(), &remote_pub_bytes).unwrap()
-                };
-
-                let socket_addr = socket_str.parse().unwrap();
-
-                NetAddress {
-                    identity_key: remote_pub,
-                    address: socket_addr,
-                }
-            };
-
-            Stream::dial(local_priv, net_address).unwrap()
-        }
-    }
 }

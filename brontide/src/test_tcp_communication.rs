@@ -1,6 +1,5 @@
 use super::tcp_communication::{Listener, Stream, NetAddress};
 use std::error::Error;
-use std::thread;
 
 use secp256k1::{Secp256k1, SecretKey, PublicKey};
 use secp256k1::constants::SECRET_KEY_SIZE;
