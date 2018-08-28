@@ -16,6 +16,7 @@ pub struct AnnouncementChannel {
 }
 
 #[cfg(test)]
+#[allow(unused_imports)]
 mod test {
     use super::*;
     use ::BinarySD;
