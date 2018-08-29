@@ -8,6 +8,10 @@ impl Hash256 {
     pub const BITCOIN_CHAIN_HASH: Self = Hash256 {
         data: hex!("6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000"),
     };
+
+    pub const TEST_HASH: Self = Hash256 {
+        data: hex!("683e86bd5c6d110d91b94b97137ba6bfe02dbbdb8e3dff722a669b5d69d77af6"),
+    };
 }
 
 mod sha2 {

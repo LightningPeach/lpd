@@ -1,5 +1,5 @@
 use secp256k1::{SecretKey, PublicKey};
-use std::net::{TcpListener, TcpStream, SocketAddr};
+use std::net::{TcpListener, TcpStream, SocketAddr, ToSocketAddrs};
 use std::io::{self, Read, Write};
 use super::{Machine, ACT_ONE_SIZE, ACT_TWO_SIZE, ACT_THREE_SIZE, MachineRead, MachineWrite};
 use super::HandshakeError;
@@ -19,7 +19,7 @@ pub struct Listener {
 impl Listener {
     // new returns a new net.Listener which enforces the Brontide scheme
     // during both initial connection establishment and data transfer.
-    pub fn new(local_static: SecretKey, listen_addr: String) -> Result<Self, IoError> {
+    pub fn new<A>(local_static: SecretKey, listen_addr: A) -> Result<Self, IoError> where A: ToSocketAddrs {
         // TODO(evg): call something like golang's net.ResolveTCPAddr("tcp", listenAddr)
 
         let listener = TcpListener::bind(listen_addr)?;
@@ -131,7 +131,7 @@ impl Stream {
     // dial attempts to establish an encrypted+authenticated connection with the
     // remote peer located at address which has remotePub as its long-term static
     // public key. In the case of a handshake failure, the connection is closed and
-    // a non-nil error is returned.
+    // an error is returned.
     pub fn dial(local_priv: SecretKey, net_addr: NetAddress,
         /* dialer: fn(String, String)  -> Result<Stream, Box<Error>> */) -> Result<Stream, HandshakeError> {
 
