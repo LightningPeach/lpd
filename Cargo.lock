@@ -552,6 +552,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "testenv"
+version = "0.1.0"
+dependencies = [
+ "brontide 0.1.0",
+ "wire 0.0.0",
+]
+
+[[package]]
 name = "time"
 version = "0.1.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"

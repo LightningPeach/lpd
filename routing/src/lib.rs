@@ -6,49 +6,49 @@
 
 extern crate secp256k1;
 extern crate chrono;
+#[macro_use]
 extern crate wire;
 extern crate brontide;
 extern crate bitcoin_types;
 extern crate common_types;
+extern crate rand;
 
 #[cfg(test)]
-extern crate rand;
+#[macro_use]
+extern crate hex_literal;
+
 #[cfg(test)]
 extern crate hex;
 
 pub mod discovery;
 pub mod topology;
+pub mod synchronization;
+pub mod peer;
 
 #[cfg(test)]
 mod tests {
-    use brontide::MachineRead;
-    use brontide::MachineWrite;
-    use brontide::MessageConsumer;
-    use brontide::MessageSource;
-    use brontide::tcp_communication::Stream;
-
+    use super::peer::*;
+    use super::synchronization::*;
     use wire::Message;
     use wire::Init;
     use wire::RawFeatureVector;
     use wire::FeatureBit;
+    use wire::PublicKey;
+    use wire::Address;
 
     #[test]
-    fn it_works() {
-        let mut stream = Stream::from_pair(
-            "127.0.0.1:10011",
-            "03638055e425d51f33c76780919e574d7e987772feb5d12cf57bb4fb4798c06b70"
+    fn test_channel_range() {
+        let tcp_self = TcpSelf::new();
+        let key = public_key!(2, "8faeeb36e7d82134b5bfedcaeb9b81e7be4260ddde1bcc97d5db7d2bd364f471");
+        let mut tcp_peer = tcp_self.connect_peer(key, Address::localhost(10011)).unwrap();
+
+        let init = Init::new(
+            RawFeatureVector::new(),
+            RawFeatureVector::new().set_bit(FeatureBit::GossipQueriesOptional).set_bit(FeatureBit::InitialRoutingSync),
         );
-
-        let init = {
-            use self::FeatureBit::*;
-
-            let global_features = RawFeatureVector::new();
-            let local_features = RawFeatureVector::new().set_bit(InitialRoutingSync);
-            Init::new(global_features, local_features)
-        };
-
-        stream.as_write().send(Message::Init(init)).unwrap();
-        let init = stream.as_read().receive().unwrap().as_init().unwrap();
-        println!("{:?}", init);
+        let response = tcp_peer.synchronous_message(Message::Init(init)).unwrap();
+        println!("{:?}", response);
+        let s = Synchronization {};
+        s.sync_channels(&mut tcp_peer)
     }
 }
