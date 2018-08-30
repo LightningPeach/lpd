@@ -10,8 +10,10 @@ brontide = { path = "../brontide" }
 common-types = { path = "../common-types" }
 bitcoin-types = { path = "../bitcoin-types" }
 chrono = "0.4.5"
+rand = "0.5.4"
 
 [dev-dependencies]
-rand = "0.5.4"
 hex = "0.3.2"
+hex-literal = "0.1.1"
 brontide = { path = "../brontide", features = ["testing"] }
+wire = { path = "../wire", features = ["testing"] }
