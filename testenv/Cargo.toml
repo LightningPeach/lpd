@@ -1,0 +1,8 @@
+[package]
+name = "testenv"
+version = "0.1.0"
+authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
+
+[dependencies]
+wire = { path = "../wire" }
+brontide = { path = "../brontide" }
