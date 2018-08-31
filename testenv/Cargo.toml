@@ -6,3 +6,6 @@ authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
 [dependencies]
 wire = { path = "../wire" }
 brontide = { path = "../brontide" }
+lnd-rust = "0.2.2"
+grpc = "0.5.0"
+futures = "0.1.23"
