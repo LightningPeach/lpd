@@ -4,10 +4,15 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::process::Child;
 use std::io;
+use std::convert::AsRef;
 
 pub struct BtcDaemon {
     home: Home,
-    instance: Option<Child>,
+}
+
+pub struct BtcRunning {
+    daemon: BtcDaemon,
+    instance: Child,
 }
 
 impl BtcDaemon {
@@ -22,14 +27,11 @@ impl BtcDaemon {
     pub fn new(name: &str) -> Result<Self, io::Error> {
         Ok(BtcDaemon {
             home: Home::new(name)?,
-            instance: None,
         })
     }
 
-    pub fn run(&mut self) -> Result<(), io::Error> {
-        self.terminate()?;
-
-        self.instance = Some(Command::new("btcd")
+    pub fn run(self) -> Result<BtcRunning, io::Error> {
+        Command::new("btcd")
             .args(&["--simnet", "--txindex", "--rpcuser=devuser", "--rpcpass=devpass"])
             .args(&[
                 format!("--datadir={}", self.home.ext_path("data").to_str().unwrap()),
@@ -38,25 +40,22 @@ impl BtcDaemon {
                 format!("--rpckey={}", self.home.private_key_path().to_str().unwrap()),
             ])
             .arg("--miningaddr=sb1qvc0mwkl35rl60memjwglxjnz0qsfxhaqq3nx4x")
-            .spawn()?
-        );
-
-        Ok(())
+            .spawn()
+            .map(|instance| BtcRunning {
+                daemon: self,
+                instance: instance,
+            })
     }
+}
 
-    pub fn terminate(&mut self) -> Result<(), io::Error> {
-        if let Some(ref mut instance) = self.instance {
-            instance.kill()?;
-        }
-
-        self.instance = None;
-
-        Ok(())
+impl AsRef<BtcDaemon> for BtcRunning {
+    fn as_ref(&self) -> &BtcDaemon {
+        &self.daemon
     }
+}
 
-    pub fn with<F>(&mut self, op: F) -> Result<(), io::Error> where F: FnOnce(&Self) {
-        self.run()?;
-        op(self);
-        self.terminate()
+impl Drop for BtcRunning {
+    fn drop(&mut self) {
+        self.instance.kill().unwrap()
     }
 }
