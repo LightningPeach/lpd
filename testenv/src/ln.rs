@@ -26,6 +26,7 @@ pub struct LnDaemon<'a> {
 pub struct LnRunning<'a> {
     daemon: LnDaemon<'a>,
     instance: Child,
+    client: LightningClient,
 }
 
 impl<'a> LnDaemon<'a> {
@@ -64,9 +65,21 @@ impl<'a> LnDaemon<'a> {
                 format!("--restlisten=localhost:{}", self.rest_port),
             ])
             .spawn()
-            .map(|instance| LnRunning {
-                daemon: self,
-                instance: instance,
+            .and_then(|instance| {
+                use lnd_rust::tls_certificate::TLSCertificate;
+
+                let certificate = TLSCertificate::from_path(self.home.public_key_path())?;
+                let localhost = "127.0.0.1";
+                let tls = certificate.into_tls(localhost)?;
+                let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::from_str(localhost).unwrap()), self.rpc_port);
+                let conf = Default::default();
+                let c = grpc::Client::new_expl(&socket_address, localhost, tls, conf)?;
+
+                Ok(LnRunning {
+                    daemon: self,
+                    instance: instance,
+                    client: LightningClient::with_client(c),
+                })
             })
     }
 }
@@ -88,23 +101,11 @@ impl<'a> LnRunning<'a> {
             .collect()
     }
 
-    pub fn client(&self) -> Result<LightningClient, io::Error> {
-        use lnd_rust::tls_certificate::TLSCertificate;
-
-        let &LnRunning {
-            daemon: ref daemon,
-            instance: _,
-        } = self;
-        let certificate = TLSCertificate::from_der_path(daemon.home.public_key_path())?;
-        let localhost = "127.0.0.1";
-        let conf = Default::default();
-        let tls = certificate.into_tls(localhost)?;
-        let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::from_str(localhost).unwrap()), daemon.rpc_port);
-        let c = grpc::Client::new_expl(&socket_address, localhost, tls, conf)?;
-        Ok(LightningClient::with_client(c))
+    pub fn client(&self) -> &LightningClient {
+        &self.client
     }
 
-    pub fn address(&self) -> Result<impl Future<Item=LightningAddress, Error=grpc::Error>, io::Error> {
+    pub fn address(&self) -> impl Future<Item=LightningAddress, Error=grpc::Error> {
         use lnd_rust::rpc;
         use lnd_rust::rpc_grpc::Lightning;
         use grpc::RequestOptions;
@@ -112,16 +113,12 @@ impl<'a> LnRunning<'a> {
         let mut address = LightningAddress::new();
         address.set_host(format!("127.0.0.1:{}", self.daemon.peer_port));
 
-        self
-            .client()
-            .map(move |client| {
-                client
-                    .get_info(RequestOptions::new(), rpc::GetInfoRequest::new())
-                    .drop_metadata()
-                    .map(move |response| {
-                        address.set_pubkey(response.identity_pubkey);
-                        address
-                    })
+        self.client
+            .get_info(RequestOptions::new(), rpc::GetInfoRequest::new())
+            .drop_metadata()
+            .map(move |response| {
+                address.set_pubkey(response.identity_pubkey);
+                address
             })
     }
 }

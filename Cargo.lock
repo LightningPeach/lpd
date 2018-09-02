@@ -507,7 +507,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "lnd-rust"
-version = "0.2.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bytes 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1059,7 +1059,7 @@ dependencies = [
  "brontide 0.1.0",
  "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lnd-rust 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lnd-rust 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "wire 0.0.0",
 ]
 
@@ -1461,7 +1461,7 @@ dependencies = [
 "checksum lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ca488b89a5657b0a2ecd45b95609b3e848cf1755da332a0da46e2b2b1cb371a7"
 "checksum lazycell 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a6f08839bc70ef4a3fe1d566d5350f519c5912ea86be0df1740a7d247c7fc0ef"
 "checksum libc 0.2.43 (registry+https://github.com/rust-lang/crates.io-index)" = "76e3a3ef172f1a0b9a9ff0dd1491ae5e6c948b94479a3021819ba7d860c8645d"
-"checksum lnd-rust 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "fe81ff8bc8dfdb570a306199df77e7cabf43bbeb7135b26420ecac6f24c02093"
+"checksum lnd-rust 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "1707be70e0f22ec0b57de02ef38b5b1ea282c2430354cb3eb4901b7544a5ccab"
 "checksum lock_api 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "949826a5ccf18c1b3a7c3d57692778d21768b79e46eb9dd07bfc4c2160036c54"
 "checksum log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"
 "checksum log 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "cba860f648db8e6f269df990180c2217f333472b4a6e901e97446858487971e2"
