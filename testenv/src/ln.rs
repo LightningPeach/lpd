@@ -73,10 +73,8 @@ impl<'a> LnDaemon<'a> {
 
 impl<'a> LnRunning<'a> {
     // errors ignored
-    pub fn with<F, T>(limit: u16, base_port: u16, btcd: &'a BtcDaemon, op: F) -> T where
-        F: FnOnce(&mut Vec<Self>) -> T
-    {
-        let mut nodes = (0..limit).into_iter()
+    pub fn batch(limit: u16, base_port: u16, btcd: &'a BtcDaemon) -> Vec<Self> {
+        (0..limit).into_iter()
             .map(|index| -> Result<LnRunning, io::Error> {
                 let p_peer = base_port + index * 10;
                 let p_rpc = base_port + index * 10 + 1;
@@ -87,8 +85,7 @@ impl<'a> LnRunning<'a> {
                 )?.run()
             })
             .filter_map(Result::ok)
-            .collect::<Vec<_>>();
-        op(&mut nodes)
+            .collect()
     }
 
     pub fn client(&self) -> Result<LightningClient, io::Error> {
