@@ -6,6 +6,7 @@ extern crate brontide;
 extern crate lnd_rust;
 extern crate grpc;
 extern crate futures;
+extern crate lazycell;
 
 mod home;
 use self::home::Home;
@@ -22,16 +23,14 @@ mod tests {
     use super::BtcDaemon;
     use super::LnRunning;
 
-    use lnd_rust::rpc_grpc::Lightning;
-    use lnd_rust::rpc;
-    use grpc::RequestOptions;
-
     use futures::Future;
+    use futures::Stream;
 
     #[test]
     fn run_btcd_lnd() {
         use std::thread;
         use std::time::Duration;
+        use lnd_rust::rpc;
 
         let btcd = BtcDaemon::new("btcd").unwrap().run().unwrap();
 
@@ -39,14 +38,10 @@ mod tests {
         let nodes = LnRunning::batch(2, 10000, btcd.as_ref());
 
         thread::sleep(Duration::from_secs(10));
-        let peer_address = nodes[1].address().wait().unwrap();
-        let mut connect_peer_request = rpc::ConnectPeerRequest::new();
-        connect_peer_request.set_addr(peer_address);
-        let options = RequestOptions::new();
-        // try to connect first peer to second
-        let response = nodes[0].client().connect_peer(options, connect_peer_request);
-        let v = response.0.wait().unwrap().1.wait().unwrap().0;
-        println!("{:?}", v);
-        thread::sleep(Duration::from_secs(100));
+        let _ = nodes[0].connect_peer(&nodes[1]).wait().unwrap();
+        let update_stream = nodes[0].open_channel(&nodes[1]);
+        let _ = update_stream.map(|i| {
+            println!("{:?}", i);
+        });
     }
 }

@@ -9,3 +9,4 @@ brontide = { path = "../brontide" }
 lnd-rust = "0.3.3"
 grpc = "0.5.0"
 futures = "0.1.23"
+lazycell = "1.0.0"
