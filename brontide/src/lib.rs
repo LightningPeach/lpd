@@ -138,7 +138,7 @@ fn ecdh(pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], CryptoError> {
 }
 
 // TODO(evg): we have changed encrypt/decrypt and encrypt_and_hash/decrypt_and_hash method signatures
-// so it should be reflect in docs
+// so it should be reflect in doc
 
 // CipherState encapsulates the state for the AEAD which will be used to
 // encrypt+authenticate any payloads sent during the handshake, and messages
