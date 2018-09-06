@@ -1,13 +1,22 @@
 pub mod types;
-pub mod setup;
-pub mod channel;
-pub mod control;
 
-use self::setup::Init;
-use self::setup::Error;
-use self::control::Ping;
-use self::control::Pong;
-use self::channel::*;
+mod setup;
+pub use self::setup::*;
+
+mod control;
+pub use self::control::*;
+
+mod channel;
+pub use self::channel::*;
+
+mod node;
+pub use self::node::*;
+
+mod announce_signatures;
+pub use self::announce_signatures::*;
+
+mod gossip_timestamp_range;
+pub use self::gossip_timestamp_range::*;
 
 use serde::Serialize;
 use serde::Serializer;
@@ -119,7 +128,15 @@ message! {
         RevokeAndAck(133u16, as_revoke_and_ack),
         UpdateFee(134u16, as_update_fee),
         ReestablishChannel(136u16, as_reestablish_channel),
-        AnnouncementChannel(256u16, as_announcement_channel)
+        AnnouncementChannel(256u16, as_announcement_channel),
+        AnnouncementNode(257u16, as_announcement_node),
+        UpdateChannel(258u16, as_update_channel),
+        AnnounceSignatures(259u16, as_announce_signatures),
+        QueryShortChannelIds(261u16, as_query_short_channel_ids),
+        ReplyShortChannelIdsEnd(262u16, as_reply_short_channel_ids_end),
+        QueryChannelRange(263u16, as_query_channel_range),
+        ReplyChannelRange(264u16, as_reply_channel_range),
+        GossipTimestampRange(265u16, as_gossip_timestamp_range)
     }
 }
 
