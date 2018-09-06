@@ -2,13 +2,7 @@ use super::Signature;
 use super::RawFeatureVector;
 use super::Hash256;
 use super::PublicKey;
-
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct ShortChannelId {
-    block_height: u32,
-    tx_index: u32,
-    tx_position: u16,
-}
+use super::ShortChannelId;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct AnnouncementChannel {

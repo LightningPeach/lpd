@@ -20,7 +20,7 @@ use std::net::{TcpStream, SocketAddr};
 use std::error::Error;
 
 use brontide::tcp_communication::{Stream, NetAddress};
-use wire::{Message, BinarySD, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned};
+use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned};
 use wire::PublicKey as LpdPublicKey;
 use wire::Signature as LpdSignature;
 
@@ -289,7 +289,7 @@ fn main() {
                 let my_commit_signed = CommitmentSigned{
                     channel_id: commitment_signed.channel_id,
                     signature: LpdSignature::from(commit_tx.sign(&funding_sk)),
-                    htlc_signatures: vec![]
+                    htlc_signatures: SerdeVec(vec![])
                 };
                 write_msg(&mut brontide_stream, &Message::CommitmentSigned(my_commit_signed));
                 your_commit_tx = Some(commit_tx);

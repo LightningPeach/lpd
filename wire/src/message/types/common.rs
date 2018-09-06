@@ -21,3 +21,13 @@ pub trait BiWrapper: Sized {
     fn first<F>(self, f: F) -> Self where F: FnOnce(Self::WrappedLeft) -> Self::WrappedLeft;
     fn second<G>(self, g: G) -> Self where G: FnOnce(Self::WrappedRight) -> Self::WrappedRight;
 }
+
+use std::ops::Add;
+use std::ops::Sub;
+use std::ops::Mul;
+
+/// The algebraic module over a field
+pub trait Module<F>: Sized + Add<Output=Self> + Sub<Output=Self> + Mul<F, Output=Self> {
+    fn conjugate(self) -> Self { self }
+    fn dot(self, rhs: Self) -> F;
+}
