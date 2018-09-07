@@ -153,4 +153,11 @@ mod test {
 
         assert_eq!(feature_vector, new_feature_vector);
     }
+
+    #[test]
+    fn empty() {
+        let v = vec![0u8, 0u8];
+        let t: RawFeatureVector = BinarySD::deserialize(&v[..]).unwrap();
+        println!("{:?}", t);
+    }
 }
