@@ -1,5 +1,4 @@
 use super::Home;
-use super::BtcDaemon;
 
 use std::process::Command;
 use std::process::Child;
@@ -8,7 +7,6 @@ use std::io;
 use lnd_rust::rpc::GetInfoResponse;
 use lnd_rust::rpc::LightningAddress;
 use lnd_rust::rpc::ConnectPeerResponse;
-use lnd_rust::rpc::NewAddressRequest;
 use lnd_rust::rpc::OpenStatusUpdate;
 
 use lnd_rust::rpc_grpc::LightningClient;
@@ -175,20 +173,25 @@ impl LnRunning {
             .drop_metadata()
     }
 
+    // TODO:
     pub fn open_channel(&self, peer: &Self) -> impl Stream<Item=OpenStatusUpdate, Error=grpc::Error> {
         use lnd_rust::rpc;
         use lnd_rust::rpc_grpc::Lightning;
         use grpc::RequestOptions;
+        use hex::FromHex;
 
         let peer_address = peer.address();
         let mut request = rpc::OpenChannelRequest::new();
-        request.set_node_pubkey_string(peer_address.get_pubkey().to_owned());
-        request.set_local_funding_amount(100000);
-        request.set_min_htlc_msat(1000);
-        request.set_push_sat(0);
+        let peer_pubkey = peer_address.get_pubkey();
+        request.set_node_pubkey_string(peer_pubkey.to_owned());
+        request.set_node_pubkey(Vec::from_hex(peer_pubkey).unwrap());
+        request.set_local_funding_amount(1000000);
+        request.set_min_htlc_msat(10000);
+        request.set_push_sat(1000);
         request.set_remote_csv_delay(144);
         request.set_sat_per_byte(12500);
-        request.set_target_conf(0);
+        request.set_target_conf(6);
+        request.set_private(false);
         self.client()
             .open_channel(RequestOptions::new(), request)
             .drop_metadata()

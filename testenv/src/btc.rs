@@ -68,6 +68,23 @@ impl BtcRunning {
         mem::replace(&mut s.daemon, daemon)
             .run_internal(Some(address))
     }
+
+    pub fn generate(&mut self, count: usize) -> Result<(), io::Error> {
+        Command::new("btcctl")
+            .args(&["--simnet", "--rpcuser=devuser", "--rpcpass=devpass"])
+            .arg(format!("--rpccert={}", self.daemon.home.public_key_path().to_str().unwrap()))
+            .args(&["generate"])
+            .args(&[format!("{}", count)])
+            .output()
+            .and_then(|output|
+                if output.status.success() {
+                    Ok(())
+                } else {
+                    // TODO: process it
+                    panic!()
+                }
+            )
+    }
 }
 
 impl AsMut<BtcDaemon> for BtcRunning {

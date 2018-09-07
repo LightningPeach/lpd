@@ -7,6 +7,7 @@ extern crate lnd_rust;
 extern crate grpc;
 extern crate futures;
 extern crate lazycell;
+extern crate hex;
 
 mod home;
 use self::home::Home;
@@ -30,7 +31,6 @@ mod tests {
     fn run_btcd_lnd() {
         use std::thread;
         use std::time::Duration;
-        use lnd_rust::rpc;
 
         let btc_running = BtcDaemon::new("btcd").unwrap().run().unwrap();
 
@@ -40,17 +40,33 @@ mod tests {
         thread::sleep(Duration::from_secs(10));
 
         let mining_address = nodes[0].new_address().wait().unwrap();
-        let btc_running = btc_running.rerun_with_mining_address(mining_address).unwrap();
+        let mut btc_running = btc_running.rerun_with_mining_address(mining_address).unwrap();
+        thread::sleep(Duration::from_secs(10));
+
+        btc_running.generate(400).unwrap();
+        thread::sleep(Duration::from_secs(5));
 
         let _ = nodes[0].connect_peer(&nodes[1]).wait().unwrap();
-        let update_stream = nodes[0].open_channel(&nodes[1]);
+        let mut update_stream = nodes[0].open_channel(&nodes[1]);
+        thread::sleep(Duration::from_secs(5));
+        btc_running.generate(10).unwrap();
+
         let _ = update_stream.map(|i| {
             println!("{:?}", i);
         });
 
-        loop {}
+        fn pause() {
+            use std::io;
+            use std::io::prelude::*;
+
+            println!("Enter any string to continue...");
+            let _ = io::stdin().read(&mut [0u8]).unwrap();
+        }
+
+        pause();
 
         // keep it running until this line
+        let _ = nodes;
         let _ = btc_running;
     }
 }
