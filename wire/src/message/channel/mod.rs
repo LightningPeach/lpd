@@ -151,6 +151,7 @@ mod rand {
 
 #[cfg(test)]
 mod tests {
+    use ::BinarySD;
     use super::ShortChannelId;
     use rand;
 
@@ -160,5 +161,12 @@ mod tests {
         let short_channel_id = ShortChannelId::from(value);
         let restored = short_channel_id.into();
         assert_eq!(value, restored);
+    }
+
+    #[test]
+    fn some_test() {
+        let v = vec![0u8, 1, 145, 0, 0, 1, 0, 0, ];
+        let t: ShortChannelId = BinarySD::deserialize(&v[..]).unwrap();
+        println!("{:?}", t);
     }
 }
