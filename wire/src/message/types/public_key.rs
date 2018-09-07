@@ -75,11 +75,8 @@ mod serde {
                         data: [0; SIGNATURE_SIZE],
                     };
                     for i in 0..SIGNATURE_SIZE {
-                        if let Some(value) =  seq.next_element()? {
-                            signature.data[i] = value;
-                        } else {
-                            return Err(Error::custom("unexpected end"));
-                        }
+                        signature.data[i] = seq.next_element()?
+                            .ok_or(<A::Error as Error>::custom("unexpected end"))?;
                     }
 
                     Ok(signature)
@@ -120,7 +117,7 @@ mod debug {
         fn fmt(&self, f: &mut Formatter) -> Result {
             let (mut _0, mut _1) = ([0u8; 32], [0u8; 32]);
             _0.copy_from_slice(&self.data[0..32]);
-            _1.copy_from_slice(&self.data[32..32]);
+            _1.copy_from_slice(&self.data[32..64]);
             write!(f, "Signature [{:?}, {:?}]", _0, _1)
         }
     }
@@ -216,5 +213,25 @@ mod literal {
     #[macro_export]
     macro_rules! public_key {
         ($header:expr, $value:expr) => { PublicKey::new($header, hex!($value)) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ::BinarySD;
+
+    #[test]
+    fn signature() {
+        let v = vec! [
+            169u8, 177, 196, 25, 57, 80, 208, 176, 113, 192, 129, 194, 129, 60, 75, 12,
+            21, 77, 188, 167, 162, 88, 249, 147, 231, 18, 208, 195, 174, 189, 240, 95,
+            66, 108, 150, 147, 28, 77, 128, 69, 220, 78, 55, 45, 9, 120, 107, 254,
+            154, 144, 165, 228, 138, 174, 67, 16, 90, 251, 148, 174, 188, 40, 216, 163,
+        ];
+
+        let t: Signature = BinarySD::deserialize(&v[..]).unwrap();
+        println!("{:?}", t);
+
     }
 }
