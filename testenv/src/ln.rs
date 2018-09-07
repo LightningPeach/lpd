@@ -8,6 +8,7 @@ use std::io;
 use lnd_rust::rpc::GetInfoResponse;
 use lnd_rust::rpc::LightningAddress;
 use lnd_rust::rpc::ConnectPeerResponse;
+use lnd_rust::rpc::NewAddressRequest;
 use lnd_rust::rpc::OpenStatusUpdate;
 
 use lnd_rust::rpc_grpc::LightningClient;
@@ -18,39 +19,37 @@ use futures::Stream;
 
 use lazycell::LazyCell;
 
-pub struct LnDaemon<'a> {
+pub struct LnDaemon {
     peer_port: u16,
     rpc_port: u16,
     rest_port: u16,
     home: Home,
-    btcd: &'a BtcDaemon,
 }
 
-pub struct LnRunning<'a> {
-    daemon: LnDaemon<'a>,
+pub struct LnRunning {
+    daemon: LnDaemon,
     instance: Child,
     client: LazyCell<LightningClient>,
     info: LazyCell<GetInfoResponse>,
 }
 
-impl<'a> LnDaemon<'a> {
+impl LnDaemon {
     pub fn name(&self) -> &str {
         self.home.name()
     }
 
     pub fn new(
-        peer_port: u16, rpc_port: u16, rest_port: u16, name: &str, btcd: &'a BtcDaemon
+        peer_port: u16, rpc_port: u16, rest_port: u16, name: &str
     ) -> Result<Self, io::Error> {
         Ok(LnDaemon {
             peer_port: peer_port,
             rpc_port: rpc_port,
             rest_port: rest_port,
             home: Home::new(name)?,
-            btcd: btcd,
         })
     }
 
-    pub fn run(self) -> Result<LnRunning<'a>, io::Error> {
+    pub fn run(self, btcd_pubkey_path: &str) -> Result<LnRunning, io::Error> {
         Command::new("lnd")
             .args(&[
                 "--bitcoin.active", "--bitcoin.simnet", "--noencryptwallet", "--no-macaroons",
@@ -61,7 +60,7 @@ impl<'a> LnDaemon<'a> {
                 format!("--logdir={}", self.home.ext_path("logs").to_str().unwrap()),
                 format!("--tlscertpath={}", self.home.public_key_path().to_str().unwrap()),
                 format!("--tlskeypath={}", self.home.private_key_path().to_str().unwrap()),
-                format!("--btcd.rpccert={}", self.btcd.public_key_path().to_str().unwrap()),
+                format!("--btcd.rpccert={}", btcd_pubkey_path),
             ])
             .args(&[
                 format!("--listen=localhost:{}", self.peer_port),
@@ -80,9 +79,9 @@ impl<'a> LnDaemon<'a> {
     }
 }
 
-impl<'a> LnRunning<'a> {
+impl LnRunning {
     // errors ignored
-    pub fn batch(limit: u16, base_port: u16, btcd: &'a BtcDaemon) -> Vec<Self> {
+    pub fn batch(limit: u16, base_port: u16, btcd_pubkey_path: &str) -> Vec<Self> {
         (0..limit).into_iter()
             .map(|index| -> Result<LnRunning, io::Error> {
                 let p_peer = base_port + index * 10;
@@ -90,8 +89,8 @@ impl<'a> LnRunning<'a> {
                 let p_rest = base_port + index * 10 + 2;
                 let name = format!("lnd-node-{}", index);
                 LnDaemon::new(
-                    p_peer, p_rpc, p_rest, name.as_str(), &btcd
-                )?.run()
+                    p_peer, p_rpc, p_rest, name.as_str()
+                )?.run(btcd_pubkey_path)
             })
             .filter_map(Result::ok)
             .collect()
@@ -144,6 +143,19 @@ impl<'a> LnRunning<'a> {
         })
     }
 
+    pub fn new_address(&self) -> impl Future<Item=String, Error=grpc::Error> {
+        use lnd_rust::rpc;
+        use lnd_rust::rpc_grpc::Lightning;
+        use grpc::RequestOptions;
+
+        let mut request = rpc::NewAddressRequest::new();
+        request.set_field_type(rpc::NewAddressRequest_AddressType::WITNESS_PUBKEY_HASH);
+        self.client()
+            .new_address(RequestOptions::new(), request)
+            .drop_metadata()
+            .map(|r| r.address)
+    }
+
     pub fn address(&self) -> LightningAddress {
         let mut address = LightningAddress::new();
         address.set_host(format!("127.0.0.1:{}", self.daemon.peer_port));
@@ -183,7 +195,7 @@ impl<'a> LnRunning<'a> {
     }
 }
 
-impl<'a> Drop for LnRunning<'a> {
+impl Drop for LnRunning {
     fn drop(&mut self) {
         self.instance.kill().unwrap()
     }
