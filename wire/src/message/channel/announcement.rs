@@ -57,7 +57,7 @@ mod test {
             2, 44, 199, 59, 73, 153, 4, 138, 110, 45, 6, 200, 74, 184, 2, 205, 187, 124, 135, 83, 223, 253, 42, 27, 173, 32, 91, 76, 212, 219, 161, 117, 40,
         ];
 
-        let t: RawFeatureVector = BinarySD::deserialize(&v[..]).unwrap();
+        let t: AnnouncementChannel = BinarySD::deserialize(&v[..]).unwrap();
         println!("{:?}", t);
     }
 }
