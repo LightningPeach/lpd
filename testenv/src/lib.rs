@@ -47,7 +47,7 @@ mod tests {
         thread::sleep(Duration::from_secs(5));
 
         let _ = nodes[0].connect_peer(&nodes[1]).wait().unwrap();
-        let mut update_stream = nodes[0].open_channel(&nodes[1]);
+        let update_stream = nodes[0].open_channel(&nodes[1]);
         thread::sleep(Duration::from_secs(5));
         btc_running.generate(10).unwrap();
 
