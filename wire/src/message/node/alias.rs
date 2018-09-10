@@ -40,22 +40,18 @@ mod serde {
                     write!(formatter, "{} byte valid utf8 string", SIZE)
                 }
 
-                fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-                    where
-                        E: de::Error,
-                {
-                    if v.len() != SIZE {
-                        Err(E::custom(format!("the size {} is not equal to {}", v.len(), SIZE)))
-                    } else {
-                        String::from_utf8(Vec::from(v))
-                            .map(|s| NodeAlias(s))
-                            .map_err(|e| E::custom(format!("utf8 error: {}", e)))
-                    }
+                fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: de::SeqAccess<'de>, {
+                    let mut seq = seq;
+                    let v: [u8; 32] = seq.next_element()?
+                        .ok_or(<A::Error as de::Error>::custom(format!("expected 32 bytes")))?;
+                    String::from_utf8(Vec::from(&v[..]))
+                        .map(|s| NodeAlias(s))
+                        .map_err(|e| <A::Error as de::Error>::custom(format!("utf8 error: {}", e)))
                 }
 
             }
 
-            deserializer.deserialize_bytes(V)
+            deserializer.deserialize_tuple(32, V)
         }
     }
 
