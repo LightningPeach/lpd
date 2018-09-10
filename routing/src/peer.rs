@@ -13,8 +13,8 @@ use brontide::tcp_communication::Listener;
 use rand;
 
 pub trait Peer {
-    fn synchronous_message(&mut self, message: Message) -> Result<Message, BrontideError>;
-    fn synchronous_message_sequence(&mut self, message: Message) -> Result<Vec<Message>, BrontideError>;
+    fn send(&mut self, message: Message) -> Result<(), BrontideError>;
+    fn receive(&mut self) -> Result<Message, BrontideError>;
 }
 
 pub struct TcpSelf {
@@ -56,31 +56,11 @@ impl TcpSelf {
 }
 
 impl Peer for TcpPeer {
-    fn synchronous_message(&mut self, message: Message) -> Result<Message, BrontideError> {
-        self.stream.as_write().send(message)?;
-        self.stream.as_read().receive()
+    fn send(&mut self, message: Message) -> Result<(), BrontideError> {
+        self.stream.as_write().send(message)
     }
 
-    fn synchronous_message_sequence(&mut self, message: Message) -> Result<Vec<Message>, BrontideError> {
-        use std::io;
-
-        self.stream.as_write().send(message)?;
-        let mut vec = Vec::new();
-        loop {
-            match self.stream.as_read().receive() {
-                Ok(message) => vec.push(message),
-                Err(error) => {
-                    let _ = error; unimplemented!()
-                    //if (error as io::Error).kind() == io::ErrorKind::UnexpectedEof {
-                    //    break;
-                    //} else {
-                    //    return Err(error)
-                    //}
-                }
-            }
-
-        };
-
-        Ok(vec)
+    fn receive(&mut self) -> Result<Message, BrontideError> {
+        self.stream.as_read().receive()
     }
 }

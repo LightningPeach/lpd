@@ -38,17 +38,35 @@ mod tests {
 
     #[test]
     fn test_channel_range() {
+        use std::thread;
+
         let tcp_self = TcpSelf::new();
-        let key = public_key!(2, "8faeeb36e7d82134b5bfedcaeb9b81e7be4260ddde1bcc97d5db7d2bd364f471");
-        let mut tcp_peer = tcp_self.connect_peer(key, Address::localhost(10011)).unwrap();
+        let key = public_key!(3, "f0826b27005e139f158ed899abe1c58929db2764b49c8780998ff78d442c6726");
+        let mut tcp_peer = tcp_self.connect_peer(key, Address::localhost(10000)).unwrap();
 
         let init = Init::new(
             RawFeatureVector::new(),
-            RawFeatureVector::new().set_bit(FeatureBit::GossipQueriesOptional).set_bit(FeatureBit::InitialRoutingSync),
+            RawFeatureVector::new().set_bit(FeatureBit::InitialRoutingSync),
         );
-        let response = tcp_peer.synchronous_message(Message::Init(init)).unwrap();
+        tcp_peer.send(Message::Init(init)).unwrap();
+        let response = tcp_peer.receive().unwrap();
         println!("{:?}", response);
+
         let s = Synchronization {};
-        s.sync_channels(&mut tcp_peer)
+        s.sync_channels(&mut tcp_peer);
+
+        thread::spawn(move || loop {
+            println!("{:?}", tcp_peer.receive())
+        }).join().unwrap();
+
+        fn pause() {
+            use std::io;
+            use std::io::prelude::*;
+
+            println!("Enter any string to continue...");
+            let _ = io::stdin().read(&mut [0u8]).unwrap();
+        }
+
+        pause();
     }
 }
