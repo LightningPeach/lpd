@@ -24,7 +24,6 @@ impl Synchronization {
     pub fn sync_channels<P>(self, peer: &mut P) where P: Peer, {
         let msg = Message::QueryChannelRange(QueryChannelRange::new(
             Hash256::TEST_HASH, 0, 120));
-        let response = peer.synchronous_message(msg);
-        println!("{:?}", response.ok().unwrap());
+        peer.send(msg).unwrap();
     }
 }
