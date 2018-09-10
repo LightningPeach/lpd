@@ -22,7 +22,11 @@ pub struct ReplyShortChannelIdsEnd {
 }
 
 mod serde {
+    use ::BinarySD;
     use super::ShortChannelIdEncoding;
+    use super::ShortChannelId;
+    use ::SerdeVec;
+    use ::PackSized;
 
     use serde::Serialize;
     use serde::Serializer;
@@ -36,26 +40,36 @@ mod serde {
             use self::ser::SerializeTuple;
             use self::ShortChannelIdEncoding::*;
 
-            let mut tuple = serializer.serialize_tuple(2)?;
             match self {
                 &StoredPlain(ref plain) => {
-                    let _ = SerializeTuple::serialize_element(&mut tuple, &0u8)?;
-                    let _ = SerializeTuple::serialize_element(&mut tuple, plain)?;
+                    let &SerdeVec(ref data) = plain;
+                    let mut tuple = serializer.serialize_tuple(2 + data.len())?;
+                    let size = ShortChannelId::SIZE * data.len() + 1; // one byte for header
+                    tuple.serialize_element(&(size as u16))?;
+                    tuple.serialize_element(&0u8)?;
+                    for item in data {
+                        tuple.serialize_element(item)?;
+                    }
+                    tuple.end()
                 },
                 &StoredZlib(ref to_compress) => {
-                    let _ = SerializeTuple::serialize_element(&mut tuple, &1u8)?;
-                    let _ = SerializeTuple::serialize_element(&mut tuple, to_compress)?;
+                    let mut v = Vec::new();
+                    let header = 1u8;
+                    BinarySD::serialize(&mut v, to_compress)
+                        .map_err(|e| <S::Error as ser::Error>::custom(format!("serialize error: {:?}", e)))?;
+                    // v looks like [ size_lo, size_hi, b_0, b_1, ..., b_size ]
+                    // result should look like [ header, b_0, b_1, ..., b_size ]
+                    // let's replace the second byte with header, and ignore the first byte
+                    v[1] = header;
+                    serializer.serialize_bytes(&v[1..])
                 }
             }
-
-            SerializeTuple::end(tuple)
         }
     }
 
     impl<'de> Deserialize<'de> for ShortChannelIdEncoding {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
             use std::fmt;
-            use self::de::SeqAccess;
 
             struct Visitor;
 
@@ -67,29 +81,29 @@ mod serde {
                                        and compressed or uncompressed data")
                 }
 
-                fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de>, {
+                fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E> where E: de::Error, {
                     use self::ShortChannelIdEncoding::*;
 
-                    let mut seq = seq;
-                    let header: u8 = seq.next_element()?
-                        .ok_or(<A::Error as de::Error>::custom(format!("expected ShortChannelIdEncoding byte")))?;
+                    // TODO: optimize me, get rid of copying
+                    let mut v = v;
+                    let header = v[0];
+                    let size = v.len() - 1;
+                    v.remove(0);
+                    let mut other = Vec::with_capacity(2 + size);
+                    let _ = BinarySD::serialize(&mut other, &(size as u16)).unwrap();
+                    other.append(&mut v);
+
                     match header {
-                        0 => {
-                            seq.next_element()?
-                                .ok_or(<A::Error as de::Error>::custom(format!("expected plain ShortChannelId list")))
-                                .map(|v| StoredPlain(v))
-                        },
-                        1 => {
-                            seq.next_element()?
-                                .ok_or(<A::Error as de::Error>::custom(format!("expected zlib compressed ShortChannelId list")))
-                                .map(|v| StoredPlain(v))
-                        },
-                        _ => Err(<A::Error as de::Error>::custom(format!("unknown compression type")))
+                        0 => Ok(StoredPlain(BinarySD::deserialize(&other[..])
+                            .map_err(|e| E::custom(format!("deserialize error: {:?}", e)))?)),
+                        1 => Ok(StoredZlib(BinarySD::deserialize(&other[..])
+                            .map_err(|e| E::custom(format!("deserialize error: {:?}", e)))?)),
+                        _ => Err(E::custom(format!("unknown compression type")))
                     }
                 }
             }
 
-            deserializer.deserialize_tuple(2, Visitor)
+            deserializer.deserialize_byte_buf(Visitor)
         }
     }
 }

@@ -53,6 +53,7 @@ pub struct ShortChannelId {
 }
 
 impl PackSized for ShortChannelId {
+    const SIZE: usize = 8;
 }
 
 impl From<u64> for ShortChannelId {

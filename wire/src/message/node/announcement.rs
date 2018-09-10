@@ -224,8 +224,6 @@ mod tests {
             98, 100, 102, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
             0, 0
-
-            , 0, 0, 0, 0, 0, 0, 0, 0
         ];
         let t: Signed<AnnouncementNodeData> = BinarySD::deserialize(&v[..]).unwrap();
         println!("{:?}", t);

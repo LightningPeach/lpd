@@ -26,3 +26,24 @@ pub struct ReplyChannelRange {
     complete: bool,
     encoded_short_ids: ShortChannelIdEncoding,
 }
+
+#[cfg(test)]
+mod tests {
+    use ::BinarySD;
+    use super::*;
+
+    #[test]
+    fn reply_channel_range() {
+        let v = vec![
+            104, 62, 134, 189, 92, 109, 17, 13, 145, 185, 75, 151, 19, 123, 166, 191,
+            224, 45, 187, 219, 142, 61, 255, 114, 42, 102, 155, 93, 105, 215, 122, 246,
+            0, 0, 0, 0,
+            0, 0, 0, 120,
+            1,
+            0, 1,
+            0
+        ];
+        let t: ReplyChannelRange = BinarySD::deserialize(&v[..]).unwrap();
+        println!("{:?}", t);
+    }
+}

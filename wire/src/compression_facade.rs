@@ -30,7 +30,7 @@ impl<T> Serialize for SerdeVec<T> where T: PackSized + Serialize {
         use self::ser::SerializeTuple;
 
         let &SerdeVec(ref data) = self;
-        let mut tuple = serializer.serialize_tuple(2 + data.len())?;
+        let mut tuple = serializer.serialize_tuple(1 + data.len())?;
         let size_in_bytes = if T::SIZE == 0 {
             data.iter()
                 .fold(0, |accumulator, item| accumulator + item.pack_size())
@@ -103,7 +103,8 @@ pub struct UncompressedData<T>(pub SerdeVec<T>) where T: PackSized;
 impl<T> Serialize for UncompressedData<T> where T: PackSized + Serialize {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let mut bytes = Vec::<u8>::new();
-        BinarySD::serialize(&mut bytes, self)
+        let &UncompressedData(ref data) = self;
+        BinarySD::serialize(&mut bytes, data)
             .map_err(|e| <S::Error as ser::Error>::custom(format!("serialize error: {:?}", e)))?;
         let mut encoder = read::ZlibEncoder::new(bytes.as_slice(), Compression::fast());
         let mut compressed_bytes = Vec::<u8>::new();
