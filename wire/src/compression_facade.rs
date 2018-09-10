@@ -65,12 +65,12 @@ impl<'de, T> Deserialize<'de> for SerdeVec<T> where T: PackSized + de::Deseriali
 
             fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de>, {
                 let mut seq = seq;
-                let size_in_bytes: u16 = seq.next_element()?
-                    .ok_or(<A::Error as de::Error>::custom(format!("expected size")))?;
 
+                let mut size = seq.size_hint()
+                    .ok_or(<A::Error as de::Error>::custom(format!("expected size")))?;
                 let mut data = Vec::new();
-                let mut size = size_in_bytes as usize;
                 loop {
+                    if size == 0 { break; }
                     let element: T = seq.next_element()?
                         .ok_or(<A::Error as de::Error>::custom(format!("cannot read T")))?;
                     if size == element.pack_size() {
