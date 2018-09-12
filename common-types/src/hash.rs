@@ -1,7 +1,13 @@
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct Hash256 {
     data: [u8; 32],
+}
+
+impl From<Hash256> for [u8; 32] {
+    fn from(h: Hash256) -> Self {
+        return h.data;
+    }
 }
 
 impl Hash256 {
