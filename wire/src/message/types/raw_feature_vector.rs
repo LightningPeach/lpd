@@ -7,7 +7,7 @@ use serde::Deserializer;
 
 use super::FeatureBit;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct RawFeatureVector {
     set: HashSet<FeatureBit>,
 }
@@ -122,6 +122,27 @@ impl<'de> Deserialize<'de> for RawFeatureVector {
 
         deserializer.deserialize_byte_buf(BytesVisitor::default())
             .map(|bytes| bytes.into())
+    }
+}
+
+mod debug {
+    use std::fmt;
+    use super::RawFeatureVector;
+
+    impl fmt::Debug for RawFeatureVector {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            if self.set.is_empty() {
+                write!(f, "RawFeatureVector [ ]")
+            } else {
+                write!(f, "RawFeatureVector [ {} ]", self.set.iter().fold(String::new(), |s, item| {
+                    if s.is_empty() {
+                        format!("{:?}", item)
+                    } else {
+                        format!("{}, {:?}", s, item)
+                    }
+                }))
+            }
+        }
     }
 }
 

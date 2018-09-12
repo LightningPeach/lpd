@@ -26,13 +26,14 @@ use serde::ser;
 use serde::de;
 
 use std::u16;
+use std::fmt;
 
 pub type MessageSize = u16;
 
 macro_rules! message {
     (pub enum $name:ident { $($variant:ident($rtt:expr, $unwrap_method:ident)),* }) => {
         /// Tagged union, the variant name equals to the type name witch the variant contains
-        #[derive(Eq, PartialEq, Debug)]
+        #[derive(Eq, PartialEq)]
         pub enum $name {
             $($variant($variant),)*
         }
@@ -100,6 +101,20 @@ macro_rules! message {
                     }
                 }
             )*
+        }
+
+        impl fmt::Debug for $name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                use self::$name::*;
+                match self {
+                    $(
+                        &$variant(ref payload) => {
+                            write!(f, "{:?}", payload)
+                        },
+                    )*
+                }
+
+            }
         }
     }
 }
