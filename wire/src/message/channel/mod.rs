@@ -27,12 +27,12 @@ use ::PackSized;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]
-    struct ChannelFlags: u8 {
+    pub struct ChannelFlags: u8 {
         const FF_ANNOUNCE_CHANNEL = 0b00000001;
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct ChannelId {
     data: [u8; 32],
 }
@@ -41,6 +41,14 @@ impl ChannelId {
     pub fn all() -> Self {
         ChannelId {
             data: [0; 32],
+        }
+    }
+}
+
+impl From<[u8; 32]> for ChannelId {
+    fn from(x: [u8; 32]) -> Self {
+        ChannelId{
+            data: x,
         }
     }
 }
