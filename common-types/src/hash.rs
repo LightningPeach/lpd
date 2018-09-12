@@ -1,5 +1,5 @@
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
 pub struct Hash256 {
     data: [u8; 32],
 }
@@ -16,8 +16,21 @@ impl Hash256 {
     };
 
     pub const TEST_HASH: Self = Hash256 {
-        data: hex!("683e86bd5c6d110d91b94b97137ba6bfe02dbbdb8e3dff722a669b5d69d77af6"),
+        data: hex!("38faad210ccb4b018c866049827661643433f1a261a54a8b3faa9e682341158d"),
     };
+}
+
+mod debug {
+    use super::Hash256;
+
+    use hex::encode;
+    use std::fmt;
+
+    impl fmt::Debug for Hash256 {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "Hash256 [ {} ]", encode(&self.data[0..]))
+        }
+    }
 }
 
 mod sha2 {

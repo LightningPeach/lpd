@@ -7,6 +7,7 @@ extern crate rand;
 extern crate sha2;
 #[macro_use]
 extern crate hex_literal;
+extern crate hex;
 
 mod hash;
 pub use self::hash::Hash256;

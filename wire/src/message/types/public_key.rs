@@ -3,7 +3,7 @@ use ::PackSized;
 pub const PUBLIC_KEY_SIZE: usize = 33;
 pub const SIGNATURE_SIZE: usize = 64;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
 pub struct PublicKey {
     header: u8,
     data: [u8; PUBLIC_KEY_SIZE - 1],
@@ -108,17 +108,23 @@ mod eq {
 
 mod debug {
     use super::Signature;
+    use super::PublicKey;
 
     use std::fmt::Debug;
     use std::fmt::Formatter;
     use std::fmt::Result;
 
+    use hex::encode;
+
     impl Debug for Signature {
         fn fmt(&self, f: &mut Formatter) -> Result {
-            let (mut _0, mut _1) = ([0u8; 32], [0u8; 32]);
-            _0.copy_from_slice(&self.data[0..32]);
-            _1.copy_from_slice(&self.data[32..64]);
-            write!(f, "Signature [{:?}, {:?}]", _0, _1)
+            write!(f, "Signature [ {} ]", encode(&self.data[0..]))
+        }
+    }
+
+    impl Debug for PublicKey {
+        fn fmt(&self, f: &mut Formatter) -> Result {
+            write!(f, "PublicKey [ {} {} ]", self.header, encode(&self.data[0..]))
         }
     }
 }
