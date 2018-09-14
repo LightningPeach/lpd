@@ -63,6 +63,67 @@ fn to_u8_32(u: &[u8]) -> [u8; 32] {
     return rez;
 }
 
+
+struct PartnerInfo {
+    funding_sk: Option<SecretKey>,
+    funding_pk: PublicKey,
+    revocation_bp_sk: Option<SecretKey>,
+    revocation_bp_pk: PublicKey,
+    payment_bp_sk: Option<SecretKey>,
+    payment_bp_pk: PublicKey,
+    delayed_payment_bp_sk: Option<SecretKey>,
+    delayed_payment_bp_pk: PublicKey,
+    htlc_bp_sk: Option<SecretKey>,
+    htlc_bp_pk: PublicKey,
+    per_commit_sk: Option<SecretKey>,
+    per_commit_pk: PublicKey,
+}
+
+impl PartnerInfo {
+    // Create new PartnerInfo with random info
+    fn new_random() -> PartnerInfo {
+        let (funding_sk, funding_pk) = get_key_pair();
+        let (revocation_sk, revocation_pk) = get_key_pair();
+        let (payment_sk, payment_pk) = get_key_pair();
+        let (delayed_payment_sk, delayed_payment_pk) = get_key_pair();
+        let (htlc_sk, htlc_pk) = get_key_pair();
+        let (first_per_commitment_sk, first_per_commitment_pk) = get_key_pair();
+        PartnerInfo {
+            funding_sk: Some(funding_sk),
+            funding_pk: funding_pk,
+            revocation_bp_sk: Some(revocation_sk),
+            revocation_bp_pk: revocation_pk,
+            payment_bp_sk: Some(payment_sk),
+            payment_bp_pk: payment_pk,
+            delayed_payment_bp_sk: Some(delayed_payment_sk),
+            delayed_payment_bp_pk: delayed_payment_pk,
+            htlc_bp_sk: Some(htlc_sk),
+            htlc_bp_pk: htlc_pk,
+            per_commit_sk: Some(first_per_commitment_sk),
+            per_commit_pk: first_per_commitment_pk,
+        }
+    }
+
+    fn htlc_pubkey(&self) -> PublicKey {
+        derive_pubkey(&self.htlc_bp_pk, &self.per_commit_pk)
+    }
+
+    // Revocation pubkey for our commitment transaction
+    // We require partners revocation_pk to generate it
+    // and our commitment point
+    fn revocation_pubkey(&self, partner_revocation_pk: &PublicKey) -> PublicKey {
+        derive_revocation_pubkey(partner_revocation_pk, &self.per_commit_pk)
+    }
+
+    fn delayed_pubkey(&self) -> PublicKey {
+        derive_pubkey(&self.delayed_payment_bp_pk, &self.per_commit_pk)
+    }
+
+    fn  payment_pubkey(&self) -> PublicKey {
+        derive_pubkey(&self.payment_bp_pk, &self.per_commit_pk)
+    }
+}
+
 fn main() {
 //    let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
 //    let local_priv = SecretKey::from_slice(&Secp256k1::new(), &local_priv_bytes).unwrap();
@@ -122,12 +183,9 @@ fn main() {
     let mut your_add_htlc : Option<UpdateAddHtlc> = None;
     let mut your_funding_locked : Option<FundingLocked> = None;
 
-    let (funding_sk, funding_pk) = get_key_pair();
-    let (revocation_sk, revocation_pk) = get_key_pair();
-    let (payment_sk, payment_pk) = get_key_pair();
-    let (delayed_payment_sk, delayed_payment_pk) = get_key_pair();
-    let (htlc_sk, htlc_pk) = get_key_pair();
-    let (first_per_commitment_sk, first_per_commitment_pk) = get_key_pair();
+
+
+    let our_info = PartnerInfo::new_random();
     let (fl_commit_point_sk, fl_commit_point_pk) = get_key_pair();
 
     let mut obscuring_factor : u64 = 0;
@@ -138,6 +196,7 @@ fn main() {
                 let pong = Pong::new(&p);
                 write_msg(&mut brontide_stream, &Message::Pong(pong)).unwrap();
             },
+
             Ok(Message::OpenChannel(open_channel)) => {
                 println!("OPEN_CHANNEL: {:?}", open_channel);
                 println!("chain_hash: {:?}", open_channel.chain_hash);
@@ -151,12 +210,12 @@ fn main() {
                     minimum_accept_depth: 1,
                     csv_delay: open_channel.csv_delay.clone(),
                     max_accepted_htlc_number: open_channel.max_accepted_htlc_number.clone(),
-                    funding_pubkey: LpdPublicKey::from(funding_pk),
-                    revocation_point: LpdPublicKey::from(revocation_pk),
-                    payment_point: LpdPublicKey::from(payment_pk),
-                    delayed_payment_point: LpdPublicKey::from(delayed_payment_pk),
-                    htlc_point: LpdPublicKey::from(htlc_pk),
-                    first_per_commitment_point: LpdPublicKey::from(first_per_commitment_pk),
+                    funding_pubkey: LpdPublicKey::from(our_info.funding_pk),
+                    revocation_point: LpdPublicKey::from(our_info.revocation_bp_pk),
+                    payment_point: LpdPublicKey::from(our_info.payment_bp_pk),
+                    delayed_payment_point: LpdPublicKey::from(our_info.delayed_payment_bp_pk),
+                    htlc_point: LpdPublicKey::from(our_info.htlc_bp_pk),
+                    first_per_commitment_point: LpdPublicKey::from(our_info.per_commit_pk),
                 };
                 write_msg(&mut brontide_stream, &Message::AcceptChannel(accept_channel_msg)).unwrap();
                 open_channel_b = Some(open_channel);
@@ -171,12 +230,10 @@ fn main() {
                     &PublicKey::from(open_channel.htlc_basepoint),
                     &PublicKey::from(open_channel.first_per_commitment_point)
                 );
-                let remote_htlc_pubkey = derive_pubkey(
-                    &htlc_pk, &first_per_commitment_pk
-                );
+                let remote_htlc_pubkey = our_info.htlc_pubkey();
 
                 let local_revocation_pubkey = derive_revocation_pubkey(
-                    &revocation_pk,
+                    &our_info.revocation_bp_pk,
                     &PublicKey::from(open_channel.first_per_commitment_point)
                 );
                 let local_delayed_pubkey = derive_pubkey(
@@ -184,16 +241,14 @@ fn main() {
                     &PublicKey::from(open_channel.first_per_commitment_point)
                 );
 
-                let remote_pubkey = derive_pubkey(
-                    &payment_pk, &first_per_commitment_pk
-                );
+                let remote_pubkey = our_info.payment_pubkey();
 
-                obscuring_factor = get_obscuring_number(&PublicKey::from(open_channel.payment_basepoint).serialize(), &payment_pk.serialize());
+                obscuring_factor = get_obscuring_number(&PublicKey::from(open_channel.payment_basepoint).serialize(), &our_info.payment_bp_pk.serialize());
 
                 let commit_tx = CommitTx{
                     funding_amount: u64::from(open_channel.funding) as i64,
                     local_funding_pubkey: PublicKey::from(open_channel.funding_pubkey),
-                    remote_funding_pubkey: funding_pk.clone(),
+                    remote_funding_pubkey: our_info.funding_pk.clone(),
 
                     local_feerate_per_kw: u32::from(open_channel.fee) as i64,
                     dust_limit_satoshi: u64::from(open_channel.dust_limit) as i64,
@@ -217,7 +272,7 @@ fn main() {
 
                     htlcs: vec![]
                 };
-                let sig = commit_tx.sign(&funding_sk);
+                let sig = commit_tx.sign(&our_info.funding_sk.unwrap());
                 let tx = commit_tx.get_tx();
                 let mut a = vec![];
                 tx.consensus_encode(&mut RawEncoder::new(&mut a)).unwrap();
@@ -262,11 +317,11 @@ fn main() {
                 let add_htlc = your_add_htlc.unwrap();
 
                 let (new_commit_point_sk, new_commit_point_pk) = get_key_pair();
-                println!("per_commit_point: {}", hex::encode(&first_per_commitment_pk.serialize()[..]));
-                println!("revocation: {}", hex::encode(&first_per_commitment_sk[..]));
+                println!("per_commit_point: {}", hex::encode(&our_info.per_commit_pk.serialize()[..]));
+                println!("revocation: {}", hex::encode(&our_info.per_commit_sk.unwrap()[..]));
                 let revoke_and_ack = RevokeAndAck {
                     channel_id: commitment_signed.channel_id,
-                    revocation_preimage: to_u8_32(&first_per_commitment_sk[..]),
+                    revocation_preimage: to_u8_32(&our_info.per_commit_sk.unwrap()[..]),
                     next_per_commitment_point: LpdPublicKey::from(new_commit_point_pk),
                 };
                 write_msg(&mut brontide_stream, &Message::RevokeAndAck(revoke_and_ack));
@@ -277,10 +332,10 @@ fn main() {
                 your_funding_locked = Some(your_fl);
 
                 let remote_pubkey = derive_pubkey(
-                    &payment_pk, &new_commit_point_pk
+                    &our_info.payment_bp_pk, &new_commit_point_pk
                 );
                 let local_revocation_pubkey = derive_revocation_pubkey(
-                    &revocation_pk,
+                    &our_info.revocation_bp_pk,
                     &PublicKey::from(your_fl_next_per_commitment_point)
                 );
                 let local_delayed_pubkey = derive_pubkey(
@@ -312,7 +367,7 @@ fn main() {
 
                 let my_commit_signed = CommitmentSigned{
                     channel_id: commitment_signed.channel_id,
-                    signature: LpdSignature::from(commit_tx.sign(&funding_sk)),
+                    signature: LpdSignature::from(commit_tx.sign(&our_info.funding_sk.unwrap())),
                     htlc_signatures: SerdeVec(vec![])
                 };
                 write_msg(&mut brontide_stream, &Message::CommitmentSigned(my_commit_signed));
