@@ -20,7 +20,7 @@ use std::net::{TcpStream, SocketAddr};
 use std::error::Error;
 
 use brontide::tcp_communication::{Stream, NetAddress};
-use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned};
+use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned, Satoshi, MilliSatoshi, CsvDelay};
 use wire::PublicKey as LpdPublicKey;
 use wire::Signature as LpdSignature;
 
@@ -63,6 +63,18 @@ fn to_u8_32(u: &[u8]) -> [u8; 32] {
     return rez;
 }
 
+// This parameters can be reconfigured
+// so they is in a separate structure
+#[derive(Debug, Copy, Clone, Default)]
+struct PartnerConfig {
+    dust_limit: u64,
+    max_htlc_value_in_flight: u64,
+    chanel_reserve: u64,
+    htlc_minimum: u64,
+    csv_delay: u16,
+    max_accepted_htlc_number: u16,
+    local_fee_rate: u32,
+}
 
 struct PartnerInfo {
     funding_sk: Option<SecretKey>,
@@ -77,6 +89,25 @@ struct PartnerInfo {
     htlc_bp_pk: PublicKey,
     per_commit_sk: Option<SecretKey>,
     per_commit_pk: PublicKey,
+
+    config: PartnerConfig,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+struct FundingInfo {
+    temporary_channel_id: ChannelId,
+    funding: u64,
+    push: u64,
+}
+
+impl FundingInfo {
+    fn from_open_channel_msg(msg: &OpenChannel) -> FundingInfo {
+        FundingInfo {
+            temporary_channel_id: msg.temporary_channel_id,
+            funding: u64::from(msg.funding),
+            push: u64::from(msg.push)
+        }
+    }
 }
 
 impl PartnerInfo {
@@ -101,6 +132,37 @@ impl PartnerInfo {
             htlc_bp_pk: htlc_pk,
             per_commit_sk: Some(first_per_commitment_sk),
             per_commit_pk: first_per_commitment_pk,
+
+            config: Default::default()
+        }
+    }
+
+    fn from_open_channel_msg(msg: &OpenChannel) -> PartnerInfo {
+        let config = PartnerConfig{
+            dust_limit: u64::from(msg.dust_limit),
+            max_htlc_value_in_flight: u64::from(msg.max_in_flight),
+            chanel_reserve: u64::from(msg.channel_reserve),
+            htlc_minimum: u64::from(msg.htlc_minimum),
+            csv_delay: u16::from(msg.csv_delay),
+            max_accepted_htlc_number: u16::from(msg.max_accepted_htlc_number),
+            local_fee_rate: u32::from(msg.fee)
+        };
+
+        PartnerInfo {
+            funding_sk: None,
+            funding_pk: PublicKey::from(msg.funding_pubkey),
+            revocation_bp_sk: None,
+            revocation_bp_pk: PublicKey::from(msg.revocation_basepoint),
+            payment_bp_sk: None,
+            payment_bp_pk: PublicKey::from(msg.payment_basepoint),
+            delayed_payment_bp_sk: None,
+            delayed_payment_bp_pk: PublicKey::from(msg.delayed_payment_basepoint),
+            htlc_bp_sk: None,
+            htlc_bp_pk: PublicKey::from(msg.htlc_basepoint),
+            per_commit_sk: None,
+            per_commit_pk: PublicKey::from(msg.first_per_commitment_point),
+
+            config
         }
     }
 
@@ -178,7 +240,6 @@ fn main() {
     let init_msg_resp = read_msg(&mut brontide_stream).unwrap();
     println!("{:?}", init_msg_resp);
 
-    let mut open_channel_b : Option<OpenChannel> = None;
     let mut your_commit_tx : Option<CommitTx> = None;
     let mut your_add_htlc : Option<UpdateAddHtlc> = None;
     let mut your_funding_locked : Option<FundingLocked> = None;
@@ -186,6 +247,9 @@ fn main() {
 
 
     let our_info = PartnerInfo::new_random();
+    let mut their_info = PartnerInfo::new_random();
+    let mut funding_info: FundingInfo = Default::default();
+
     let (fl_commit_point_sk, fl_commit_point_pk) = get_key_pair();
 
     let mut obscuring_factor : u64 = 0;
@@ -200,16 +264,18 @@ fn main() {
             Ok(Message::OpenChannel(open_channel)) => {
                 println!("OPEN_CHANNEL: {:?}", open_channel);
                 println!("chain_hash: {:?}", open_channel.chain_hash);
+                their_info = PartnerInfo::from_open_channel_msg(&open_channel);
+                funding_info = FundingInfo::from_open_channel_msg(&open_channel);
 
                 let accept_channel_msg = AcceptChannel {
                     temporary_channel_id: open_channel.temporary_channel_id.clone(),
-                    dust_limit: open_channel.dust_limit.clone(),
-                    max_htlc_value_in_flight: open_channel.max_in_flight.clone(),
-                    chanel_reserve: open_channel.channel_reserve.clone(),
-                    htlc_minimum: open_channel.htlc_minimum.clone(),
+                    dust_limit: Satoshi::from(their_info.config.dust_limit),
+                    max_htlc_value_in_flight: MilliSatoshi::from(their_info.config.max_htlc_value_in_flight),
+                    chanel_reserve: Satoshi::from(their_info.config.chanel_reserve),
+                    htlc_minimum: MilliSatoshi::from(their_info.config.htlc_minimum),
                     minimum_accept_depth: 1,
-                    csv_delay: open_channel.csv_delay.clone(),
-                    max_accepted_htlc_number: open_channel.max_accepted_htlc_number.clone(),
+                    csv_delay: CsvDelay::from(their_info.config.csv_delay),
+                    max_accepted_htlc_number: their_info.config.max_accepted_htlc_number,
                     funding_pubkey: LpdPublicKey::from(our_info.funding_pk),
                     revocation_point: LpdPublicKey::from(our_info.revocation_bp_pk),
                     payment_point: LpdPublicKey::from(our_info.payment_bp_pk),
@@ -218,43 +284,33 @@ fn main() {
                     first_per_commitment_point: LpdPublicKey::from(our_info.per_commit_pk),
                 };
                 write_msg(&mut brontide_stream, &Message::AcceptChannel(accept_channel_msg)).unwrap();
-                open_channel_b = Some(open_channel);
             },
             Ok(Message::FundingCreated(funding_created)) => {
                 println!("FUNDING_CREATED: {:?}", &funding_created);
                 // Now we create a commitment transaction
                 // local => from OpenChannel
                 // remote => from AcceptChannel
-                let open_channel = open_channel_b.unwrap();
-                let local_htlc_pubkey = derive_pubkey(
-                    &PublicKey::from(open_channel.htlc_basepoint),
-                    &PublicKey::from(open_channel.first_per_commitment_point)
-                );
+                let local_htlc_pubkey = their_info.htlc_pubkey();
                 let remote_htlc_pubkey = our_info.htlc_pubkey();
 
-                let local_revocation_pubkey = derive_revocation_pubkey(
-                    &our_info.revocation_bp_pk,
-                    &PublicKey::from(open_channel.first_per_commitment_point)
-                );
-                let local_delayed_pubkey = derive_pubkey(
-                    &PublicKey::from(open_channel.delayed_payment_basepoint),
-                    &PublicKey::from(open_channel.first_per_commitment_point)
-                );
+                let local_revocation_pubkey = their_info.revocation_pubkey(&our_info.revocation_bp_pk);
+
+                let local_delayed_pubkey = their_info.delayed_pubkey();
 
                 let remote_pubkey = our_info.payment_pubkey();
 
-                obscuring_factor = get_obscuring_number(&PublicKey::from(open_channel.payment_basepoint).serialize(), &our_info.payment_bp_pk.serialize());
+                obscuring_factor = get_obscuring_number(&their_info.payment_bp_pk.serialize(), &our_info.payment_bp_pk.serialize());
 
                 let commit_tx = CommitTx{
-                    funding_amount: u64::from(open_channel.funding) as i64,
-                    local_funding_pubkey: PublicKey::from(open_channel.funding_pubkey),
+                    funding_amount: funding_info.funding as i64,
+                    local_funding_pubkey: their_info.funding_pk.clone(),
                     remote_funding_pubkey: our_info.funding_pk.clone(),
 
-                    local_feerate_per_kw: u32::from(open_channel.fee) as i64,
-                    dust_limit_satoshi: u64::from(open_channel.dust_limit) as i64,
+                    local_feerate_per_kw: u32::from(their_info.config.local_fee_rate) as i64,
+                    dust_limit_satoshi: u64::from(their_info.config.dust_limit) as i64,
 
-                    to_local_msat: (1000 * u64::from(open_channel.funding)) as i64,
-                    to_remote_msat: u64::from(open_channel.push) as i64,
+                    to_local_msat: (1000 * funding_info.funding) as i64,
+                    to_remote_msat: funding_info.push as i64,
 
                     obscured_commit_number: 0 ^ obscuring_factor,
 
@@ -263,7 +319,7 @@ fn main() {
 
                     local_revocation_pubkey: local_revocation_pubkey,
                     local_delayedpubkey: local_delayed_pubkey,
-                    local_delay: u16::from(open_channel.csv_delay).into(),
+                    local_delay: their_info.config.csv_delay.into(),
 
                     remotepubkey: remote_pubkey,
 
@@ -326,7 +382,6 @@ fn main() {
                 };
                 write_msg(&mut brontide_stream, &Message::RevokeAndAck(revoke_and_ack));
 
-                let open_channel = open_channel_b.unwrap();
                 let your_fl = your_funding_locked.unwrap();
                 let your_fl_next_per_commitment_point = your_fl.next_per_commitment_point;
                 your_funding_locked = Some(your_fl);
@@ -339,7 +394,7 @@ fn main() {
                     &PublicKey::from(your_fl_next_per_commitment_point)
                 );
                 let local_delayed_pubkey = derive_pubkey(
-                    &PublicKey::from(open_channel.delayed_payment_basepoint),
+                    &their_info.payment_bp_pk,
                     &PublicKey::from(your_fl_next_per_commitment_point)
                 );
 

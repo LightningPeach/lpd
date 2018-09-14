@@ -31,7 +31,7 @@ bitflags! {
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Default, Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct ChannelId {
     data: [u8; 32],
 }

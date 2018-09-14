@@ -34,9 +34,21 @@ mod wrappers {
         }
     }
 
+    impl From<u64> for Satoshi {
+        fn from(s: u64) -> Self{
+            Satoshi{raw: s}
+        }
+    }
+
     impl From<SatoshiPerKiloWeight> for u32 {
         fn from(s: SatoshiPerKiloWeight) -> Self {
             return s.raw;
+        }
+    }
+
+    impl From<u32> for SatoshiPerKiloWeight {
+        fn from(s: u32) -> SatoshiPerKiloWeight {
+            SatoshiPerKiloWeight{raw: s}
         }
     }
 
@@ -46,9 +58,21 @@ mod wrappers {
         }
     }
 
+    impl From<u64> for MilliSatoshi {
+        fn from(s: u64) -> MilliSatoshi {
+            MilliSatoshi {raw: s}
+        }
+    }
+
     impl From<CsvDelay> for u16 {
         fn from(c: CsvDelay) -> Self {
             return c.raw;
+        }
+    }
+
+    impl From<u16> for CsvDelay {
+        fn from(c: u16) -> CsvDelay {
+            CsvDelay{ raw: c }
         }
     }
 
