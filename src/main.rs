@@ -5,6 +5,7 @@ extern crate brontide;
 extern crate hex;
 extern crate wire;
 extern crate channel;
+extern crate routing;
 extern crate serde;
 
 use rand::{Rng, RngCore};
@@ -30,6 +31,8 @@ use bitcoin::network::encodable::ConsensusEncodable;
 use channel::derivation::{derive_pubkey, derive_revocation_pubkey};
 use channel::tools::{get_obscuring_number, sha256};
 use channel::commit::{CommitTx, HTLC, HTLCDirection};
+
+use routing::Graph;
 
 use std::{thread, time};
 
@@ -87,11 +90,11 @@ fn main() {
     let rhash = sha256(&rpreimg);
     println!("rhash={}",  hex::encode(&rhash));
 
-    let remote_pub_hex = "02968e42dcc075d6c747b46688eb2527bf549b000459bc9c1bc45d762a0c0c38d1";
+    let remote_pub_hex = "03bc578d3822ad1ad77c3394816cdf09c70157f95b11e51b33beb36941c3bb746c";
     let remote_pub_bytes = hex::decode(remote_pub_hex).unwrap();
     let remote_pub = PublicKey::from_slice(&Secp256k1::new(), &remote_pub_bytes).unwrap();
 
-    let socket_addr = "127.0.0.1:10011".parse().unwrap();
+    let socket_addr = "127.0.0.1:10000".parse().unwrap();
 
     let net_address = NetAddress {
         identity_key: remote_pub,
@@ -127,6 +130,8 @@ fn main() {
     let (delayed_payment_sk, delayed_payment_pk) = get_key_pair();
     let (htlc_sk, htlc_pk) = get_key_pair();
     let (first_per_commitment_sk, first_per_commitment_pk) = get_key_pair();
+
+    let mut graph = Graph::new();
 
     let mut obscuring_factor : u64 = 0;
     while true {
@@ -305,6 +310,10 @@ fn main() {
 
                 your_add_htlc = Some(add_htlc);
             }
+            | Ok(m @ Message::AnnouncementNode(_))
+            | Ok(m @ Message::AnnouncementChannel(_))
+            | Ok(m @ Message::UpdateChannel(_))
+                => graph.message(m),
             Ok(msg) => println!("MSG: {:?}", msg),
             Err(err) =>  {
 //                println!("ERROR: {:?}", err)

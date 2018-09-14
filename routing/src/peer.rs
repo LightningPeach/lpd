@@ -19,9 +19,11 @@ pub trait Peer {
 
 pub struct TcpSelf {
     private_key: [u8; 32],
+    peers: Vec<TcpPeer>,
 }
 
 pub struct TcpPeer {
+    public_key: PublicKey,
     stream: Stream,
 }
 
@@ -29,10 +31,11 @@ impl TcpSelf {
     pub fn new() -> Self {
         TcpSelf {
             private_key: rand::random(),
+            peers: Vec::new(),
         }
     }
 
-    pub fn connect_peer(&self, public_key: PublicKey, address: Address) -> Result<TcpPeer, ()> {
+    pub fn connect_peer(&mut self, public_key: PublicKey, address: Address) -> Result<(), ()> {
         use brontide::tcp_communication::NetAddress;
         use secp256k1::Secp256k1;
         use secp256k1::SecretKey;
@@ -49,9 +52,13 @@ impl TcpSelf {
         let key = SecretKey::from_slice(&Secp256k1::new(), &self.private_key[0..])
             .map_err(|_| ())?;
 
-        Stream::dial(key, net_address)
-        .map(|stream| TcpPeer { stream: stream, })
-            .map_err(|_| ())
+        let peer = Stream::dial(key, net_address)
+            .map(|stream| TcpPeer { public_key: public_key, stream: stream, })
+            .map_err(|_| ())?;
+
+        self.peers.push(peer);
+
+        Ok(())
     }
 }
 

@@ -12,6 +12,9 @@ extern crate brontide;
 extern crate bitcoin_types;
 extern crate common_types;
 extern crate rand;
+extern crate actix;
+#[macro_use]
+extern crate actix_derive;
 
 #[cfg(test)]
 #[macro_use]
@@ -24,6 +27,41 @@ pub mod discovery;
 pub mod topology;
 pub mod synchronization;
 pub mod peer;
+
+use wire::Message;
+
+use self::topology::LightningNode;
+use self::topology::ChannelInfo;
+
+pub struct Graph {
+    nodes: Vec<LightningNode>,
+    channels: Vec<ChannelInfo>,
+}
+
+impl Graph {
+    pub fn new() -> Self {
+        Graph {
+            nodes: Vec::new(),
+            channels: Vec::new(),
+        }
+    }
+
+    pub fn message(&mut self, message: Message) {
+        use self::Message::*;
+        match message {
+            AnnouncementNode(announcement_node) => {
+                //self.nodes.push(LightningNode::new(announcement_node));
+            },
+            AnnouncementChannel(announcement_channel) => {
+                //self.nodes.push(ChannelInfo::new(announcement_channel));
+            },
+            UpdateChannel(update_channel) => {
+                ()
+            },
+            _ => (),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -40,8 +78,8 @@ mod tests {
     fn test_channel_range() {
         use std::thread;
 
-        let tcp_self = TcpSelf::new();
-        let key = public_key!(3, "f0826b27005e139f158ed899abe1c58929db2764b49c8780998ff78d442c6726");
+        let mut tcp_self = TcpSelf::new();
+        let key = public_key!(3, "02f2dda2232393a0a608f4ffa4c940b25b2ea4af8f9489f8e62afc0a729e973b0d");
         let mut tcp_peer = tcp_self.connect_peer(key, Address::localhost(10000)).unwrap();
 
         let init = Init::new(
@@ -52,11 +90,11 @@ mod tests {
         let response = tcp_peer.receive().unwrap();
         println!("{:?}", response);
 
-        let s = Synchronization {};
-        s.sync_channels(&mut tcp_peer);
+        //let s = Synchronization {};
+        //s.sync_channels(&mut tcp_peer);
 
         thread::spawn(move || loop {
-            println!("{:?}", tcp_peer.receive())
+            println!("{:?}", tcp_peer.receive().unwrap())
         }).join().unwrap();
 
         fn pause() {

@@ -28,16 +28,11 @@ pub struct LightningNode {
     color: Color,
     alias: NodeAlias,
     features: RawFeatureVector,
-    // TODO(vlad):
-    db: (),
 }
 
 impl LightningNode {
-    pub fn announcement_node(&self) -> AnnouncementNode {
-        Signed {
-            signature: self.auth_signature.clone(),
-            value: unimplemented!(),
-        }
+    pub fn new(msg: AnnouncementNode) -> Self {
+        unimplemented!()
     }
 }
 
@@ -55,8 +50,6 @@ pub struct ChannelInfo {
     auth_proof: ChannelAuthProof,
     channel_point: ChannelPoint,
     capacity: Satoshi,
-    // TODO(vlad):
-    db: (),
 }
 
 pub type ChannelPolicy = Signed<ChannelPolicyData>;
@@ -71,6 +64,4 @@ pub struct ChannelPolicyData {
     base_fee: u32,
     fee_rate: u32,
     node: LightningNode,
-    // TODO(vlad):
-    db: (),
 }
