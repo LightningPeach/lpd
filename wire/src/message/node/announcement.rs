@@ -6,7 +6,7 @@ use super::Color;
 
 pub type AnnouncementNode = Signed<AnnouncementNodeData>;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AnnouncementNodeData {
     features: RawFeatureVector,
     timestamp: u32,
@@ -17,7 +17,7 @@ pub struct AnnouncementNodeData {
 }
 
 // TODO:
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub enum Address {
     None,
     IpV4,

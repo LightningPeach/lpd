@@ -20,7 +20,7 @@ use std::net::{TcpStream, SocketAddr};
 use std::error::Error;
 
 use brontide::tcp_communication::{Stream, NetAddress};
-use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned, Satoshi, MilliSatoshi, CsvDelay};
+use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned, Satoshi, MilliSatoshi, CsvDelay, FundingCreated};
 use wire::PublicKey as LpdPublicKey;
 use wire::Signature as LpdSignature;
 
@@ -76,6 +76,7 @@ struct PartnerConfig {
     local_fee_rate: u32,
 }
 
+#[derive(Debug, Clone)]
 struct PartnerInfo {
     funding_sk: Option<SecretKey>,
     funding_pk: PublicKey,
@@ -186,6 +187,233 @@ impl PartnerInfo {
     }
 }
 
+#[derive(Debug, Clone)]
+struct InitialState ();
+
+#[derive(Debug, Clone)]
+struct ReadyState {
+    channel_id: ChannelId,
+    our_info: PartnerInfo,
+    their_info: PartnerInfo,
+    obscuring_factor: u64,
+    funding_tx_id: Sha256dHash,
+    funding_output_index: u16,
+}
+
+
+#[derive(Debug, Clone)]
+enum ChannelState {
+    Initial(InitialState),
+    Opening(OpeningState),
+    Ready(ReadyState),
+    Closing,
+    ForceClosing,
+    Closed,
+    Error,
+    PunishingPartner,
+    PunishedPartner,
+    Robbed,
+    PunishedByPartner,
+}
+
+struct Channel {
+    our_info: PartnerInfo,
+    their_info: PartnerInfo,
+    funding: FundingInfo,
+//    our_commit_tx: CommitTx,
+    their_commit_tx: Option<CommitTx>
+}
+
+#[derive(Debug, Clone)]
+struct WaitFundingCreatedData {
+    temp_channel_id: ChannelId,
+    our_info: PartnerInfo,
+    their_info: PartnerInfo,
+    funding: FundingInfo,
+}
+
+#[derive(Debug, Clone)]
+struct WaitFundingLockedData {
+    temp_channel_id: ChannelId,
+    channel_id: ChannelId,
+    our_info: PartnerInfo,
+    their_info: PartnerInfo,
+    obscuring_factor: u64,
+    funding: FundingInfo,
+    funding_tx_id: Sha256dHash,
+    funding_output_index: u16,
+}
+
+#[derive(Debug, Clone)]
+enum OpeningState {
+    Initial,
+    WaitFundingCreated(WaitFundingCreatedData),
+    WaitFundingLocked(WaitFundingLockedData),
+    Error(String)
+}
+
+#[derive(Debug, Clone)]
+enum Event {
+    MessageEvent(Message),
+    ControlEvent,
+    BlockchainEvent,
+    TimerEvent,
+}
+
+impl ChannelState {
+    fn new() -> ChannelState {
+        ChannelState::Initial(InitialState())
+    }
+
+    fn next(self, msg: Message) -> (ChannelState, Option<Message>) {
+        match (self, msg) {
+            (ChannelState::Initial(st), Message::OpenChannel(msg)) => {
+                st.handle_open_channel_msg(msg)
+            },
+            (ChannelState::Opening(OpeningState::WaitFundingCreated(st)), Message::FundingCreated(msg)) => {
+                st.handle_funding_created_msg(msg)
+            },
+            (ChannelState::Opening(OpeningState::WaitFundingLocked(st)), Message::FundingLocked(msg)) => {
+                st.handle_funding_locked_msg(msg)
+            },
+            (st, msg) => {
+                println!("Unknown combination state/message: {:?}/{:?}", &st, &msg);
+                (st, None)
+            }
+        }
+    }
+}
+
+impl InitialState {
+    fn handle_open_channel_msg(self, msg: OpenChannel) -> (ChannelState, Option<Message>) {
+        let their_info = PartnerInfo::from_open_channel_msg(&msg);
+        let mut our_info = PartnerInfo::new_random();
+        our_info.config = their_info.config.clone();
+        let funding = FundingInfo::from_open_channel_msg(&msg);
+        let accept_channel_msg = AcceptChannel {
+            temporary_channel_id: msg.temporary_channel_id.clone(),
+            dust_limit: Satoshi::from(their_info.config.dust_limit),
+            max_htlc_value_in_flight: MilliSatoshi::from(their_info.config.max_htlc_value_in_flight),
+            chanel_reserve: Satoshi::from(their_info.config.chanel_reserve),
+            htlc_minimum: MilliSatoshi::from(their_info.config.htlc_minimum),
+            minimum_accept_depth: 1,
+            csv_delay: CsvDelay::from(their_info.config.csv_delay),
+            max_accepted_htlc_number: their_info.config.max_accepted_htlc_number,
+            funding_pubkey: LpdPublicKey::from(our_info.funding_pk),
+            revocation_point: LpdPublicKey::from(our_info.revocation_bp_pk),
+            payment_point: LpdPublicKey::from(our_info.payment_bp_pk),
+            delayed_payment_point: LpdPublicKey::from(our_info.delayed_payment_bp_pk),
+            htlc_point: LpdPublicKey::from(our_info.htlc_bp_pk),
+            first_per_commitment_point: LpdPublicKey::from(our_info.per_commit_pk),
+        };
+        let data = WaitFundingCreatedData {
+            our_info,
+            their_info,
+            temp_channel_id: msg.temporary_channel_id.into(),
+            funding: FundingInfo::from_open_channel_msg(&msg)
+        };
+        (
+            ChannelState::Opening(OpeningState::WaitFundingCreated(data)),
+            Some(Message::AcceptChannel(accept_channel_msg))
+        )
+    }
+}
+
+impl WaitFundingCreatedData {
+    fn handle_funding_created_msg(self, msg: FundingCreated) -> (ChannelState, Option<Message>) {
+        let local_htlc_pubkey = self.their_info.htlc_pubkey();
+        let remote_htlc_pubkey = self.our_info.htlc_pubkey();
+
+        let local_revocation_pubkey = self.their_info.revocation_pubkey(&self.our_info.revocation_bp_pk);
+
+        let local_delayed_pubkey = self.their_info.delayed_pubkey();
+
+        let remote_pubkey = self.our_info.payment_pubkey();
+
+        let obscuring_factor = get_obscuring_number(
+            &self.their_info.payment_bp_pk.serialize(),
+            &self.our_info.payment_bp_pk.serialize()
+        );
+
+        let commit_tx = CommitTx{
+            funding_amount: self.funding.funding as i64,
+            local_funding_pubkey: self.their_info.funding_pk.clone(),
+            remote_funding_pubkey: self.our_info.funding_pk.clone(),
+
+            local_feerate_per_kw: u32::from(self.their_info.config.local_fee_rate) as i64,
+            dust_limit_satoshi: u64::from(self.their_info.config.dust_limit) as i64,
+
+            to_local_msat: (1000 * self.funding.funding) as i64,
+            to_remote_msat: self.funding.push as i64,
+
+            obscured_commit_number: 0 ^ obscuring_factor,
+
+            local_htlc_pubkey: local_htlc_pubkey,
+            remote_htlc_pubkey: remote_htlc_pubkey,
+
+            local_revocation_pubkey: local_revocation_pubkey,
+            local_delayedpubkey: local_delayed_pubkey,
+            local_delay: self.their_info.config.csv_delay.into(),
+
+            remotepubkey: remote_pubkey,
+
+            funding_tx_id: Sha256dHash::from(&<[u8; 32]>::from(msg.funding_txid.clone())[..]),
+            funding_output_index: u16::from(msg.output_index) as u32,
+
+            htlcs: vec![]
+        };
+        let sig = commit_tx.sign(&self.our_info.funding_sk.unwrap());
+        let tx = commit_tx.get_tx();
+        let mut a = vec![];
+        tx.consensus_encode(&mut RawEncoder::new(&mut a)).unwrap();
+
+        let mut channel_id = <[u8; 32]>::from(msg.funding_txid);
+        let ind = u16::from(msg.output_index);
+        channel_id[0] ^= (ind & 0xFF) as u8;
+        channel_id[1] ^= (ind >> 8) as u8;
+        let funding_signed = FundingSigned {
+            channel_id: ChannelId::from(channel_id),
+            signature: LpdSignature::from(sig),
+        };
+        let data = WaitFundingLockedData {
+            temp_channel_id: self.temp_channel_id,
+            channel_id: channel_id.into(),
+            funding: self.funding,
+            our_info: self.our_info,
+            obscuring_factor,
+            their_info: self.their_info,
+            funding_tx_id: Sha256dHash::from(&<[u8; 32]>::from(msg.funding_txid.clone())[..]),
+            funding_output_index: msg.output_index.into(),
+        };
+        (
+            ChannelState::Opening(OpeningState::WaitFundingLocked(data)),
+            Some(Message::FundingSigned(funding_signed))
+        )
+    }
+}
+
+impl WaitFundingLockedData {
+    fn handle_funding_locked_msg(self, msg: FundingLocked) -> (ChannelState, Option<Message>) {
+        // TODO(mkl): check blockchain
+        let funding_locked = FundingLocked {
+            channel_id: msg.channel_id,
+            next_per_commitment_point: LpdPublicKey::from(msg.next_per_commitment_point),
+        };
+        let data = ReadyState {
+            channel_id: self.channel_id,
+            our_info: self.our_info,
+            their_info: self.their_info,
+            obscuring_factor: self.obscuring_factor,
+            funding_tx_id: self.funding_tx_id,
+            funding_output_index: self.funding_output_index,
+        };
+        (
+            ChannelState::Ready(data),
+            Some(Message::FundingLocked(funding_locked))
+        )
+    }
+}
+
 fn main() {
 //    let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
 //    let local_priv = SecretKey::from_slice(&Secp256k1::new(), &local_priv_bytes).unwrap();
@@ -243,119 +471,57 @@ fn main() {
     let mut your_commit_tx : Option<CommitTx> = None;
     let mut your_add_htlc : Option<UpdateAddHtlc> = None;
     let mut your_funding_locked : Option<FundingLocked> = None;
+    let mut channel: Option<Channel> = None;
 
-
-
-    let our_info = PartnerInfo::new_random();
-    let mut their_info = PartnerInfo::new_random();
     let mut funding_info: FundingInfo = Default::default();
 
     let (fl_commit_point_sk, fl_commit_point_pk) = get_key_pair();
 
     let mut obscuring_factor : u64 = 0;
+    let mut st = ChannelState::new();
     while true {
         match read_msg(&mut brontide_stream) {
+            // Ping -> Pong
             Ok(Message::Ping(p)) =>  {
                 println!("PING: {:?}", &p);
                 let pong = Pong::new(&p);
                 write_msg(&mut brontide_stream, &Message::Pong(pong)).unwrap();
             },
 
+            // OpenChannel -> AcceptChannel OR Error
             Ok(Message::OpenChannel(open_channel)) => {
                 println!("OPEN_CHANNEL: {:?}", open_channel);
                 println!("chain_hash: {:?}", open_channel.chain_hash);
-                their_info = PartnerInfo::from_open_channel_msg(&open_channel);
-                funding_info = FundingInfo::from_open_channel_msg(&open_channel);
-
-                let accept_channel_msg = AcceptChannel {
-                    temporary_channel_id: open_channel.temporary_channel_id.clone(),
-                    dust_limit: Satoshi::from(their_info.config.dust_limit),
-                    max_htlc_value_in_flight: MilliSatoshi::from(their_info.config.max_htlc_value_in_flight),
-                    chanel_reserve: Satoshi::from(their_info.config.chanel_reserve),
-                    htlc_minimum: MilliSatoshi::from(their_info.config.htlc_minimum),
-                    minimum_accept_depth: 1,
-                    csv_delay: CsvDelay::from(their_info.config.csv_delay),
-                    max_accepted_htlc_number: their_info.config.max_accepted_htlc_number,
-                    funding_pubkey: LpdPublicKey::from(our_info.funding_pk),
-                    revocation_point: LpdPublicKey::from(our_info.revocation_bp_pk),
-                    payment_point: LpdPublicKey::from(our_info.payment_bp_pk),
-                    delayed_payment_point: LpdPublicKey::from(our_info.delayed_payment_bp_pk),
-                    htlc_point: LpdPublicKey::from(our_info.htlc_bp_pk),
-                    first_per_commitment_point: LpdPublicKey::from(our_info.per_commit_pk),
-                };
-                write_msg(&mut brontide_stream, &Message::AcceptChannel(accept_channel_msg)).unwrap();
+                let (new_st, resp) = st.next(Message::OpenChannel(open_channel));
+                st = new_st;
+                if resp.is_some() {
+                    write_msg(&mut brontide_stream, &resp.unwrap()).unwrap();
+                }
             },
+
+            // FundingCreated -> FundingSigned OR ERROR
             Ok(Message::FundingCreated(funding_created)) => {
                 println!("FUNDING_CREATED: {:?}", &funding_created);
                 // Now we create a commitment transaction
                 // local => from OpenChannel
                 // remote => from AcceptChannel
-                let local_htlc_pubkey = their_info.htlc_pubkey();
-                let remote_htlc_pubkey = our_info.htlc_pubkey();
 
-                let local_revocation_pubkey = their_info.revocation_pubkey(&our_info.revocation_bp_pk);
-
-                let local_delayed_pubkey = their_info.delayed_pubkey();
-
-                let remote_pubkey = our_info.payment_pubkey();
-
-                obscuring_factor = get_obscuring_number(&their_info.payment_bp_pk.serialize(), &our_info.payment_bp_pk.serialize());
-
-                let commit_tx = CommitTx{
-                    funding_amount: funding_info.funding as i64,
-                    local_funding_pubkey: their_info.funding_pk.clone(),
-                    remote_funding_pubkey: our_info.funding_pk.clone(),
-
-                    local_feerate_per_kw: u32::from(their_info.config.local_fee_rate) as i64,
-                    dust_limit_satoshi: u64::from(their_info.config.dust_limit) as i64,
-
-                    to_local_msat: (1000 * funding_info.funding) as i64,
-                    to_remote_msat: funding_info.push as i64,
-
-                    obscured_commit_number: 0 ^ obscuring_factor,
-
-                    local_htlc_pubkey: local_htlc_pubkey,
-                    remote_htlc_pubkey: remote_htlc_pubkey,
-
-                    local_revocation_pubkey: local_revocation_pubkey,
-                    local_delayedpubkey: local_delayed_pubkey,
-                    local_delay: their_info.config.csv_delay.into(),
-
-                    remotepubkey: remote_pubkey,
-
-                    funding_tx_id: Sha256dHash::from(&<[u8; 32]>::from(funding_created.funding_txid.clone())[..]),
-                    funding_output_index: u16::from(funding_created.output_index) as u32,
-
-                    htlcs: vec![]
-                };
-                let sig = commit_tx.sign(&our_info.funding_sk.unwrap());
-                let tx = commit_tx.get_tx();
-                let mut a = vec![];
-                tx.consensus_encode(&mut RawEncoder::new(&mut a)).unwrap();
-                println!("commit_tx: {}", hex::encode(a));
-
-                println!("Signature: {:?}", sig);
-                let mut channel_id = <[u8; 32]>::from(funding_created.funding_txid);
-                let ind = u16::from(funding_created.output_index);
-                channel_id[0] ^= (ind & 0xFF) as u8;
-                channel_id[1] ^= (ind >> 8) as u8;
-                let funding_signed = FundingSigned {
-                    channel_id: ChannelId::from(channel_id),
-                    signature: LpdSignature::from(sig),
-                };
-                write_msg(&mut brontide_stream, &Message::FundingSigned(funding_signed)).unwrap();
-                your_commit_tx = Some(commit_tx);
+                let (new_st, resp) = st.next(Message::FundingCreated(funding_created));
+                st = new_st;
+                if resp.is_some() {
+                    write_msg(&mut brontide_stream, &resp.unwrap()).unwrap();
+                }
             },
+
+            // FundingLocked -> <channel opened>
             Ok(Message::FundingLocked(funding_locked)) => {
                 println!("FUNDING_LOCKED: {:?}", &funding_locked);
 
-                let my_funding_locked = FundingLocked {
-                    channel_id: funding_locked.channel_id,
-                    next_per_commitment_point: LpdPublicKey::from(fl_commit_point_pk),
-                };
-
-                your_funding_locked = Some(funding_locked);
-                write_msg(&mut brontide_stream, &Message::FundingLocked(my_funding_locked)).unwrap();
+                let (new_st, resp) = st.next(Message::FundingLocked(funding_locked));
+                st = new_st;
+                if resp.is_some() {
+                    write_msg(&mut brontide_stream, &resp.unwrap()).unwrap();
+                }
                 println!(
                     "sendpayment --dest {} --amt {} --payment_hash {} --final_cltv_delta={}",
                     hex::encode(&local_pk.serialize()[..]),
@@ -364,81 +530,81 @@ fn main() {
                     1,
                 );
             },
-            Ok(Message::UpdateAddHtlc(update_add_htlc)) => {
-                println!("UPDATE_ADD_HTLC: {:?}", &update_add_htlc);
-                your_add_htlc = Some(update_add_htlc);
-            },
-            Ok(Message::CommitmentSigned(commitment_signed)) => {
-                println!("COMMITMENT_SIGNED: {:?}", &commitment_signed);
-                let add_htlc = your_add_htlc.unwrap();
-
-                let (new_commit_point_sk, new_commit_point_pk) = get_key_pair();
-                println!("per_commit_point: {}", hex::encode(&our_info.per_commit_pk.serialize()[..]));
-                println!("revocation: {}", hex::encode(&our_info.per_commit_sk.unwrap()[..]));
-                let revoke_and_ack = RevokeAndAck {
-                    channel_id: commitment_signed.channel_id,
-                    revocation_preimage: to_u8_32(&our_info.per_commit_sk.unwrap()[..]),
-                    next_per_commitment_point: LpdPublicKey::from(new_commit_point_pk),
-                };
-                write_msg(&mut brontide_stream, &Message::RevokeAndAck(revoke_and_ack));
-
-                let your_fl = your_funding_locked.unwrap();
-                let your_fl_next_per_commitment_point = your_fl.next_per_commitment_point;
-                your_funding_locked = Some(your_fl);
-
-                let remote_pubkey = derive_pubkey(
-                    &our_info.payment_bp_pk, &new_commit_point_pk
-                );
-                let local_revocation_pubkey = derive_revocation_pubkey(
-                    &our_info.revocation_bp_pk,
-                    &PublicKey::from(your_fl_next_per_commitment_point)
-                );
-                let local_delayed_pubkey = derive_pubkey(
-                    &their_info.payment_bp_pk,
-                    &PublicKey::from(your_fl_next_per_commitment_point)
-                );
-
-                let mut commit_tx = your_commit_tx.unwrap();
-                commit_tx.local_revocation_pubkey = local_revocation_pubkey;
-                commit_tx.local_delayedpubkey = local_delayed_pubkey;
-                commit_tx.htlcs.push(HTLC{
-                    amount_msat: u64::from(add_htlc.amount) as i64,
-                    direction: HTLCDirection::Offered,
-                    expiry: add_htlc.expiry as i32,
-                    payment_hash: <[u8; 32]>::from(add_htlc.payment),
-                });
-                commit_tx.to_local_msat -= u64::from(add_htlc.amount) as i64;
-                commit_tx.obscured_commit_number = 1 ^ obscuring_factor;
-                commit_tx.remotepubkey = remote_pubkey;
-
-                println!("commit_tx::local_delayed_pubkey: {}", hex::encode(&commit_tx.local_delayedpubkey.serialize()[..]));
-                println!("commit_tx::local_revocation_pubkey: {}", hex::encode(&commit_tx.local_revocation_pubkey.serialize()[..]));
-
-
-                let tx = commit_tx.get_tx();
-                let mut a = vec![];
-                tx.consensus_encode(&mut RawEncoder::new(&mut a)).unwrap();
-                println!("commit_tx: {}", hex::encode(&a));
-
-                let my_commit_signed = CommitmentSigned{
-                    channel_id: commitment_signed.channel_id,
-                    signature: LpdSignature::from(commit_tx.sign(&our_info.funding_sk.unwrap())),
-                    htlc_signatures: SerdeVec(vec![])
-                };
-                write_msg(&mut brontide_stream, &Message::CommitmentSigned(my_commit_signed));
-                your_commit_tx = Some(commit_tx);
-
-                thread::sleep(time::Duration::from_millis(1000));
-
-                let update_fulfill_htlc = UpdateFulfillHtlc {
-                    channel_id: add_htlc.channel_id,
-                    id: add_htlc.id,
-                    payment_preimage: rpreimg,
-                };
-                write_msg(&mut brontide_stream, &Message::UpdateFulfillHtlc(update_fulfill_htlc)).unwrap();
-
-                your_add_htlc = Some(add_htlc);
-            }
+//            Ok(Message::UpdateAddHtlc(update_add_htlc)) => {
+//                println!("UPDATE_ADD_HTLC: {:?}", &update_add_htlc);
+//                your_add_htlc = Some(update_add_htlc);
+//            },
+//            Ok(Message::CommitmentSigned(commitment_signed)) => {
+//                println!("COMMITMENT_SIGNED: {:?}", &commitment_signed);
+//                let add_htlc = your_add_htlc.unwrap();
+//
+//
+//                // CommitmentSigned -> RevokeAndAck
+//                let (new_commit_point_sk, new_commit_point_pk) = get_key_pair();
+//                let revoke_and_ack = RevokeAndAck {
+//                    channel_id: commitment_signed.channel_id,
+//                    revocation_preimage: to_u8_32(&our_info.per_commit_sk.unwrap()[..]),
+//                    next_per_commitment_point: LpdPublicKey::from(new_commit_point_pk),
+//                };
+//                write_msg(&mut brontide_stream, &Message::RevokeAndAck(revoke_and_ack));
+//
+//                let your_fl = your_funding_locked.unwrap();
+//                let your_fl_next_per_commitment_point = your_fl.next_per_commitment_point;
+//                your_funding_locked = Some(your_fl);
+//
+//                let remote_pubkey = derive_pubkey(
+//                    &our_info.payment_bp_pk, &new_commit_point_pk
+//                );
+//                let local_revocation_pubkey = derive_revocation_pubkey(
+//                    &our_info.revocation_bp_pk,
+//                    &PublicKey::from(your_fl_next_per_commitment_point)
+//                );
+//                let local_delayed_pubkey = derive_pubkey(
+//                    &their_info.payment_bp_pk,
+//                    &PublicKey::from(your_fl_next_per_commitment_point)
+//                );
+//
+//                let mut commit_tx = your_commit_tx.unwrap();
+//                commit_tx.local_revocation_pubkey = local_revocation_pubkey;
+//                commit_tx.local_delayedpubkey = local_delayed_pubkey;
+//                commit_tx.htlcs.push(HTLC{
+//                    amount_msat: u64::from(add_htlc.amount) as i64,
+//                    direction: HTLCDirection::Offered,
+//                    expiry: add_htlc.expiry as i32,
+//                    payment_hash: <[u8; 32]>::from(add_htlc.payment),
+//                });
+//                commit_tx.to_local_msat -= u64::from(add_htlc.amount) as i64;
+//                commit_tx.obscured_commit_number = 1 ^ obscuring_factor;
+//                commit_tx.remotepubkey = remote_pubkey;
+//
+//                println!("commit_tx::local_delayed_pubkey: {}", hex::encode(&commit_tx.local_delayedpubkey.serialize()[..]));
+//                println!("commit_tx::local_revocation_pubkey: {}", hex::encode(&commit_tx.local_revocation_pubkey.serialize()[..]));
+//
+//
+//                let tx = commit_tx.get_tx();
+//                let mut a = vec![];
+//                tx.consensus_encode(&mut RawEncoder::new(&mut a)).unwrap();
+//                println!("commit_tx: {}", hex::encode(&a));
+//
+//                let my_commit_signed = CommitmentSigned{
+//                    channel_id: commitment_signed.channel_id,
+//                    signature: LpdSignature::from(commit_tx.sign(&our_info.funding_sk.unwrap())),
+//                    htlc_signatures: SerdeVec(vec![])
+//                };
+//                write_msg(&mut brontide_stream, &Message::CommitmentSigned(my_commit_signed));
+//                your_commit_tx = Some(commit_tx);
+//
+//                thread::sleep(time::Duration::from_millis(1000));
+//
+//                let update_fulfill_htlc = UpdateFulfillHtlc {
+//                    channel_id: add_htlc.channel_id,
+//                    id: add_htlc.id,
+//                    payment_preimage: rpreimg,
+//                };
+//                write_msg(&mut brontide_stream, &Message::UpdateFulfillHtlc(update_fulfill_htlc)).unwrap();
+//
+//                your_add_htlc = Some(add_htlc);
+//            }
             Ok(msg) => println!("MSG: {:?}", msg),
             Err(err) =>  {
 //                println!("ERROR: {:?}", err)

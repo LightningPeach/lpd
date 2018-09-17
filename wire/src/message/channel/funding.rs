@@ -8,7 +8,7 @@ pub struct FundingTxid {
     data: [u8; 32],
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct FundingCreated {
     pub temporary_channel_id: ChannelId,
     pub funding_txid: FundingTxid,
@@ -16,13 +16,13 @@ pub struct FundingCreated {
     pub signature: Signature,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct FundingSigned {
     pub channel_id: ChannelId,
     pub signature: Signature,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct FundingLocked {
     pub channel_id: ChannelId,
     pub next_per_commitment_point: PublicKey,

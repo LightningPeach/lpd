@@ -8,7 +8,7 @@ use super::types::*;
 
 use std::ops::Range;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct NodePort(pub u16);
 
 impl NodePort {
