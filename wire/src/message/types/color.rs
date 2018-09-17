@@ -1,6 +1,6 @@
 use super::common::Module;
 
-#[derive(Default, Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Default, Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct Color {
     data: [u8; 4],
 }

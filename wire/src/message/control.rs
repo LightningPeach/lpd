@@ -11,7 +11,7 @@ use super::MessageSize;
 /// obfuscate traffic pattern.
 /// `pong_length` should be less or equal 2 ^ 16 - 5,
 /// in order to the response message fit in the size limit.
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct Ping {
     pong_length: MessageSize,
     data: Vec<u8>,
@@ -59,7 +59,7 @@ impl Ping {
 /// Should ignore the `Ping` message if required length
 /// cause the whole message exceed 2 ^ 16 - 1 size limit.
 /// Should fail the channel if
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct Pong {
     data: Vec<u8>,
 }

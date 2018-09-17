@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use super::RawFeatureVector;
 use super::FeatureBit;
 
+#[derive(Clone, Debug)]
 pub struct FeatureVector {
     raw: RawFeatureVector,
     names: HashMap<FeatureBit, String>,

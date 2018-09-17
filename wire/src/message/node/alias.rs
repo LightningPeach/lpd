@@ -1,4 +1,4 @@
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct NodeAlias(String);
 
 const SIZE: usize = 32;

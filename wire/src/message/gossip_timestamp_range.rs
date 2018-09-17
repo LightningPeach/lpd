@@ -2,7 +2,7 @@ use super::types::Hash256;
 
 use std::ops::Range;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct GossipTimestampRange {
     chain_hash: Hash256,
     first_timestamp: u32,

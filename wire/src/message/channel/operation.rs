@@ -27,7 +27,7 @@ impl HtlcId {
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateAddHtlc {
     pub channel_id: ChannelId,
     pub id: HtlcId,
@@ -37,21 +37,21 @@ pub struct UpdateAddHtlc {
     pub onion_blob: OnionBlob,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateFulfillHtlc {
     pub channel_id: ChannelId,
     pub id: HtlcId,
     pub payment_preimage: [u8; 32],
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateFailHtlc {
     channel_id: ChannelId,
     id: HtlcId,
     reason: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateFailMalformedHtlc {
     channel_id: ChannelId,
     id: HtlcId,
@@ -59,21 +59,21 @@ pub struct UpdateFailMalformedHtlc {
     failure_code: u16,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct CommitmentSigned {
     pub channel_id: ChannelId,
     pub signature: Signature,
     pub htlc_signatures: SerdeVec<Signature>,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct RevokeAndAck {
     pub channel_id: ChannelId,
     pub revocation_preimage: [u8; 32],
     pub next_per_commitment_point: PublicKey,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateFee {
     channel_id: ChannelId,
     fee: SatoshiPerKiloWeight,

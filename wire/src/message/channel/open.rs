@@ -29,12 +29,12 @@ pub struct OpenChannel {
     pub flags: ChannelFlags,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct OpenChannelShutdownScript {
     shutdown_script_pubkey: Vec<()>,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AcceptChannel {
     pub temporary_channel_id: ChannelId,
     pub dust_limit: Satoshi,
@@ -52,7 +52,7 @@ pub struct AcceptChannel {
     pub first_per_commitment_point: PublicKey,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ReestablishChannel {
     channel_id: ChannelId,
     next_local_commitment_number: u64,

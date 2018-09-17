@@ -4,7 +4,7 @@ use super::Hash256;
 use super::PublicKey;
 use super::ShortChannelId;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AnnouncementChannel {
     node_sig: (Signature, Signature),
     bitcoin_sig: (Signature, Signature),

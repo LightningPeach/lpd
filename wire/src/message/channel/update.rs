@@ -5,7 +5,7 @@ use super::MilliSatoshi;
 
 pub type UpdateChannel = Signed<UpdateChannelData>;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateChannelData {
     hash: Hash256,
     short_channel_id: ShortChannelId,
