@@ -1,3 +1,5 @@
+use super::types::*;
+
 mod funding;
 pub use self::funding::*;
 
@@ -9,6 +11,9 @@ pub use self::operation::*;
 
 mod open;
 pub use self::open::*;
+
+mod keys;
+pub use self::keys::*;
 
 mod announcement;
 pub use self::announcement::*;
@@ -22,7 +27,6 @@ pub use self::query_short_channel_ids::*;
 mod query_channel_range;
 pub use self::query_channel_range::*;
 
-use super::types::*;
 use ::PackSized;
 
 bitflags! {

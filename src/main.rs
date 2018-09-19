@@ -1,8 +1,11 @@
+#![allow(unused_imports)]
+
 extern crate bitcoin;
 extern crate rand;
 extern crate secp256k1;
 extern crate brontide;
 extern crate hex;
+#[macro_use]
 extern crate wire;
 extern crate channel;
 extern crate routing;
@@ -21,9 +24,13 @@ use std::net::{TcpStream, SocketAddr};
 use std::error::Error;
 
 use brontide::tcp_communication::{Stream, NetAddress};
-use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned};
+use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, ChannelKeys, ChannelPrivateKeys, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned};
 use wire::PublicKey as LpdPublicKey;
+use wire::SecretKey as LpdPrivate;
 use wire::Signature as LpdSignature;
+
+#[macro_use]
+extern crate hex_literal;
 
 use bitcoin::network::serialize::{RawEncoder};
 use bitcoin::network::encodable::ConsensusEncodable;
@@ -67,18 +74,6 @@ fn to_u8_32(u: &[u8]) -> [u8; 32] {
 }
 
 fn main() {
-//    let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
-//    let local_priv = SecretKey::from_slice(&Secp256k1::new(), &local_priv_bytes).unwrap();
-//
-//    let public_key = PublicKey::from_secret_key(&Secp256k1::new(), &local_priv).unwrap();
-//    println!("{}", hex::encode(&public_key.serialize()[..]));
-//
-//    let listener = brontide::tcp_communication::Listener::new(local_priv, String::from("127.0.0.1:11011")).unwrap();
-//    loop {
-//        listener.accept().unwrap();
-//        println!("accept");
-//    }
-
     // Connect to lnd node
     let ctx = Secp256k1::new();
     let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
@@ -90,9 +85,7 @@ fn main() {
     let rhash = sha256(&rpreimg);
     println!("rhash={}",  hex::encode(&rhash));
 
-    let remote_pub_hex = "03bc578d3822ad1ad77c3394816cdf09c70157f95b11e51b33beb36941c3bb746c";
-    let remote_pub_bytes = hex::decode(remote_pub_hex).unwrap();
-    let remote_pub = PublicKey::from_slice(&Secp256k1::new(), &remote_pub_bytes).unwrap();
+    let remote_pub = public_key!("03aff762f5c4de64cb567da4a7c79ce1e825cecd2ee303855fe34bf686aacc4031");
 
     let socket_addr = "127.0.0.1:10000".parse().unwrap();
 
@@ -124,17 +117,13 @@ fn main() {
     let mut your_commit_tx : Option<CommitTx> = None;
     let mut your_add_htlc : Option<UpdateAddHtlc> = None;
 
-    let (funding_sk, funding_pk) = get_key_pair();
-    let (revocation_sk, revocation_pk) = get_key_pair();
-    let (payment_sk, payment_pk) = get_key_pair();
-    let (delayed_payment_sk, delayed_payment_pk) = get_key_pair();
-    let (htlc_sk, htlc_pk) = get_key_pair();
-    let (first_per_commitment_sk, first_per_commitment_pk) = get_key_pair();
+    let private_channel_keys = rand::random();
+    let accept_channel_keys = ChannelKeys::new(&private_channel_keys).unwrap();
 
     let mut graph = Graph::new();
 
     let mut obscuring_factor : u64 = 0;
-    while true {
+    loop {
         match read_msg(&mut brontide_stream) {
             Ok(Message::Ping(p)) =>  {
                 println!("PING: {:?}", &p);
@@ -145,22 +134,7 @@ fn main() {
                 println!("OPEN_CHANNEL: {:?}", open_channel);
                 println!("chain_hash: {:?}", open_channel.chain_hash);
 
-                let accept_channel_msg = AcceptChannel {
-                    temporary_channel_id: open_channel.temporary_channel_id.clone(),
-                    dust_limit: open_channel.dust_limit.clone(),
-                    max_htlc_value_in_flight: open_channel.max_in_flight.clone(),
-                    chanel_reserve: open_channel.channel_reserve.clone(),
-                    htlc_minimum: open_channel.htlc_minimum.clone(),
-                    minimum_accept_depth: 1,
-                    csv_delay: open_channel.csv_delay.clone(),
-                    max_accepted_htlc_number: open_channel.max_accepted_htlc_number.clone(),
-                    funding_pubkey: LpdPublicKey::from(funding_pk),
-                    revocation_point: LpdPublicKey::from(revocation_pk),
-                    payment_point: LpdPublicKey::from(payment_pk),
-                    delayed_payment_point: LpdPublicKey::from(delayed_payment_pk),
-                    htlc_point: LpdPublicKey::from(htlc_pk),
-                    first_per_commitment_point: LpdPublicKey::from(first_per_commitment_pk),
-                };
+                let accept_channel_msg = AcceptChannel::accept(&open_channel, &accept_channel_keys);
                 write_msg(&mut brontide_stream, &Message::AcceptChannel(accept_channel_msg)).unwrap();
                 open_channel_b = Some(open_channel);
             },
@@ -169,40 +143,57 @@ fn main() {
                 // Now we create a commitment transaction
                 // local => from OpenChannel
                 // remote => from AcceptChannel
-                let open_channel = open_channel_b.unwrap();
+
+                // bit ugly, but avoid copy
+                // anyway this code is temporary
+                let open_channel = || {
+                    match &open_channel_b {
+                        &Some(ref c) => c,
+                        &None => panic!(),
+                    }
+                };
+                let open_channel_keys = || {
+                    &open_channel().keys
+                };
+
                 let local_htlc_pubkey = derive_pubkey(
-                    &PublicKey::from(open_channel.htlc_basepoint),
-                    &PublicKey::from(open_channel.first_per_commitment_point)
+                    &open_channel_keys().htlc().as_ref(),
+                    &open_channel_keys().first_per_commitment().as_ref(),
                 );
                 let remote_htlc_pubkey = derive_pubkey(
-                    &htlc_pk, &first_per_commitment_pk
+                    accept_channel_keys.htlc().as_ref(),
+                    &accept_channel_keys.first_per_commitment().as_ref()
                 );
 
                 let local_revocation_pubkey = derive_revocation_pubkey(
-                    &revocation_pk,
-                    &PublicKey::from(open_channel.first_per_commitment_point)
+                    &accept_channel_keys.revocation().as_ref(),
+                    &open_channel_keys().first_per_commitment().as_ref()
                 );
                 let local_delayed_pubkey = derive_pubkey(
-                    &PublicKey::from(open_channel.delayed_payment_basepoint),
-                    &PublicKey::from(open_channel.first_per_commitment_point)
+                    &open_channel_keys().delayed_payment().as_ref(),
+                    &open_channel_keys().first_per_commitment().as_ref()
                 );
 
                 let remote_pubkey = derive_pubkey(
-                    &payment_pk, &first_per_commitment_pk
+                    &accept_channel_keys.payment().as_ref(),
+                    &accept_channel_keys.first_per_commitment().as_ref()
                 );
 
-                obscuring_factor = get_obscuring_number(&PublicKey::from(open_channel.payment_basepoint).serialize(), &payment_pk.serialize());
+                obscuring_factor = get_obscuring_number(
+                    &open_channel_keys().payment().as_ref().serialize(),
+                    &accept_channel_keys.payment().as_ref().serialize()
+                );
 
                 let commit_tx = CommitTx{
-                    funding_amount: u64::from(open_channel.funding) as i64,
-                    local_funding_pubkey: PublicKey::from(open_channel.funding_pubkey),
-                    remote_funding_pubkey: funding_pk.clone(),
+                    funding_amount: u64::from(open_channel().funding) as i64,
+                    local_funding_pubkey: open_channel_keys().funding().as_ref().clone(),
+                    remote_funding_pubkey: accept_channel_keys.funding().as_ref().clone(),
 
-                    local_feerate_per_kw: u32::from(open_channel.fee) as i64,
-                    dust_limit_satoshi: u64::from(open_channel.dust_limit) as i64,
+                    local_feerate_per_kw: u32::from(open_channel().fee) as i64,
+                    dust_limit_satoshi: u64::from(open_channel().dust_limit) as i64,
 
-                    to_local_msat: (1000 * u64::from(open_channel.funding)) as i64,
-                    to_remote_msat: u64::from(open_channel.push) as i64,
+                    to_local_msat: (1000 * u64::from(open_channel().funding)) as i64,
+                    to_remote_msat: u64::from(open_channel().push) as i64,
 
                     obscured_commit_number: 0 ^ obscuring_factor,
 
@@ -211,7 +202,7 @@ fn main() {
 
                     local_revocation_pubkey: local_revocation_pubkey,
                     local_delayedpubkey: local_delayed_pubkey,
-                    local_delay: u16::from(open_channel.csv_delay).into(),
+                    local_delay: u16::from(open_channel().csv_delay).into(),
 
                     remotepubkey: remote_pubkey,
 
@@ -220,7 +211,7 @@ fn main() {
 
                     htlcs: vec![]
                 };
-                let sig = commit_tx.sign(&funding_sk);
+                let sig = commit_tx.sign(&private_channel_keys.funding_sk().as_ref());
                 let tx = commit_tx.get_tx();
                 let mut a = vec![];
                 tx.consensus_encode(&mut RawEncoder::new(&mut a)).unwrap();
@@ -240,7 +231,7 @@ fn main() {
             },
             Ok(Message::FundingLocked(funding_locked)) => {
                 println!("FUNDING_LOCKED: {:?}", &funding_locked);
-                let (commit_point_sk, commit_point_pk) = get_key_pair();
+                let (_commit_point_sk, commit_point_pk) = get_key_pair();
                 let my_funding_locked = FundingLocked {
                     channel_id: funding_locked.channel_id,
                     next_per_commitment_point: LpdPublicKey::from(commit_point_pk),
@@ -262,18 +253,19 @@ fn main() {
                 println!("COMMITMENT_SIGNED: {:?}", &commitment_signed);
                 let add_htlc = your_add_htlc.unwrap();
 
-                let (new_commit_point_sk, new_commit_point_pk) = get_key_pair();
-                println!("per_commit_point: {}", hex::encode(&first_per_commitment_pk.serialize()[..]));
-                println!("revocation: {}", hex::encode(&first_per_commitment_sk[..]));
+                let (_new_commit_point_sk, new_commit_point_pk) = get_key_pair();
+                println!("per_commit_point: {:?}", &accept_channel_keys.first_per_commitment());
+                println!("revocation: {:?}", &private_channel_keys.first_per_commitment_sk());
                 let revoke_and_ack = RevokeAndAck {
                     channel_id: commitment_signed.channel_id,
-                    revocation_preimage: to_u8_32(&first_per_commitment_sk[..]),
+                    revocation_preimage: to_u8_32(&private_channel_keys.first_per_commitment_sk().as_ref()[..]),
                     next_per_commitment_point: LpdPublicKey::from(new_commit_point_pk),
                 };
-                write_msg(&mut brontide_stream, &Message::RevokeAndAck(revoke_and_ack));
+                write_msg(&mut brontide_stream, &Message::RevokeAndAck(revoke_and_ack)).unwrap();
 
                 let remote_pubkey = derive_pubkey(
-                    &payment_pk, &new_commit_point_pk
+                    &accept_channel_keys.payment().as_ref(),
+                    &new_commit_point_pk
                 );
                 let mut commit_tx = your_commit_tx.unwrap();
                 commit_tx.htlcs.push(HTLC{
@@ -293,10 +285,10 @@ fn main() {
 
                 let my_commit_signed = CommitmentSigned{
                     channel_id: commitment_signed.channel_id,
-                    signature: LpdSignature::from(commit_tx.sign(&funding_sk)),
+                    signature: LpdSignature::from(commit_tx.sign(&private_channel_keys.funding_sk().as_ref())),
                     htlc_signatures: SerdeVec(vec![])
                 };
-                write_msg(&mut brontide_stream, &Message::CommitmentSigned(my_commit_signed));
+                write_msg(&mut brontide_stream, &Message::CommitmentSigned(my_commit_signed)).unwrap();
                 your_commit_tx = Some(commit_tx);
 
                 thread::sleep(time::Duration::from_millis(1000));
@@ -315,10 +307,9 @@ fn main() {
             | Ok(m @ Message::UpdateChannel(_))
                 => graph.message(m),
             Ok(msg) => println!("MSG: {:?}", msg),
-            Err(err) =>  {
-//                println!("ERROR: {:?}", err)
+            Err(_err) =>  {
+//                println!("ERROR: {:?}", _err)
             }
         }
     }
-
 }
