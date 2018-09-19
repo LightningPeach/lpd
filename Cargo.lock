@@ -751,6 +751,7 @@ dependencies = [
  "channel 0.0.0",
  "hdkeychain 0.1.0",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex-literal 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "routing 0.0.0",
  "rust-crypto 0.2.36 (registry+https://github.com/rust-lang/crates.io-index)",
