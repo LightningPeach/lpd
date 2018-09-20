@@ -24,6 +24,7 @@ use std::net::{TcpStream, SocketAddr};
 use std::error::Error;
 
 use brontide::tcp_communication::{Stream, NetAddress};
+use brontide::{BrontideError, MessageSource, MessageConsumer};
 use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, ChannelKeys, ChannelPrivateKeys, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned};
 use wire::PublicKey as LpdPublicKey;
 use wire::SecretKey as LpdPrivate;
@@ -43,19 +44,6 @@ use routing::Graph;
 
 use std::{thread, time};
 
-fn write_msg(stream: &mut Stream, msg: &Message) -> Result<(), Box<Error>> {
-    let mut data = Vec::<u8>::new();
-    BinarySD::serialize(&mut data, msg)?;
-    stream.encrypt_and_write_message(&data)?;
-    Ok(())
-}
-
-fn read_msg(stream: &mut Stream) -> Result<Message, Box<Error>> {
-    let data = stream.read_and_decrypt_message()?;
-    let msg = BinarySD::deserialize(&data[..])?;
-    Ok(msg)
-}
-
 fn get_key_pair() -> (SecretKey, PublicKey) {
     let ctx = Secp256k1::new();
     let sk_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
@@ -67,9 +55,7 @@ fn get_key_pair() -> (SecretKey, PublicKey) {
 fn to_u8_32(u: &[u8]) -> [u8; 32] {
     assert_eq!(u.len(), 32);
     let mut rez: [u8; 32] = [0; 32];
-    for i in 0..32 {
-        rez[i] = u[i];
-    }
+    &rez[0..].copy_from_slice(u);
     return rez;
 }
 
@@ -107,10 +93,10 @@ fn main() {
         Message::Init(init)
     };
 
-    write_msg(&mut brontide_stream, &init_msg_req).unwrap();
+    brontide_stream.as_write().send(init_msg_req).unwrap();
     println!("init_req: OK");
 
-    let init_msg_resp = read_msg(&mut brontide_stream).unwrap();
+    let init_msg_resp = brontide_stream.as_read().receive().unwrap();
     println!("{:?}", init_msg_resp);
 
     let mut open_channel_b : Option<OpenChannel> = None;
@@ -124,18 +110,18 @@ fn main() {
 
     let mut obscuring_factor : u64 = 0;
     loop {
-        match read_msg(&mut brontide_stream) {
+        match brontide_stream.as_read().receive() {
             Ok(Message::Ping(p)) =>  {
                 println!("PING: {:?}", &p);
                 let pong = Pong::new(&p);
-                write_msg(&mut brontide_stream, &Message::Pong(pong)).unwrap();
+                brontide_stream.as_write().send(Message::Pong(pong)).unwrap();
             },
             Ok(Message::OpenChannel(open_channel)) => {
                 println!("OPEN_CHANNEL: {:?}", open_channel);
                 println!("chain_hash: {:?}", open_channel.chain_hash);
 
                 let accept_channel_msg = AcceptChannel::accept(&open_channel, &accept_channel_keys);
-                write_msg(&mut brontide_stream, &Message::AcceptChannel(accept_channel_msg)).unwrap();
+                brontide_stream.as_write().send(Message::AcceptChannel(accept_channel_msg)).unwrap();
                 open_channel_b = Some(open_channel);
             },
             Ok(Message::FundingCreated(funding_created)) => {
@@ -226,7 +212,7 @@ fn main() {
                     channel_id: ChannelId::from(channel_id),
                     signature: LpdSignature::from(sig),
                 };
-                write_msg(&mut brontide_stream, &Message::FundingSigned(funding_signed)).unwrap();
+                brontide_stream.as_write().send(Message::FundingSigned(funding_signed)).unwrap();
                 your_commit_tx = Some(commit_tx);
             },
             Ok(Message::FundingLocked(funding_locked)) => {
@@ -236,7 +222,7 @@ fn main() {
                     channel_id: funding_locked.channel_id,
                     next_per_commitment_point: LpdPublicKey::from(commit_point_pk),
                 };
-                write_msg(&mut brontide_stream, &Message::FundingLocked(my_funding_locked)).unwrap();
+                brontide_stream.as_write().send(Message::FundingLocked(my_funding_locked)).unwrap();
                 println!(
                     "sendpayment --dest {} --amt {} --payment_hash {} --final_cltv_delta={}",
                     hex::encode(&local_pk.serialize()[..]),
@@ -261,7 +247,7 @@ fn main() {
                     revocation_preimage: to_u8_32(&private_channel_keys.first_per_commitment_sk().as_ref()[..]),
                     next_per_commitment_point: LpdPublicKey::from(new_commit_point_pk),
                 };
-                write_msg(&mut brontide_stream, &Message::RevokeAndAck(revoke_and_ack)).unwrap();
+                brontide_stream.as_write().send(Message::RevokeAndAck(revoke_and_ack)).unwrap();
 
                 let remote_pubkey = derive_pubkey(
                     &accept_channel_keys.payment().as_ref(),
@@ -288,7 +274,7 @@ fn main() {
                     signature: LpdSignature::from(commit_tx.sign(&private_channel_keys.funding_sk().as_ref())),
                     htlc_signatures: SerdeVec(vec![])
                 };
-                write_msg(&mut brontide_stream, &Message::CommitmentSigned(my_commit_signed)).unwrap();
+                brontide_stream.as_write().send(Message::CommitmentSigned(my_commit_signed)).unwrap();
                 your_commit_tx = Some(commit_tx);
 
                 thread::sleep(time::Duration::from_millis(1000));
@@ -298,7 +284,7 @@ fn main() {
                     id: add_htlc.id,
                     payment_preimage: rpreimg,
                 };
-                write_msg(&mut brontide_stream, &Message::UpdateFulfillHtlc(update_fulfill_htlc)).unwrap();
+                brontide_stream.as_write().send(Message::UpdateFulfillHtlc(update_fulfill_htlc)).unwrap();
 
                 your_add_htlc = Some(add_htlc);
             }
