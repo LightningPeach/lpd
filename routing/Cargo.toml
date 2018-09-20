@@ -11,8 +11,10 @@ common-types = { path = "../common-types" }
 bitcoin-types = { path = "../bitcoin-types" }
 chrono = "0.4.5"
 rand = "0.5.4"
-actix = "0.7.4"
-actix_derive = "0.3.0"
+specs = "0.12.2"
+specs-derive = "0.2.0"
+shred = "0.7.0"
+shred-derive = "0.5.0"
 
 [dev-dependencies]
 hex = "0.3.2"

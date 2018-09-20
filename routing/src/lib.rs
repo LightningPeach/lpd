@@ -12,9 +12,12 @@ extern crate brontide;
 extern crate bitcoin_types;
 extern crate common_types;
 extern crate rand;
-extern crate actix;
+extern crate specs;
 #[macro_use]
-extern crate actix_derive;
+extern crate specs_derive;
+extern crate shred;
+#[macro_use]
+extern crate shred_derive;
 
 #[cfg(test)]
 #[macro_use]
@@ -23,19 +26,21 @@ extern crate hex_literal;
 #[cfg(test)]
 extern crate hex;
 
-pub mod discovery;
-pub mod topology;
-pub mod synchronization;
-pub mod peer;
+//pub mod discovery;
+//pub mod topology;
+//pub mod synchronization;
+//pub mod peer;
+pub mod graph;
 
 use wire::Message;
-
-use self::topology::LightningNode;
-use self::topology::ChannelInfo;
+use wire::AnnouncementNode;
+use wire::AnnouncementChannel;
+use wire::UpdateChannel;
 
 pub struct Graph {
-    nodes: Vec<LightningNode>,
-    channels: Vec<ChannelInfo>,
+    nodes: Vec<AnnouncementNode>,
+    channels: Vec<AnnouncementChannel>,
+    policies: Vec<UpdateChannel>,
 }
 
 impl Graph {
@@ -43,6 +48,7 @@ impl Graph {
         Graph {
             nodes: Vec::new(),
             channels: Vec::new(),
+            policies: Vec::new(),
         }
     }
 
@@ -50,13 +56,13 @@ impl Graph {
         use self::Message::*;
         match message {
             AnnouncementNode(announcement_node) => {
-                //self.nodes.push(LightningNode::new(announcement_node));
+                self.nodes.push(announcement_node);
             },
             AnnouncementChannel(announcement_channel) => {
-                //self.nodes.push(ChannelInfo::new(announcement_channel));
+                self.channels.push(announcement_channel);
             },
             UpdateChannel(update_channel) => {
-                ()
+                self.policies.push(update_channel);
             },
             _ => (),
         }

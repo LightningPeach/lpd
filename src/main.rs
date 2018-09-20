@@ -40,7 +40,7 @@ use channel::derivation::{derive_pubkey, derive_revocation_pubkey};
 use channel::tools::{get_obscuring_number, sha256};
 use channel::commit::{CommitTx, HTLC, HTLCDirection};
 
-use routing::Graph;
+use routing::graph::Graph;
 
 use std::{thread, time};
 
@@ -71,7 +71,7 @@ fn main() {
     let rhash = sha256(&rpreimg);
     println!("rhash={}",  hex::encode(&rhash));
 
-    let remote_pub = public_key!("03aff762f5c4de64cb567da4a7c79ce1e825cecd2ee303855fe34bf686aacc4031");
+    let remote_pub = public_key!("0347a8ff76084f8de0b9c8819d5af73a27ee5132d44013a922d626daa8e361f77c");
 
     let socket_addr = "127.0.0.1:10000".parse().unwrap();
 
