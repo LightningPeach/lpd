@@ -44,7 +44,9 @@ mod serde {
                     let mut seq = seq;
                     let v: [u8; 32] = seq.next_element()?
                         .ok_or(<A::Error as de::Error>::custom(format!("expected 32 bytes")))?;
-                    String::from_utf8(Vec::from(&v[..]))
+                    let len = v.iter().enumerate()
+                        .fold((0, true), |(a, f), (i, &b)| (if f { i } else { a }, f & (b != 0))).0;
+                    String::from_utf8(Vec::from(&v[0..len]))
                         .map(|s| NodeAlias(s))
                         .map_err(|e| <A::Error as de::Error>::custom(format!("utf8 error: {}", e)))
                 }
