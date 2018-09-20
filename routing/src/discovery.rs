@@ -1,8 +1,5 @@
 use wire::Hash256;
-use super::topology::LightningNode;
 use super::topology::ChannelGraph;
-
-use std::error::Error;
 
 pub struct Config<G> where G: ChannelGraph {
     chain_hash: Hash256,

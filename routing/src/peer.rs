@@ -45,7 +45,7 @@ impl TcpSelf {
             .map_err(|_| ())?;
 
         let net_address = NetAddress {
-            identity_key: public_key.into(),
+            identity_key: public_key.clone().into(),
             address: socket_address,
         };
 
