@@ -7,7 +7,7 @@ use serde::Deserializer;
 
 use super::FeatureBit;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Default, Clone, Eq, PartialEq)]
 pub struct RawFeatureVector {
     set: HashSet<FeatureBit>,
 }

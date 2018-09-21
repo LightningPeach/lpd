@@ -7,7 +7,6 @@ use super::CsvDelay;
 use super::PublicKey;
 use super::ChannelFlags;
 use super::ChannelKeys;
-use super::ChannelPrivateKeys;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct OpenChannel {

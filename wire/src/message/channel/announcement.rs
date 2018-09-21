@@ -11,8 +11,29 @@ pub struct AnnouncementChannel {
     features: RawFeatureVector,
     chain_hash: Hash256,
     short_channel_id: ShortChannelId,
-    node_id: (PublicKey, PublicKey),
-    bitcoin_key: (PublicKey, PublicKey),
+    pub node_id: (PublicKey, PublicKey),
+    pub bitcoin_key: (PublicKey, PublicKey),
+}
+
+impl AnnouncementChannel {
+    pub fn hash(&self) -> &Hash256 {
+        &self.chain_hash
+    }
+
+    pub fn id(&self) -> &ShortChannelId {
+        &self.short_channel_id
+    }
+
+    pub fn check_signatures(&self) -> Result<(), ()> {
+        // TODO: check_signatures
+        Ok(())
+    }
+
+    pub fn check_features(&self, this: &RawFeatureVector) -> Result<(), ()> {
+        // TODO: check_features
+        let _ = this;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

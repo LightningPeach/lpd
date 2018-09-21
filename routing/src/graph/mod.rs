@@ -1,23 +1,13 @@
 use specs::prelude::*;
 
 use wire::AnnouncementNode;
-use wire::AnnouncementChannel;
-use wire::UpdateChannel;
 use wire::Message;
+
+mod channel;
 
 #[derive(Component)]
 pub struct NodeComponent {
     pub v: AnnouncementNode,
-}
-
-#[derive(Component)]
-pub struct ChannelComponent {
-    pub v: AnnouncementChannel,
-}
-
-#[derive(Component)]
-pub struct ChannelPolicyComponent {
-    pub v: UpdateChannel,
 }
 
 pub struct IncomingMessageSystem {
@@ -55,35 +45,23 @@ impl<'a> System<'a> for IncomingMessageSystem {
                 let entity = (&data.entities).create();
                 data.updates.insert(entity, component);
             },
-            Some(AnnouncementChannel(v)) => {
-                let component = ChannelComponent { v: v };
-                let entity = (&data.entities).create();
-                data.updates.insert(entity, component);
-            },
-            Some(UpdateChannel(v)) => {
-                let component = ChannelPolicyComponent { v: v };
-                let entity = (&data.entities).create();
-                data.updates.insert(entity, component);
-            },
             Some(_) => println!("warning, unknown message type, ignoring"),
         }
     }
 }
 
-pub struct EnumerateNodesSystem;
+pub struct LogGraphSystem;
 
 #[derive(SystemData)]
 pub struct EnumerateNodesSystemData<'a> {
     nodes: ReadStorage<'a, NodeComponent>,
-    channels: ReadStorage<'a, ChannelComponent>,
-    policies: ReadStorage<'a, ChannelPolicyComponent>,
 }
 
-impl<'a> System<'a> for EnumerateNodesSystem {
+impl<'a> System<'a> for LogGraphSystem {
     type SystemData = EnumerateNodesSystemData<'a>;
 
     fn run(&mut self, data: Self::SystemData) {
-        (&data.nodes).join().for_each(|n| println!("{:?}", n.v))
+        (&data.nodes).join().for_each(|n| println!("{:?}", n.v));
     }
 }
 
@@ -93,9 +71,14 @@ pub struct Graph {
 
 impl Graph {
     pub fn new() -> Self {
+        use self::channel::AnnouncementChannelSystem;
+        use self::channel::UpdateChannelSystem;
+
         let mut world = World::new();
         world.setup::<IncomingMessageSystemData>();
         world.setup::<EnumerateNodesSystemData>();
+        world.setup::<<AnnouncementChannelSystem as System>::SystemData>();
+        world.setup::<<UpdateChannelSystem as System>::SystemData>();
 
         Graph {
             world: world,
@@ -103,13 +86,22 @@ impl Graph {
     }
 
     pub fn message(&mut self, message: Message) {
-        IncomingMessageSystem::new(message)
-            .run_now(&mut self.world.res);
+        use self::Message::*;
+        use self::channel::AnnouncementChannelSystem;
+        use self::channel::UpdateChannelSystem;
+
+        match message {
+            AnnouncementChannel(v) => AnnouncementChannelSystem::from(v).run_now(&mut self.world.res),
+            UpdateChannel(v) => UpdateChannelSystem::from(v).run_now(&mut self.world.res),
+            message => IncomingMessageSystem::new(message).run_now(&mut self.world.res),
+        }
         self.world.maintain();
     }
 
     pub fn enumerate_nodes(&mut self) {
-        EnumerateNodesSystem
-            .run_now(&mut self.world.res);
+        use self::channel::LogChannelsSystem;
+
+        LogGraphSystem.run_now(&mut self.world.res);
+        LogChannelsSystem.run_now(&mut self.world.res);
     }
 }
