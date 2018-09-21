@@ -18,6 +18,7 @@ extern crate specs_derive;
 extern crate shred;
 #[macro_use]
 extern crate shred_derive;
+extern crate rayon;
 
 #[cfg(test)]
 #[macro_use]

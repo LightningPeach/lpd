@@ -15,6 +15,7 @@ specs = "0.12.2"
 specs-derive = "0.2.0"
 shred = "0.7.0"
 shred-derive = "0.5.0"
+rayon = "1.0.2"
 
 [dev-dependencies]
 hex = "0.3.2"

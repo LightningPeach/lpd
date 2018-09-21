@@ -2,6 +2,7 @@ use super::Signed;
 use super::Hash256;
 use super::ShortChannelId;
 use super::MilliSatoshi;
+use super::AnnouncementChannel;
 
 pub type UpdateChannel = Signed<UpdateChannelData>;
 
@@ -17,10 +18,20 @@ bitflags! {
 pub struct UpdateChannelData {
     hash: Hash256,
     short_channel_id: ShortChannelId,
-    timestamp: u32,
-    flags: ChannelUpdateFlags,
-    time_lock_delta: u16,
-    htlc_minimum: MilliSatoshi,
-    base_fee: u32,
-    fee_rate: u32,
+    pub timestamp: u32,
+    pub flags: ChannelUpdateFlags,
+    pub time_lock_delta: u16,
+    pub htlc_minimum: MilliSatoshi,
+    pub base_fee: u32,
+    pub fee_rate: u32,
+}
+
+impl UpdateChannelData {
+    pub fn hash(&self) -> &Hash256 {
+        &self.hash
+    }
+
+    pub fn id(&self) -> &ShortChannelId {
+        &self.short_channel_id
+    }
 }

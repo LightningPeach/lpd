@@ -112,6 +112,7 @@ fn main() {
     loop {
         match brontide_stream.as_read().receive() {
             Ok(Message::Ping(p)) =>  {
+                graph.enumerate_nodes();
                 println!("PING: {:?}", &p);
                 let pong = Pong::new(&p);
                 brontide_stream.as_write().send(Message::Pong(pong)).unwrap();
