@@ -2,7 +2,6 @@ use super::Signed;
 use super::Hash256;
 use super::ShortChannelId;
 use super::MilliSatoshi;
-use super::AnnouncementChannel;
 
 pub type UpdateChannel = Signed<UpdateChannelData>;
 

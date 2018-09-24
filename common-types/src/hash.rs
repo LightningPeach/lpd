@@ -33,21 +33,14 @@ mod debug {
     }
 }
 
-mod sha2 {
-    use sha2::Sha256;
+mod secp256k1 {
     use super::Hash256;
+    use secp256k1::Message;
+    use secp256k1::constants;
 
-    impl From<Sha256> for Hash256 {
-        fn from(v: Sha256) -> Self {
-            let _ = v;
-            unimplemented!()
-        }
-    }
-
-    impl From<Hash256> for Sha256 {
+    impl From<Hash256> for Message {
         fn from(v: Hash256) -> Self {
-            let _ = v;
-            unimplemented!()
+            <Message as From<[u8; constants::MESSAGE_SIZE]>>::from(v.data)
         }
     }
 }

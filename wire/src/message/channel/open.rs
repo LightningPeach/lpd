@@ -8,6 +8,9 @@ use super::PublicKey;
 use super::ChannelFlags;
 use super::ChannelKeys;
 
+#[cfg(test)]
+use super::ChannelPrivateKeys;
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct OpenChannel {
     pub chain_hash: Hash256,

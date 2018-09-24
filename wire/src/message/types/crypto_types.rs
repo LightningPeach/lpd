@@ -9,6 +9,10 @@ pub use secp256k1::constants::PUBLIC_KEY_SIZE;
 pub use secp256k1::constants::SECRET_KEY_SIZE;
 pub const SIGNATURE_SIZE: usize = 64;
 
+use ::WireError;
+
+use serde::Serialize;
+
 #[derive(Eq, PartialEq, Clone)]
 pub struct PublicKey {
     raw: Secp256k1PublicKey,
@@ -33,7 +37,7 @@ impl AsRef<Secp256k1SecretKey> for SecretKey {
 
 #[derive(Clone)]
 pub struct Signature {
-    data: [u8; SIGNATURE_SIZE],
+    data: Secp256k1Signature,
 }
 
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -42,12 +46,53 @@ pub struct Signed<T> {
     pub value: T,
 }
 
+pub enum SignError {
+    WireError(WireError),
+    Secp256k1Error(Secp256k1Error),
+}
+
+impl<T> Signed<T> where T: Serialize {
+    pub fn sign(value: T, key: SecretKey) -> Result<Self, SignError> {
+        use self::SignError::*;
+        use secp256k1::Secp256k1;
+        use secp256k1::Message;
+        use sha2::Sha256;
+        use digest::FixedOutput;
+        use digest::Input;
+        use ::BinarySD;
+
+        let mut v = Vec::new();
+        BinarySD::serialize(&mut v.as_mut_slice(), &value).map_err(WireError)?;
+        let mut hasher = Sha256::default();
+        hasher.process(v.as_slice());
+        let msg = Message::from_slice(hasher.fixed_result().as_slice()).unwrap();
+
+        Secp256k1::new().sign(&msg, key.as_ref())
+            .map_err(Secp256k1Error)
+            .map(|s| {
+                Signed {
+                    signature: Signature {
+                        data: s,
+                    },
+                    value: value,
+                }
+            })
+    }
+}
+
+impl<T> Signed<T> where T: Serialize {
+    pub fn check(self, _id: PublicKey) -> Result<T, ()> {
+        Err(())
+    }
+}
+
 impl PackSized for Signature {
 }
 
 mod serde {
     use super::Signature;
     use super::SIGNATURE_SIZE;
+    use super::Secp256k1Signature;
 
     use super::PublicKey;
     use super::PUBLIC_KEY_SIZE;
@@ -69,10 +114,12 @@ mod serde {
     impl Serialize for Signature {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
             use serde::ser::SerializeTuple;
+            use secp256k1::Secp256k1;
 
             let mut tuple = serializer.serialize_tuple(SIGNATURE_SIZE)?;
+            let data = self.data.serialize_compact(&Secp256k1::new());
             for i in 0..SIGNATURE_SIZE {
-                tuple.serialize_element(&self.data[i])?;
+                tuple.serialize_element(&data[i])?;
             }
 
             tuple.end()
@@ -91,16 +138,18 @@ mod serde {
                 }
 
                 fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
+                    use secp256k1::Secp256k1;
+
                     let mut seq = seq;
-                    let mut signature = Signature {
-                        data: [0; SIGNATURE_SIZE],
-                    };
+                    let mut data = [0u8; SIGNATURE_SIZE];
                     for i in 0..SIGNATURE_SIZE {
-                        signature.data[i] = seq.next_element()?
+                        data[i] = seq.next_element()?
                             .ok_or(<A::Error as Error>::custom("unexpected end"))?;
                     }
 
-                    Ok(signature)
+                    Secp256k1Signature::from_compact(&Secp256k1::new(), &data)
+                        .map(Into::into)
+                        .map_err(A::Error::custom)
                 }
             }
 
@@ -189,15 +238,13 @@ mod serde {
 
 mod eq {
     use super::Signature;
-    use super::SIGNATURE_SIZE;
 
     use std::cmp::Eq;
     use std::cmp::PartialEq;
 
     impl PartialEq for Signature {
         fn eq(&self, other: &Self) -> bool {
-            (0..SIGNATURE_SIZE)
-                .fold(true, |acc, index| acc && self.data[index] == other.data[index])
+            self.data == other.data
         }
     }
 
@@ -270,16 +317,15 @@ mod secp256k1 {
 
     impl From<Signature> for LpdSignature {
         fn from(v: Signature) -> Self {
-            let v_array = v.serialize_compact(&Secp256k1::new());
             LpdSignature {
-                data: v_array,
+                data: v,
             }
         }
     }
 
     impl From<LpdSignature> for Signature {
         fn from(v: LpdSignature) -> Self {
-            Signature::from_compact(&Secp256k1::new(), &v.data).unwrap()
+            v.data
         }
     }
 }
@@ -328,11 +374,25 @@ mod rand {
 
     impl Distribution<Signature> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Signature {
+            use secp256k1::Secp256k1;
+            use super::Secp256k1Signature;
+
             let mut rng = rng;
-            let rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(SIGNATURE_SIZE).collect();
-            let mut this = Signature { data: [0u8; SIGNATURE_SIZE] };
-            this.data.copy_from_slice(rnd_bytes.as_slice());
-            this
+            let mut try_inner = || {
+                let rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(SIGNATURE_SIZE).collect();
+                Secp256k1Signature::from_compact(&Secp256k1::new(), &rnd_bytes.as_slice())
+            };
+            let mut inner: Option<Secp256k1Signature> = None;
+            for _ in 0..8 {
+                inner = try_inner().ok();
+                if inner.is_some() {
+                    break;
+                }
+            }
+
+            Signature {
+                data: inner.unwrap(),
+            }
         }
     }
 }
