@@ -10,15 +10,12 @@ extern crate secp256k1;
 extern crate bitflags;
 extern crate rand;
 extern crate sha2;
+extern crate digest;
 extern crate flate2;
 extern crate common_types;
 extern crate bitcoin_types;
 
 extern crate hex;
-
-#[cfg(feature = "testing")]
-#[macro_use]
-extern crate hex_literal;
 
 mod message;
 
