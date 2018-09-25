@@ -1,4 +1,5 @@
 use super::Signed;
+use super::SignedData;
 use super::RawFeatureVector;
 use super::PublicKey;
 use super::NodeAlias;
@@ -12,7 +13,7 @@ use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::net::Ipv6Addr;
 
-pub type AnnouncementNode = Signed<AnnouncementNodeData>;
+pub type AnnouncementNode = Signed<SignedData<AnnouncementNodeData>>;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct AnnouncementNodeData {
@@ -225,7 +226,7 @@ mod tests {
 
             0, 0
         ];
-        let t: Signed<AnnouncementNodeData> = BinarySD::deserialize(&v[..]).unwrap();
+        let t: AnnouncementNode = BinarySD::deserialize(&v[..]).unwrap();
         println!("{:?}", t);
     }
 }
