@@ -56,12 +56,6 @@ pub struct Signed<T> where T: DataToSign {
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct SignedData<T>(pub T) where T: Serialize;
 
-impl<T> AsRef<T> for SignedData<T> where T: Serialize {
-    fn as_ref(&self) -> &T {
-        &self.0
-    }
-}
-
 pub trait DataToSign: Serialize {
     type Inner: Serialize;
 
