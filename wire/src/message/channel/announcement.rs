@@ -4,7 +4,6 @@ use super::PublicKey;
 use super::ShortChannelId;
 use super::Signed;
 use super::SignedData;
-use super::DataToSign;
 
 pub type AnnouncementChannel = Signed<Signed<Signed<Signed<SignedData<AnnouncementChannelData>>>>>;
 
@@ -48,6 +47,7 @@ impl AnnouncementChannel {
 #[allow(unused_imports)]
 mod test {
     use super::*;
+    use super::super::DataToSign;
     use ::BinarySD;
 
     #[test]
