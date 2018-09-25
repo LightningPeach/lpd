@@ -1,9 +1,10 @@
 use super::Signed;
+use super::SignedData;
 use super::Hash256;
 use super::ShortChannelId;
 use super::MilliSatoshi;
 
-pub type UpdateChannel = Signed<UpdateChannelData>;
+pub type UpdateChannel = Signed<SignedData<UpdateChannelData>>;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]

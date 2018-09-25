@@ -1,13 +1,15 @@
-use super::Signature;
 use super::RawFeatureVector;
 use super::Hash256;
 use super::PublicKey;
 use super::ShortChannelId;
+use super::Signed;
+use super::SignedData;
+use super::DataToSign;
+
+pub type AnnouncementChannel = Signed<Signed<Signed<Signed<SignedData<AnnouncementChannelData>>>>>;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct AnnouncementChannel {
-    node_sig: (Signature, Signature),
-    bitcoin_sig: (Signature, Signature),
+pub struct AnnouncementChannelData {
     features: RawFeatureVector,
     chain_hash: Hash256,
     short_channel_id: ShortChannelId,
@@ -15,7 +17,7 @@ pub struct AnnouncementChannel {
     pub bitcoin_key: (PublicKey, PublicKey),
 }
 
-impl AnnouncementChannel {
+impl AnnouncementChannelData {
     pub fn hash(&self) -> &Hash256 {
         &self.chain_hash
     }
@@ -23,10 +25,16 @@ impl AnnouncementChannel {
     pub fn id(&self) -> &ShortChannelId {
         &self.short_channel_id
     }
+}
 
-    pub fn check_signatures(&self) -> Result<(), ()> {
-        // TODO: check_signatures
-        Ok(())
+impl AnnouncementChannel {
+    pub fn check_signatures(self) -> Result<AnnouncementChannelData, ()> {
+        Ok(self
+            .verify_owned(|data| &data.node_id.0).map_err(|_| ())?
+            .verify_owned(|data| &data.node_id.1).map_err(|_| ())?
+            .verify_owned(|data| &data.bitcoin_key.0).map_err(|_| ())?
+            .verify_owned(|data| &data.bitcoin_key.1).map_err(|_| ())?
+            .0)
     }
 
     pub fn check_features(&self, this: &RawFeatureVector) -> Result<(), ()> {
@@ -79,6 +87,12 @@ mod test {
         ];
 
         let t: AnnouncementChannel = BinarySD::deserialize(&v[..]).unwrap();
-        println!("{:?}", t);
+        let t = t
+            .verify_owned(|data| &data.node_id.0).ok().unwrap()
+            .verify_owned(|data| &data.node_id.1).ok().unwrap()
+            .verify_owned(|data| &data.bitcoin_key.0).ok().unwrap()
+            .verify_owned(|data| &data.bitcoin_key.1).ok().unwrap();
+
+        println!("{:?}", t.as_ref_data());
     }
 }

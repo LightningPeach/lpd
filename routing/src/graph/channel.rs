@@ -6,6 +6,8 @@ use wire::ChannelUpdateFlags;
 use wire::RawFeatureVector;
 
 use wire::AnnouncementChannel;
+use wire::AnnouncementChannelData;
+use wire::DataToSign;
 use wire::UpdateChannel;
 
 use specs::DenseVecStorage;
@@ -110,10 +112,13 @@ impl<'a> System<'a> for AnnouncementChannelSystem {
                 return;
             }
 
-            if let Err(()) = announcement_channel.check_signatures() {
-                // TODO: fail the connection
-                return;
-            }
+            let announcement_channel = match announcement_channel.check_signatures() {
+                Err(()) => {
+                    // TODO: fail the connection
+                    return;
+                },
+                Ok(s) => s,
+            };
 
             // TODO: check channel id, check if chain hash known
 
@@ -215,6 +220,7 @@ impl UpdateChannelSystem {
 impl<'a> System<'a> for UpdateChannelSystem {
     type SystemData = (
         ReadStorage<'a, ChannelId>,
+        ReadStorage<'a, ChannelParties>,
         WriteStorage<'a, ChannelHistory>,
     );
 
@@ -224,19 +230,26 @@ impl<'a> System<'a> for UpdateChannelSystem {
         self.consume().map(|update_channel| {
             let (
                 channel_id,
+                channel_parties,
                 mut channel_history,
             ) = data;
 
-            for (id, history) in (&channel_id, &mut channel_history).join() {
-                if update_channel.value.id().eq(&id.short_channel_id)
-                    && update_channel.value.hash().eq(&id.hash) {
+
+            for (id, parties, history) in (&channel_id, &channel_parties, &mut channel_history).join() {
+
+                if update_channel.as_ref_data().id().eq(&id.short_channel_id)
+                    && update_channel.as_ref_data().hash().eq(&id.hash) {
+                    let update_channel = match update_channel.verify(&parties.lightning.0) {
+                        Ok(d) => d.0,
+                        Err(_) => break,
+                    };
                     history.records.push(ChannelPolicy {
-                        timestamp: update_channel.value.timestamp,
-                        flags: update_channel.value.flags,
-                        time_lock_delta: update_channel.value.time_lock_delta,
-                        htlc_minimum: update_channel.value.htlc_minimum,
-                        base_fee: update_channel.value.base_fee,
-                        fee_rate: update_channel.value.fee_rate,
+                        timestamp: update_channel.timestamp,
+                        flags: update_channel.flags,
+                        time_lock_delta: update_channel.time_lock_delta,
+                        htlc_minimum: update_channel.htlc_minimum,
+                        base_fee: update_channel.base_fee,
+                        fee_rate: update_channel.fee_rate,
                     });
 
                     break;
