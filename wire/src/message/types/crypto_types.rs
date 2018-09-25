@@ -4,6 +4,7 @@ use secp256k1::PublicKey as Secp256k1PublicKey;
 use secp256k1::SecretKey as Secp256k1SecretKey;
 use secp256k1::Signature as Secp256k1Signature;
 pub use secp256k1::Error as Secp256k1Error;
+use secp256k1::Message as Secp256k1Message;
 
 pub use secp256k1::constants::PUBLIC_KEY_SIZE;
 pub use secp256k1::constants::SECRET_KEY_SIZE;
@@ -40,6 +41,12 @@ pub struct Signature {
     data: Secp256k1Signature,
 }
 
+impl AsRef<Secp256k1Signature> for Signature {
+    fn as_ref(&self) -> &Secp256k1Signature {
+        &self.data
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Signed<T> {
     pub signature: Signature,
@@ -52,21 +59,27 @@ pub enum SignError {
 }
 
 impl<T> Signed<T> where T: Serialize {
-    pub fn sign(value: T, key: SecretKey) -> Result<Self, SignError> {
+    fn hash(value: &T) -> Result<Secp256k1Message, SignError> {
         use self::SignError::*;
-        use secp256k1::Secp256k1;
-        use secp256k1::Message;
         use sha2::Sha256;
         use digest::FixedOutput;
         use digest::Input;
         use ::BinarySD;
 
         let mut v = Vec::new();
-        BinarySD::serialize(&mut v.as_mut_slice(), &value).map_err(WireError)?;
+        BinarySD::serialize(&mut v.as_mut_slice(), value).map_err(WireError)?;
         let mut hasher = Sha256::default();
         hasher.process(v.as_slice());
-        let msg = Message::from_slice(hasher.fixed_result().as_slice()).unwrap();
 
+        Secp256k1Message::from_slice(hasher.fixed_result().as_slice())
+            .map_err(Secp256k1Error)
+    }
+
+    pub fn sign(value: T, key: SecretKey) -> Result<Self, SignError> {
+        use self::SignError::*;
+        use secp256k1::Secp256k1;
+
+        let msg = Self::hash(&value)?;
         Secp256k1::new().sign(&msg, key.as_ref())
             .map_err(Secp256k1Error)
             .map(|s| {
@@ -81,8 +94,14 @@ impl<T> Signed<T> where T: Serialize {
 }
 
 impl<T> Signed<T> where T: Serialize {
-    pub fn check(self, _id: PublicKey) -> Result<T, ()> {
-        Err(())
+    pub fn check(self, id: PublicKey) -> Result<T, SignError> {
+        use self::SignError::*;
+        use secp256k1::Secp256k1;
+
+        let msg = Self::hash(&self.value)?;
+        Secp256k1::new().verify(&msg, self.signature.as_ref(), id.as_ref())
+            .map_err(Secp256k1Error)
+            .map(|()| self.value)
     }
 }
 
