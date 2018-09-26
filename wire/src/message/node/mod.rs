@@ -5,6 +5,8 @@ mod alias;
 pub use self::alias::*;
 
 use super::types::*;
+use super::Signed;
+use super::SignedData;
 
 use std::ops::Range;
 

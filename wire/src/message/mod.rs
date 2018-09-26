@@ -19,6 +19,9 @@ pub use self::announce_signatures::*;
 mod gossip_timestamp_range;
 pub use self::gossip_timestamp_range::*;
 
+mod signed;
+pub use self::signed::*;
+
 use serde::Serialize;
 use serde::Serializer;
 use serde::Deserialize;

@@ -1,4 +1,6 @@
 use super::types::*;
+use super::Signed;
+use super::SignedData;
 
 mod funding;
 pub use self::funding::*;
