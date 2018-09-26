@@ -239,7 +239,7 @@ impl<'a> System<'a> for UpdateChannelSystem {
 
                 if update_channel.as_ref_data().id().eq(&id.short_channel_id)
                     && update_channel.as_ref_data().hash().eq(&id.hash) {
-                    let update_channel = match update_channel.verify(&parties.lightning.0) {
+                    let update_channel = match update_channel.verify_any_of_two(&parties.lightning) {
                         Ok(d) => d.0,
                         Err(_) => break,
                     };

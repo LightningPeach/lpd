@@ -99,11 +99,12 @@ impl<T> Signed<T> where T: DataToSign {
         Ok(self.value)
     }
 
-    pub fn verify_any_of_two(self, first: &PublicKey, second: &PublicKey) -> Result<(), SignError> {
-        self.check(first).or_else(|e| match e {
-            SignError::IncorrectSignature => self.check(second),
+    pub fn verify_any_of_two(self, pair: &(PublicKey, PublicKey)) -> Result<T, SignError> {
+        self.check(&pair.0).or_else(|e| match e {
+            SignError::IncorrectSignature => self.check(&pair.1),
             e @ _ => Err(e),
-        })
+        })?;
+        Ok(self.value)
     }
 
     // verify using the public key owned by the inner content
