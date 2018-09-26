@@ -4,15 +4,10 @@ use secp256k1::PublicKey as Secp256k1PublicKey;
 use secp256k1::SecretKey as Secp256k1SecretKey;
 use secp256k1::Signature as Secp256k1Signature;
 pub use secp256k1::Error as Secp256k1Error;
-use secp256k1::Message as Secp256k1Message;
 
 pub use secp256k1::constants::PUBLIC_KEY_SIZE;
 pub use secp256k1::constants::SECRET_KEY_SIZE;
 pub const SIGNATURE_SIZE: usize = 64;
-
-use ::WireError;
-
-use serde::Serialize;
 
 #[derive(Eq, PartialEq, Clone)]
 pub struct PublicKey {
@@ -44,103 +39,6 @@ pub struct Signature {
 impl AsRef<Secp256k1Signature> for Signature {
     fn as_ref(&self) -> &Secp256k1Signature {
         &self.data
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct Signed<T> where T: DataToSign {
-    pub signature: Signature,
-    pub value: T,
-}
-
-#[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct SignedData<T>(pub T) where T: Serialize;
-
-pub trait DataToSign: Serialize {
-    type Inner: Serialize;
-
-    fn as_ref_data(&self) -> &Self::Inner;
-
-    fn hash(&self) -> Result<Secp256k1Message, SignError> {
-        use self::SignError::*;
-        use sha2::Sha256;
-        use digest::FixedOutput;
-        use digest::Input;
-        use ::BinarySD;
-
-        let mut v = Vec::new();
-        let data = self.as_ref_data();
-        BinarySD::serialize(&mut v, data).map_err(WireError)?;
-        let mut first = Sha256::default();
-        first.process(v.as_slice());
-        let mut second = Sha256::default();
-        second.process(first.fixed_result().as_slice());
-
-        Secp256k1Message::from_slice(second.fixed_result().as_slice())
-            .map_err(Secp256k1Error)
-    }
-}
-
-// recursion base
-impl<T> DataToSign for SignedData<T> where T: Serialize {
-    type Inner = T;
-
-    fn as_ref_data(&self) -> &Self::Inner {
-        &self.0
-    }
-}
-
-// recursion step
-impl<T> DataToSign for Signed<T> where T: DataToSign {
-    type Inner = T::Inner;
-
-    fn as_ref_data(&self) -> &Self::Inner {
-        &self.value.as_ref_data()
-    }
-}
-
-#[derive(Debug)]
-pub enum SignError {
-    WireError(WireError),
-    Secp256k1Error(Secp256k1Error),
-}
-
-impl<T> Signed<T> where T: DataToSign {
-    pub fn sign(value: T, key: &SecretKey) -> Result<Self, SignError> {
-        use self::SignError::*;
-        use secp256k1::Secp256k1;
-
-        let msg = value.hash()?;
-        Secp256k1::new().sign(&msg, key.as_ref())
-            .map_err(Secp256k1Error)
-            .map(|s| {
-                Signed {
-                    signature: Signature {
-                        data: s,
-                    },
-                    value: value,
-                }
-            })
-    }
-
-    pub fn verify(self, id: &PublicKey) -> Result<T, SignError> {
-        use self::SignError::*;
-        use secp256k1::Secp256k1;
-
-        let msg = self.hash()?;
-        Secp256k1::new().verify(&msg, self.signature.as_ref(), id.as_ref())
-            .map_err(Secp256k1Error)
-            .map(|()| self.value)
-    }
-
-    pub fn verify_owned<F>(self, f: F) -> Result<T, SignError> where F: Fn(&<Self as DataToSign>::Inner) -> &PublicKey {
-        use self::SignError::*;
-        use secp256k1::Secp256k1;
-
-        let msg = self.hash()?;
-        Secp256k1::new().verify(&msg, self.signature.as_ref(), f(DataToSign::as_ref_data(&self)).as_ref())
-            .map_err(Secp256k1Error)
-            .map(|()| self.value)
     }
 }
 
