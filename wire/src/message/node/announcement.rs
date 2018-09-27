@@ -18,11 +18,11 @@ pub type AnnouncementNode = Signed<SignedData<AnnouncementNodeData>>;
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct AnnouncementNodeData {
     features: RawFeatureVector,
-    timestamp: u32,
-    node_id: PublicKey,
-    color: Color,
-    alias: NodeAlias,
-    address: SerdeVec<Address>,
+    pub timestamp: u32,
+    pub node_id: PublicKey,
+    pub color: Color,
+    pub alias: NodeAlias,
+    pub address: SerdeVec<Address>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
