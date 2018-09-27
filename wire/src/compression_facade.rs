@@ -37,7 +37,7 @@ impl<T> Serialize for SerdeVec<T> where T: PackSized + Serialize {
         } else {
             T::SIZE * data.len()
         };
-        let _ = SerializeTuple::serialize_element(&mut tuple, &size_in_bytes)?;
+        let _ = SerializeTuple::serialize_element(&mut tuple, &(size_in_bytes as u16))?;
         for item in data {
             let _ = SerializeTuple::serialize_element(&mut tuple, item)?;
         }

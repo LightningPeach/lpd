@@ -31,41 +31,30 @@ mod serde {
 
     impl<'de> Deserialize<'de> for NodeAlias {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
-            struct V;
-
-            impl<'de> de::Visitor<'de> for V {
-                type Value = NodeAlias;
-
-                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                    write!(formatter, "{} byte valid utf8 string", SIZE)
-                }
-
-                fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: de::SeqAccess<'de>, {
-                    let mut seq = seq;
-                    let v: [u8; 32] = seq.next_element()?
-                        .ok_or(<A::Error as de::Error>::custom(format!("expected 32 bytes")))?;
-                    let len = v.iter().enumerate()
-                        .fold((0, true), |(a, f), (i, &b)| (if f { i } else { a }, f & (b != 0))).0;
-                    String::from_utf8(Vec::from(&v[0..len]))
-                        .map(|s| NodeAlias(s))
-                        .map_err(|e| <A::Error as de::Error>::custom(format!("utf8 error: {}", e)))
-                }
-
-            }
-
-            deserializer.deserialize_tuple(32, V)
+            let buffer: [u8; SIZE] = Deserialize::deserialize(deserializer)?;
+            let len = buffer.iter()
+                .try_fold(0, |state, &b| if b == 0 { Err(state) } else { Ok(state + 1) })
+                .err().unwrap_or(SIZE);
+            let string = String::from_utf8((&buffer[0..len]).to_owned())
+                .map_err(<D::Error as de::Error>::custom)?;
+            Ok(NodeAlias(string))
         }
     }
 
     impl Serialize for NodeAlias {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+            use std::slice;
+            use serde::ser::SerializeTuple;
+
             let &NodeAlias(ref s) = self;
             let v = s.as_bytes();
 
-            if s.len() != SIZE {
-                Err(<S::Error as ser::Error>::custom(format!("the size {} is not equal to {}", v.len(), SIZE)))
+            if v.len() >= SIZE {
+                Err(<S::Error as ser::Error>::custom(format!("the size {} of alias overflows {} limit", v.len(), SIZE - 1)))
             } else {
-                serializer.serialize_bytes(v)
+                let mut buffer = [0u8; SIZE];
+                buffer[0..v.len()].copy_from_slice(v);
+                buffer.serialize(serializer)
             }
         }
     }

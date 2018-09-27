@@ -6,7 +6,6 @@ use wire::ChannelUpdateFlags;
 use wire::RawFeatureVector;
 
 use wire::AnnouncementChannel;
-use wire::AnnouncementChannelData;
 use wire::DataToSign;
 use wire::UpdateChannel;
 
