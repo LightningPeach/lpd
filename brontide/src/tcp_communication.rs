@@ -246,6 +246,7 @@ impl Write for Stream {
 // reachability of a peer. Information stored includes the node's identity
 // public key for establishing a confidential+authenticated connection, the
 // service bits it supports, and a TCP address the node is reachable at.
+#[derive(Debug)]
 pub struct NetAddress {
 	// identity_key is the long-term static public key for a node. This node is
 	// used throughout the network as a node's identity key. It is used to
