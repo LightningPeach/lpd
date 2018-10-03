@@ -10,6 +10,9 @@ extern crate hkdf;
 extern crate hex;
 extern crate crossbeam;
 
+extern crate tokio_core;
+extern crate futures;
+
 mod machine;
 pub use self::machine::{Machine, HandshakeError};
 

@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod test_bolt0008;
 
+use tokio_core::io::read;
 use std::{fmt, io, error};
 use secp256k1::{PublicKey, SecretKey, Error};
 use sha2::{Sha256, Digest};
