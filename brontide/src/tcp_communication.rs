@@ -59,7 +59,7 @@ impl Listener {
         // receive(from remote peer) and implicitly verify one.
         let mut brontide_stream = Stream::new(
             tcp_stream,
-            Machine::new(false, self.local_static, PublicKey::new(), &[])
+            Machine::new::<fn(&mut Machine)>(false, self.local_static, PublicKey::new(), &[])
                 .map_err(HandshakeError::Crypto)?,
         );
 //
@@ -151,7 +151,7 @@ impl Stream {
 //
         let mut brontide_stream = Stream{
             stream,
-            noise: Machine::new(true, local_priv, net_addr.identity_key, &[])
+            noise: Machine::new::<fn(&mut Machine)>(true, local_priv, net_addr.identity_key, &[])
                 .map_err(HandshakeError::Crypto)?,
         };
 

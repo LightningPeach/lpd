@@ -484,14 +484,20 @@ impl Machine {
     // string "lightning" as the prologue. The last parameter is a set of variadic
     // arguments for adding additional options to the brontide Machine
     // initialization.
-    // TODO(evg): should F be FnMut instead of Fn?
-    fn new(initiator: bool, local_priv: SecretKey,
-    	remote_pub: PublicKey, options: &[fn(&Machine)]) -> Result<Self, CryptoError> {
+    fn new<F>(
+        initiator: bool,
+        local_priv: SecretKey,
+        remote_pub: PublicKey,
+        options: &[F]
+    ) -> Result<Self, CryptoError>
+    where
+        F: Fn(&mut Self),
+    {
 
     	let handshake = HandshakeState::new(
             initiator, "lightning".as_bytes(), local_priv, remote_pub)?;
 
-    	let m = Machine{
+    	let mut m = Machine{
             send_cipher: CipherState::empty(),
             recv_cipher: CipherState::empty(),
             // With the initial base machine created, we'll assign our default
@@ -509,7 +515,7 @@ impl Machine {
     	// With the default options established, we'll now process all the
     	// options passed in as parameters.
     	for option in options {
-    		option(&m)
+    		option(&mut m)
     	}
 
         Ok(m)
