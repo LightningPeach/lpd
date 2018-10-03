@@ -12,6 +12,7 @@ chacha20-poly1305-aead = "0.1.2"
 hkdf = "0.5.0"
 hex = "0.3.2"
 crossbeam = "0.3.2"
+
 wire = { path = "../wire" }
 
 [features]

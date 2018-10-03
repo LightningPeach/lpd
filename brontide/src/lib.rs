@@ -9,6 +9,7 @@ extern crate chacha20_poly1305_aead;
 extern crate hkdf;
 extern crate hex;
 extern crate crossbeam;
+
 extern crate wire;
 
 #[cfg(test)]
