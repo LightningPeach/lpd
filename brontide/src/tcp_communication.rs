@@ -34,16 +34,19 @@ impl Listener {
         Ok(brontide_listener)
     }
 
-    pub fn accept(&self) -> Result<Stream, HandshakeError> {
-        let (tcp_stream, _socket_address) = self.tcp.accept().map_err(HandshakeError::Io)?;
+    pub fn accept(&self) -> Result<(Stream, NetAddress), HandshakeError> {
+        let (tcp_stream, socket_address) = self.tcp.accept().map_err(HandshakeError::Io)?;
 
-        self.do_handshake(tcp_stream)
+        self.do_handshake(tcp_stream).map(|(stream, remote_public)| (stream, NetAddress {
+            identity_key: remote_public,
+            address: socket_address,
+        }))
     }
 
     // doHandshake asynchronously performs the brontide handshake, so that it does
     // not block the main accept loop. This prevents peers that delay writing to the
     // connection from block other connection attempts.
-    pub fn do_handshake(&self, tcp_stream: TcpStream) -> Result<Stream, HandshakeError> {
+    pub fn do_handshake(&self, tcp_stream: TcpStream) -> Result<(Stream, PublicKey), HandshakeError> {
 //        defer func() { l.handshakeSema <- struct{}{} }()
 //
 //        select {
@@ -100,7 +103,8 @@ impl Listener {
 //        // initial handshake.
 //        conn.SetReadDeadline(time.Time{})
 
-        Ok(brontide_stream)
+        let remote_public = brontide_stream.noise.handshake_state.remote_static.clone();
+        Ok((brontide_stream, remote_public))
     }
 
     pub fn local_addr(&self) -> io::Result<SocketAddr> {
