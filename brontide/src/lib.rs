@@ -20,7 +20,6 @@ mod test_tcp_communication;
 // TODO(evg): should be private?
 pub mod tcp_communication;
 
-use std::error::Error;
 use std::io::{Read, Write, Error as IoError};
 use std::fmt;
 use secp256k1::constants::SECRET_KEY_SIZE;
@@ -52,18 +51,6 @@ impl fmt::Display for HandshakeError {
     }
 }
 
-impl Error for HandshakeError {
-    fn cause(&self) -> Option<&Error> {
-        use self::HandshakeError::*;
-
-        match self {
-            &Io(ref e) => Some(e),
-            &Crypto(ref e) => Some(e),
-            _ => None,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub enum BrontideError {
     Io(IoError),
@@ -79,18 +66,6 @@ impl fmt::Display for BrontideError {
             &Io(ref e) => write!(f, "io error: {}", e),
             &WireError(ref e) => write!(f, "wire error: {}", e),
             &MaxMessageLengthExceeded => write!(f, "{}", ERR_MAX_MESSAGE_LENGTH_EXCEEDED)
-        }
-    }
-}
-
-impl Error for BrontideError {
-    fn cause(&self) -> Option<&Error> {
-        use self::BrontideError::*;
-
-        match self {
-            &Io(ref e) => Some(e),
-            &WireError(ref e) => Some(e),
-            _ => None,
         }
     }
 }
