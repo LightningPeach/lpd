@@ -21,12 +21,12 @@ pub struct NetAddress {
     pub socket: net::SocketAddr,
 }
 
-pub struct Stream {
+pub struct BrontideStream {
     noise: Machine,
     raw: net::TcpStream,
 }
 
-impl Stream {
+impl BrontideStream {
     pub fn connect(secret_key: SecretKey, address: NetAddress) -> Result<Self, HandshakeError> {
         let mut stream = net::TcpStream::connect(address.socket).map_err(HandshakeError::Io)?;
         let mut machine = Machine::new::<fn(&mut Machine)>(true, secret_key, address.identity_key, &[])
@@ -35,7 +35,7 @@ impl Stream {
         // async
         let _ = machine.handshake(&mut stream)?;
 
-        Ok(Stream {
+        Ok(BrontideStream {
             noise: machine,
             raw: stream,
         })
@@ -48,7 +48,7 @@ impl Stream {
 
         let public_key = machine.handshake(&mut stream)?;
 
-        Ok((Stream {
+        Ok((BrontideStream {
             noise: machine,
             raw: stream,
         }, NetAddress {
@@ -59,7 +59,7 @@ impl Stream {
 }
 
 // TODO: impl io::BufRead
-impl io::Read for Stream {
+impl io::Read for BrontideStream {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
         self.noise.read_message(&mut self.raw).map(|v| {
             buf.copy_from_slice(v.as_slice());
@@ -68,7 +68,7 @@ impl io::Read for Stream {
     }
 }
 
-impl io::Write for Stream {
+impl io::Write for BrontideStream {
     fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
         self.noise.write_message(&mut self.raw, buf).map(|()| buf.len())
     }

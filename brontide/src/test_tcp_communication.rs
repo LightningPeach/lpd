@@ -1,4 +1,4 @@
-use super::tcp_communication::{Stream, NetAddress};
+use super::tcp_communication::{BrontideStream, NetAddress};
 use std::net;
 use std::error::Error;
 
@@ -27,7 +27,7 @@ fn make_listener() -> Result<(net::TcpListener, NetAddress, SecretKey), Box<Erro
     Ok((listener, net_addr, local_priv))
 }
 
-fn establish_test_connection() -> Result<(Stream, Stream), Box<Error>> {
+fn establish_test_connection() -> Result<(BrontideStream, BrontideStream), Box<Error>> {
 	let (listener, net_addr, local_priv) = make_listener()?;
 
 	// Nos, generate the long-term private keys remote end of the connection
@@ -38,14 +38,14 @@ fn establish_test_connection() -> Result<(Stream, Stream), Box<Error>> {
     // Initiate a connection with a separate goroutine, and listen with our
 	// main one. If both errors are nil, then encryption+auth was
 	// successful.
-    let mut local_stream: Option<Stream> = None;
-    let mut remote_stream: Option<Stream> = None;
+    let mut local_stream: Option<BrontideStream> = None;
+    let mut remote_stream: Option<BrontideStream> = None;
     crossbeam::scope(|scope|{
         scope.spawn(|| {
-            local_stream = Some(Stream::connect(remote_priv, net_addr).unwrap());
+            local_stream = Some(BrontideStream::connect(remote_priv, net_addr).unwrap());
         });
         scope.spawn(|| {
-            let (tcp_stream, _) = Stream::accept(&listener, local_priv).unwrap();
+            let (tcp_stream, _) = BrontideStream::accept(&listener, local_priv).unwrap();
             remote_stream = Some(tcp_stream);
         });
     });

@@ -23,7 +23,7 @@ use std::net::{TcpStream, SocketAddr};
 
 use std::error::Error;
 
-use brontide::tcp_communication::{Stream, NetAddress};
+use brontide::tcp_communication::{BrontideStream, NetAddress};
 use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, ChannelKeys, ChannelPrivateKeys, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned};
 use wire::PublicKey as LpdPublicKey;
 use wire::SecretKey as LpdPrivate;
@@ -79,7 +79,7 @@ fn main() {
 	    socket:      socket_addr,
     };
 
-    let mut brontide_stream= Stream::connect(local_priv, net_address).unwrap();
+    let mut brontide_stream= BrontideStream::connect(local_priv, net_address).unwrap();
 
     println!("dial: OK");
 

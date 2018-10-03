@@ -100,12 +100,13 @@ dependencies = [
  "byteorder 1.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "chacha20-poly1305-aead 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hkdf 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "secp256k1 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "wire 0.0.0",
+ "tokio-core 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

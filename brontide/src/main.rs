@@ -13,7 +13,7 @@ fn main() {
 
     let listener = net::TcpListener::bind("localhost:10011".to_owned()).ok().unwrap();
     loop {
-        let (_, net_address) = brontide::tcp_communication::Stream::accept(&listener, local_priv).ok().unwrap();
+        let (_, net_address) = brontide::tcp_communication::BrontideStream::accept(&listener, local_priv).ok().unwrap();
         println!("{:?}", net_address);
     }
 }
