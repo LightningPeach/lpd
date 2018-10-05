@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod test_bolt0008;
+mod async_stream;
+pub use self::async_stream::BrontideStream;
 
-use tokio_core::io::read;
 use std::{fmt, io, error};
 use secp256k1::{PublicKey, SecretKey, Error};
 use sha2::{Sha256, Digest};
@@ -13,9 +14,12 @@ use std;
 use rand;
 use chacha20_poly1305_aead;
 
+use tokio::timer::timeout;
+
 #[derive(Debug)]
 pub enum HandshakeError {
     Io(io::Error),
+    IoTimeout(timeout::Error<io::Error>),
     Crypto(Error),
     UnknownHandshakeVersion(String),
     NotInitializedYet,
@@ -27,6 +31,7 @@ impl error::Error for HandshakeError {
 
         match self {
             &Io(ref e) => Some(e),
+            &IoTimeout(ref e) => Some(e),
             &Crypto(ref e) => Some(e),
             _ => None,
         }
@@ -39,6 +44,7 @@ impl fmt::Display for HandshakeError {
 
         match self {
             &Io(ref e) => write!(f, "io error: {}", e),
+            &IoTimeout(ref e) => write!(f, "io timeout error: {}", e),
             &Crypto(ref e) => write!(f, "crypto error: {}", e),
             &UnknownHandshakeVersion(ref msg) => write!(f, "{}", msg),
             &NotInitializedYet => write!(f, "not initialized yet")
@@ -63,12 +69,6 @@ const LENGTH_HEADER_SIZE: usize = 2;
 // keyRotationInterval is the number of messages sent on a single
 // cipher stream before the keys are rotated forwards.
 const KEY_ROTATION_INTERVAL: u16 = 1000;
-
-// HANDSHAKE_READ_TIMEOUT is a read timeout that will be enforced when
-// waiting for data payloads during the various acts of Brontide. If
-// the remote party fails to deliver the proper payload within this
-// time frame, then we'll fail the connection.
-static _HANDSHAKE_READ_TIMEOUT: u8 = 5;
 
 // ERR_MAX_MESSAGE_LENGTH_EXCEEDED is returned a message to be written to
 // the cipher session exceeds the maximum allowed message payload.
@@ -426,8 +426,6 @@ pub struct Machine {
     send_cipher: CipherState,
     recv_cipher: CipherState,
 
-    initiator: bool,
-
     ephemeral_gen: fn() -> Result<SecretKey, Error>,
 
     handshake_state: HandshakeState,
@@ -473,7 +471,6 @@ impl Machine {
         let mut m = Machine {
             send_cipher: CipherState::empty(),
             recv_cipher: CipherState::empty(),
-            initiator: initiator,
             // With the initial base machine created, we'll assign our default
             // version of the ephemeral key generator.
             ephemeral_gen: || {
@@ -493,23 +490,6 @@ impl Machine {
         }
 
         Ok(m)
-    }
-
-    pub fn handshake<T>(&mut self, remote: &mut T) -> Result<PublicKey, HandshakeError>
-    where
-        T: io::Read + io::Write,
-    {
-        if self.initiator {
-            self.gen_act_one()?.write(remote).map_err(HandshakeError::Io)?;
-            self.recv_act_two(ActTwo::read(remote).map_err(HandshakeError::Io)?)?;
-            self.gen_act_three()?.write(remote).map_err(HandshakeError::Io)?;
-        } else {
-            self.recv_act_one(ActOne::read(remote).map_err(HandshakeError::Io)?)?;
-            self.gen_act_two()?.write(remote).map_err(HandshakeError::Io)?;
-            self.recv_act_three(ActThree::read(remote).map_err(HandshakeError::Io)?)?;
-        }
-
-        Ok(self.handshake_state.remote_static.clone())
     }
 }
 
@@ -531,18 +511,28 @@ struct ActOne {
     bytes: [u8; 1 + 33 + MAC_SIZE],
 }
 
+impl Default for ActOne {
+    fn default() -> Self {
+        ActOne {
+            bytes: [0; Self::SIZE],
+        }
+    }
+}
+
+impl AsRef<[u8]> for ActOne {
+    fn as_ref(&self) -> &[u8] {
+        &self.bytes[..]
+    }
+}
+
+impl AsMut<[u8]> for ActOne {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.bytes[..]
+    }
+}
+
 impl ActOne {
     const SIZE: usize = 1 + 33 + MAC_SIZE;
-
-    fn read<R>(source: &mut R) -> Result<Self, io::Error> where R: io::Read {
-        let mut bytes = [0; Self::SIZE];
-        source.read_exact(&mut bytes)?;
-        Ok(ActOne { bytes: bytes })
-    }
-
-    fn write<W>(self, destination: &mut W) -> Result<(), io::Error> where W: io::Write {
-        destination.write_all(&self.bytes[..])
-    }
 
     fn new(version: HandshakeVersion, key: [u8; 33], tag: [u8; MAC_SIZE]) -> Self {
         let mut s = ActOne {
@@ -592,18 +582,28 @@ struct ActThree {
     bytes: [u8; 1 + 33 + 16 + 16],
 }
 
+impl Default for ActThree {
+    fn default() -> Self {
+        ActThree {
+            bytes: [0; Self::SIZE],
+        }
+    }
+}
+
+impl AsRef<[u8]> for ActThree {
+    fn as_ref(&self) -> &[u8] {
+        &self.bytes[..]
+    }
+}
+
+impl AsMut<[u8]> for ActThree {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.bytes[..]
+    }
+}
+
 impl ActThree {
     const SIZE: usize = 1 + 33 + 2 * MAC_SIZE;
-
-    fn read<R>(mut source: R) -> Result<Self, io::Error> where R: io::Read {
-        let mut bytes = [0; Self::SIZE];
-        source.read_exact(&mut bytes)?;
-        Ok(ActThree { bytes: bytes })
-    }
-
-    fn write<W>(self, mut destination: W) -> Result<(), io::Error> where W: io::Write {
-        destination.write_all(&self.bytes[..])
-    }
 
     fn new(version: HandshakeVersion, key: Vec<u8>, tag_first: [u8; MAC_SIZE], tag_second: [u8; MAC_SIZE]) -> Self {
         let mut s = ActThree {
