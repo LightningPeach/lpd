@@ -10,13 +10,11 @@ extern crate hkdf;
 extern crate hex;
 extern crate crossbeam;
 
-extern crate tokio_core;
+extern crate tokio;
 extern crate futures;
 
 mod machine;
-pub use self::machine::{Machine, HandshakeError};
+pub use self::machine::{Machine, HandshakeError, BrontideStream};
 
-pub mod tcp_communication;
-
-#[cfg(test)]
-mod test_tcp_communication;
+//#[cfg(test)]
+//mod test_tcp_communication;
