@@ -1,9 +1,10 @@
 #[cfg(test)]
 mod test_bolt0008;
 mod async_stream;
+mod serde;
 pub use self::async_stream::BrontideStream;
 
-use std::{fmt, io, error};
+use std::{fmt, io, error, cell};
 use secp256k1::{PublicKey, SecretKey, Error};
 use sha2::{Sha256, Digest};
 use byteorder::{ByteOrder, LittleEndian, BigEndian};
@@ -143,7 +144,7 @@ impl CipherState {
 
     // encrypt returns a ciphertext which is the encryption of the plainText
     // observing the passed associatedData within the AEAD construction.
-    fn encrypt(&mut self, associated_data: &[u8], cipher_text: &mut Vec<u8>, plain_text: &[u8]) -> Result<[u8; MAC_SIZE], io::Error> {
+    fn encrypt<W: io::Write>(&mut self, associated_data: &[u8], cipher_text: &mut W, plain_text: &[u8]) -> Result<[u8; MAC_SIZE], io::Error> {
         let mut nonce: [u8; 12] = [0; 12];
         LittleEndian::write_u64(&mut nonce[4..], self.nonce);
         let tag = chacha20_poly1305_aead::encrypt(
@@ -423,26 +424,21 @@ impl HandshakeState {
 }
 
 pub struct Machine {
-    send_cipher: CipherState,
-    recv_cipher: CipherState,
+    send_cipher: cell::RefCell<CipherState>,
+    recv_cipher: cell::RefCell<CipherState>,
 
     ephemeral_gen: fn() -> Result<SecretKey, Error>,
 
     handshake_state: HandshakeState,
 
-    // next_cipher_header is a static buffer that we'll use to read in the
-    // next ciphertext header from the wire. The header is a 2 byte length
-    // (of the next ciphertext), followed by a 16 byte MAC.
-    next_cipher_header: [u8; LENGTH_HEADER_SIZE + MAC_SIZE],
-
-    // next_cipher_text is a static buffer that we'll use to read in the
+    // a static buffer that we'll use to read in the
     // bytes of the next cipher text message. As all messages in the
     // protocol MUST be below 65KB plus our macSize, this will be
     // sufficient to buffer all messages from the socket when we need to
     // read the next one. Having a fixed buffer that's re-used also means
     // that we save on allocations as we don't need to create a new one
     // each time.
-    next_cipher_text: [u8; std::u16::MAX as usize + MAC_SIZE],
+    message_buffer: cell::RefCell<[u8; std::u16::MAX as usize]>,
 }
 
 impl fmt::Debug for Machine {
@@ -469,8 +465,8 @@ impl Machine {
         let handshake = HandshakeState::new(initiator, "lightning".as_bytes(), local_priv, remote_pub)?;
 
         let mut m = Machine {
-            send_cipher: CipherState::empty(),
-            recv_cipher: CipherState::empty(),
+            send_cipher: cell::RefCell::new(CipherState::empty()),
+            recv_cipher: cell::RefCell::new(CipherState::empty()),
             // With the initial base machine created, we'll assign our default
             // version of the ephemeral key generator.
             ephemeral_gen: || {
@@ -479,8 +475,7 @@ impl Machine {
                 Ok(sk)
             },
             handshake_state: handshake,
-            next_cipher_header: [0; LENGTH_HEADER_SIZE + MAC_SIZE],
-            next_cipher_text:   [0; std::u16::MAX as usize + MAC_SIZE],
+            message_buffer: cell::RefCell::new([0; std::u16::MAX as usize]),
         };
 
         // With the default options established, we'll now process all the
@@ -851,16 +846,16 @@ impl Machine {
         // responder the opposite is true.
         if self.handshake_state.initiator {
             send_key.copy_from_slice(&okm.as_slice()[..32]);
-            self.send_cipher.initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, send_key);
+            self.send_cipher.borrow_mut().initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, send_key);
 
             recv_key.copy_from_slice(&okm.as_slice()[32..]);
-            self.recv_cipher.initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, recv_key);
+            self.recv_cipher.borrow_mut().initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, recv_key);
         } else {
             recv_key.copy_from_slice(&okm.as_slice()[..32]);
-            self.recv_cipher.initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, recv_key);
+            self.recv_cipher.borrow_mut().initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, recv_key);
 
             send_key.copy_from_slice(&okm.as_slice()[32..]);
-            self.send_cipher.initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, send_key);
+            self.send_cipher.borrow_mut().initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, send_key);
         }
     }
 
@@ -885,7 +880,7 @@ impl Machine {
 
         // First, write out the encrypted+MAC'd length prefix for the packet.
         let mut cipher_len = Vec::new();
-        let tag = self.send_cipher.encrypt(&[], &mut cipher_len, &pkt_len)?;
+        let tag = self.send_cipher.borrow_mut().encrypt(&[], &mut cipher_len, &pkt_len)?;
         w.write_all(&cipher_len)?;
         w.write_all(&tag)?;
 
@@ -893,7 +888,7 @@ impl Machine {
         // single packet, as any fragmentation should have taken place at a
         // higher level.
         let mut cipher_text = Vec::new();
-        let tag = self.send_cipher.encrypt(&[], &mut cipher_text, p)?;
+        let tag = self.send_cipher.borrow_mut().encrypt(&[], &mut cipher_text, p)?;
         w.write_all(&cipher_text)?;
         w.write_all(&tag)?;
         Ok(())
@@ -902,30 +897,32 @@ impl Machine {
     // read_message attempts to read the next message from the passed io.Reader. In
     // the case of an authentication error, a non-nil error is returned.
     pub fn read_message<R: io::Read>(&mut self, r: &mut R) -> Result<Vec<u8>, io::Error> {
-        r.read_exact(&mut self.next_cipher_header)?;
+        let mut header = [0; LENGTH_HEADER_SIZE];
+        r.read_exact(&mut header)?;
 
         // Attempt to decrypt+auth the packet length present in the stream.
         let mut pkt_len_bytes = Vec::new();
         let mut tag: [u8; MAC_SIZE] = [0; MAC_SIZE];
-        tag.copy_from_slice(&self.next_cipher_header[LENGTH_HEADER_SIZE..]);
-        self.recv_cipher.decrypt(
+        r.read_exact(&mut tag[..])?;
+        tag.copy_from_slice(&header[LENGTH_HEADER_SIZE..]);
+        self.recv_cipher.borrow_mut().decrypt(
             &[],
             &mut pkt_len_bytes,
-            &self.next_cipher_header[..LENGTH_HEADER_SIZE],
+            &header[..],
             tag
         )?;
 
         // Next, using the length read from the packet header, read the
         // encrypted packet itself.
-        let pkt_len = BigEndian::read_u16(&pkt_len_bytes) as usize + MAC_SIZE;
-        r.read_exact(&mut self.next_cipher_text[..pkt_len])?;
+        let pkt_len = BigEndian::read_u16(&pkt_len_bytes[..]) as usize + MAC_SIZE;
+        r.read_exact(&mut self.message_buffer.borrow_mut()[..pkt_len])?;
 
         let mut plaintext = Vec::new();
         let mut tag = [0; MAC_SIZE];
-        tag.copy_from_slice(&self.next_cipher_text[pkt_len - MAC_SIZE ..pkt_len]);
-        self.recv_cipher.decrypt(
+        r.read_exact(&mut tag[..])?;
+        self.recv_cipher.borrow_mut().decrypt(
             &[], &mut plaintext,
-            &self.next_cipher_text[..pkt_len - MAC_SIZE],
+            &self.message_buffer.borrow()[..],
             tag
         )?;
 

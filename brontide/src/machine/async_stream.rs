@@ -1,11 +1,11 @@
 use tokio::io;
-use futures::{Future, Poll};
+use tokio::codec::{Decoder, Framed};
+use tokio::prelude::Future;
 
 use secp256k1::{PublicKey, SecretKey};
 use std::time::Duration;
 
 use super::{Machine, HandshakeError};
-
 
 pub struct BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
     // the Machine holds a lot of byte arrays,
@@ -25,8 +25,7 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
     }
 
     pub fn outgoing(stream: T, local_secret: SecretKey, remote_public: PublicKey) -> impl Future<Item=Self, Error=HandshakeError> {
-        use futures::IntoFuture;
-        use tokio::prelude::FutureExt;
+        use tokio::prelude::{FutureExt, IntoFuture};
 
         Machine::new::<fn(&mut Machine)>(true, local_secret, remote_public, &[])
             .map_err(HandshakeError::Crypto)
@@ -92,6 +91,10 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
                 (this, k)
             })
     }
+
+    pub fn framed(self) -> Framed<T, Box<Machine>> {
+        self.noise.framed(self.stream)
+    }
 }
 
 impl<T> AsRef<T> for BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
@@ -103,35 +106,5 @@ impl<T> AsRef<T> for BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
 impl<T> AsMut<T> for BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
     fn as_mut(&mut self) -> &mut T {
         &mut self.stream
-    }
-}
-
-// TODO: impl io::BufRead
-impl<T> io::Read for BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
-        self.noise.read_message(&mut self.stream).map(|v| {
-            buf.copy_from_slice(v.as_slice());
-            v.len()
-        })
-    }
-}
-
-impl<T> io::AsyncRead for BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {}
-
-impl<T> io::Write for BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
-    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
-        self.noise.write_message(&mut self.stream, buf).map(|()| buf.len())
-    }
-
-    fn flush(&mut self) -> Result<(), io::Error> {
-        io::Write::flush(&mut self.stream)
-    }
-}
-
-impl<T> io::AsyncWrite for BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
-    fn shutdown(&mut self) -> Poll<(), io::Error> {
-        use futures::Async;
-
-        Ok(Async::Ready(()))
     }
 }
