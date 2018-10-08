@@ -14,7 +14,9 @@ hex = "0.3.2"
 crossbeam = "0.3.2"
 
 tokio = "0.1.11"
-futures = "0.1.24"
+bytes = "0.4.10"
+
+wire = { path = "../wire" }
 
 [features]
 testing = []

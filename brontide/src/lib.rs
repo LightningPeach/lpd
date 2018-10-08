@@ -11,7 +11,9 @@ extern crate hex;
 extern crate crossbeam;
 
 extern crate tokio;
-extern crate futures;
+extern crate bytes;
+
+extern crate wire;
 
 mod machine;
 pub use self::machine::{Machine, HandshakeError, BrontideStream};

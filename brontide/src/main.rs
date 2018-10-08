@@ -2,7 +2,6 @@ extern crate rand;
 extern crate secp256k1;
 extern crate brontide;
 extern crate tokio;
-extern crate futures;
 extern crate hex;
 
 use secp256k1::{SecretKey, PublicKey, Secp256k1};
@@ -11,8 +10,7 @@ use secp256k1::constants::SECRET_KEY_SIZE;
 use tokio::net;
 
 fn main() {
-    use futures::Stream;
-    use futures::Future;
+    use tokio::prelude::{Stream, Future};
 
     let secret = {
         let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
