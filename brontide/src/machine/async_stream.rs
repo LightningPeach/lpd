@@ -55,7 +55,7 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
             )
     }
 
-    pub fn incoming(stream: T, local_secret: SecretKey) -> impl Future<Item=(Self, PublicKey), Error=HandshakeError> {
+    pub fn incoming(stream: T, local_secret: SecretKey) -> impl Future<Item=Self, Error=HandshakeError> {
         use tokio::prelude::FutureExt;
 
         io::read_exact(stream, Default::default())
@@ -85,10 +85,10 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
                         Ok(BrontideStream { noise: noise, stream: stream })
                     })
             )
-            .map(|this| {
-                let k = this.noise.handshake_state.remote_static.clone();
-                (this, k)
-            })
+    }
+
+    pub fn remote_key(&self) -> &PublicKey {
+        &self.noise.handshake_state.remote_static
     }
 
     pub fn framed(self) -> Framed<T, Box<Machine>> {
