@@ -34,6 +34,13 @@ use std::fmt;
 
 pub type MessageSize = u16;
 
+pub trait MessageFiltered
+where
+    Self: Sized,
+{
+    fn filter(v: Message) -> Result<Self, Message>;
+}
+
 macro_rules! message {
     (pub enum $name:ident { $($variant:ident($rtt:expr, $unwrap_method:ident)),* }) => {
         /// Tagged union, the variant name equals to the type name witch the variant contains
