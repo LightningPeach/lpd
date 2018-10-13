@@ -41,8 +41,7 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
             )
             .and_then(|BrontideStream { noise: mut noise, stream: stream }|
                 io::read_exact(stream, Default::default())
-                    .timeout(Self::read_timeout())
-                    .map_err(HandshakeError::IoTimeout)
+                    .map_err(HandshakeError::Io)
                     .and_then(move |(stream, a)| {
                         noise.recv_act_two(a)?;
                         let a = noise.gen_act_three()?;
