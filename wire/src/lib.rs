@@ -16,6 +16,7 @@ extern crate common_types;
 extern crate bitcoin_types;
 
 extern crate hex;
+extern crate tokio;
 
 mod message;
 

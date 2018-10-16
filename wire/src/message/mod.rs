@@ -22,6 +22,10 @@ pub use self::gossip_timestamp_range::*;
 mod signed;
 pub use self::signed::*;
 
+use super::serde_facade::WireError;
+use tokio::prelude::Future;
+use tokio::prelude::Sink;
+
 use serde::Serialize;
 use serde::Serializer;
 use serde::Deserialize;
@@ -39,6 +43,17 @@ where
     Self: Sized,
 {
     fn filter(v: Message) -> Result<Self, Message>;
+}
+
+pub trait MessageConsumer {
+    type Message: MessageFiltered;
+
+    // consumes message and return future with the sink and maybe modified self
+    // works synchronously
+    fn consume<S>(self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError>>
+        where
+            Self: Sized,
+            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
 }
 
 macro_rules! message {
