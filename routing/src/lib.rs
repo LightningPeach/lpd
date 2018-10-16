@@ -27,91 +27,52 @@ extern crate hex_literal;
 #[cfg(test)]
 extern crate hex;
 
+extern crate tokio;
+
+//pub mod tcp_connection;
+
 //pub mod discovery;
 //pub mod topology;
 //pub mod synchronization;
 //pub mod peer;
-pub mod graph;
+mod graph;
 
-use wire::Message;
-use wire::AnnouncementNode;
-use wire::AnnouncementChannel;
-use wire::UpdateChannel;
+use wire::{
+    Message, AnnouncementNode, AnnouncementChannel, UpdateChannel,
+    MessageFiltered, MessageConsumer, WireError
+};
 
-pub struct Graph {
-    nodes: Vec<AnnouncementNode>,
-    channels: Vec<AnnouncementChannel>,
-    policies: Vec<UpdateChannel>,
+use tokio::prelude::{Future, Sink};
+
+pub use self::graph::Graph;
+
+pub enum TopologyMessage {
+    AnnouncementNode(AnnouncementNode),
+    AnnouncementChannel(AnnouncementChannel),
+    UpdateChannel(UpdateChannel),
 }
 
-impl Graph {
-    pub fn new() -> Self {
-        Graph {
-            nodes: Vec::new(),
-            channels: Vec::new(),
-            policies: Vec::new(),
-        }
-    }
-
-    pub fn message(&mut self, message: Message) {
-        use self::Message::*;
-        match message {
-            AnnouncementNode(announcement_node) => {
-                self.nodes.push(announcement_node);
-            },
-            AnnouncementChannel(announcement_channel) => {
-                self.channels.push(announcement_channel);
-            },
-            UpdateChannel(update_channel) => {
-                self.policies.push(update_channel);
-            },
-            _ => (),
+impl MessageFiltered for TopologyMessage {
+    fn filter(v: Message) -> Result<Self, Message> {
+        match v {
+            Message::AnnouncementNode(v) => Ok(TopologyMessage::AnnouncementNode(v)),
+            Message::AnnouncementChannel(v) => Ok(TopologyMessage::AnnouncementChannel(v)),
+            Message::UpdateChannel(v) => Ok(TopologyMessage::UpdateChannel(v)),
+            v @ _ => Err(v),
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::peer::*;
-    use super::synchronization::*;
-    use wire::Message;
-    use wire::Init;
-    use wire::RawFeatureVector;
-    use wire::FeatureBit;
-    use wire::PublicKey;
-    use wire::Address;
+impl MessageConsumer for Graph {
+    type Message = TopologyMessage;
 
-    #[test]
-    fn test_channel_range() {
-        use std::thread;
+    fn consume<S>(mut self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError>>
+    where
+        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+    {
+        use tokio::prelude::IntoFuture;
 
-        let mut tcp_self = TcpSelf::new();
-        let key = public_key!(3, "02f2dda2232393a0a608f4ffa4c940b25b2ea4af8f9489f8e62afc0a729e973b0d");
-        let mut tcp_peer = tcp_self.connect_peer(key, Address::localhost(10000)).unwrap();
-
-        let init = Init::new(
-            RawFeatureVector::new(),
-            RawFeatureVector::new().set_bit(FeatureBit::InitialRoutingSync),
-        );
-        tcp_peer.send(Message::Init(init)).unwrap();
-        let response = tcp_peer.receive().unwrap();
-        println!("{:?}", response);
-
-        //let s = Synchronization {};
-        //s.sync_channels(&mut tcp_peer);
-
-        thread::spawn(move || loop {
-            println!("{:?}", tcp_peer.receive().unwrap())
-        }).join().unwrap();
-
-        fn pause() {
-            use std::io;
-            use std::io::prelude::*;
-
-            println!("Enter any string to continue...");
-            let _ = io::stdin().read(&mut [0u8]).unwrap();
-        }
-
-        pause();
+        self.message(message);
+        Box::new(Ok((self, sink)).into_future())
     }
 }
