@@ -1,6 +1,7 @@
 use specs::prelude::*;
 
-use wire::Message;
+use super::TopologyMessage;
+use wire::MessageFiltered;
 
 mod channel;
 mod node;
@@ -12,8 +13,7 @@ pub struct Graph {
 
 impl Graph {
     pub fn new() -> Self {
-        use self::channel::AnnouncementChannelSystem;
-        use self::channel::UpdateChannelSystem;
+        use self::channel::{AnnouncementChannelSystem, UpdateChannelSystem};
         use self::node::LogNodesSystem;
         use self::tools::UseOnce;
         use wire::AnnouncementNode;
@@ -29,10 +29,9 @@ impl Graph {
         }
     }
 
-    pub fn message(&mut self, message: Message) {
-        use self::Message::*;
-        use self::channel::AnnouncementChannelSystem;
-        use self::channel::UpdateChannelSystem;
+    pub fn message(&mut self, message: TopologyMessage) {
+        use self::TopologyMessage::*;
+        use self::channel::{AnnouncementChannelSystem, UpdateChannelSystem};
         use self::tools::UseOnce;
 
         match message {
