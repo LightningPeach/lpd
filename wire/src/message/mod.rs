@@ -51,9 +51,9 @@ pub trait MessageConsumer {
     // consumes message and return future with the sink and maybe modified self
     // works synchronously
     fn consume<S>(self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError>>
-        where
-            Self: Sized,
-            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
+    where
+        Self: Sized,
+        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
 }
 
 macro_rules! message {
