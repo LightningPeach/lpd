@@ -27,7 +27,6 @@ mod serde {
     use serde::Serializer;
     use serde::Deserialize;
     use serde::Deserializer;
-    use std::fmt;
 
     impl<'de> Deserialize<'de> for NodeAlias {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
@@ -43,9 +42,6 @@ mod serde {
 
     impl Serialize for NodeAlias {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-            use std::slice;
-            use serde::ser::SerializeTuple;
-
             let &NodeAlias(ref s) = self;
             let v = s.as_bytes();
 
