@@ -38,7 +38,7 @@ extern crate tokio;
 mod graph;
 
 use wire::{
-    Message, AnnouncementNode, AnnouncementChannel, UpdateChannel,
+    Message, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel,
     MessageFiltered, MessageConsumer, WireError
 };
 
@@ -47,6 +47,7 @@ use tokio::prelude::{Future, Sink};
 pub use self::graph::Graph;
 
 pub enum TopologyMessage {
+    Init(Init),
     AnnouncementNode(AnnouncementNode),
     AnnouncementChannel(AnnouncementChannel),
     UpdateChannel(UpdateChannel),
@@ -55,6 +56,7 @@ pub enum TopologyMessage {
 impl MessageFiltered for TopologyMessage {
     fn filter(v: Message) -> Result<Self, Message> {
         match v {
+            Message::Init(v) => Ok(TopologyMessage::Init(v)),
             Message::AnnouncementNode(v) => Ok(TopologyMessage::AnnouncementNode(v)),
             Message::AnnouncementChannel(v) => Ok(TopologyMessage::AnnouncementChannel(v)),
             Message::UpdateChannel(v) => Ok(TopologyMessage::UpdateChannel(v)),
