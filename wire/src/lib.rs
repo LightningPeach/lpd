@@ -22,6 +22,7 @@ mod message;
 
 mod serde_facade;
 mod compression_facade;
+mod message_processor;
 
 pub use self::message::*;
 pub use self::message::types::*;
@@ -31,3 +32,4 @@ pub use self::serde_facade::WireError;
 pub use self::compression_facade::UncompressedData;
 pub use self::compression_facade::SerdeVec;
 pub use self::compression_facade::PackSized;
+pub use self::message_processor::*;

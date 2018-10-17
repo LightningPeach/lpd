@@ -22,7 +22,7 @@ use wire::{
     Message, SerdeVec, Init, Ping, Pong, AcceptChannel, ChannelKeys, ChannelPrivateKeys,
     OpenChannel, FundingSigned, FundingCreated, ChannelId, FundingLocked,
     UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned,
-    MessageConsumer, WireError, MessageFiltered
+    MessageConsumer, WireError, MessageFiltered, MessageConsumerChain
 };
 use wire::PublicKey as LpdPublicKey;
 use wire::Signature as LpdSignature;
@@ -376,48 +376,11 @@ where
     O: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
 {
     use tokio::prelude::IntoFuture;
-    type Contexts = (PingResponder, Graph, MainContext);
 
-    let contexts = (PingResponder, Graph::new(), MainContext::new());
+    let contexts = (PingResponder, (Graph::new(), (MainContext::new(), ())));
     stream
         .fold((contexts, sink), |(contexts, sink), message| {
-            Err::<Box<dyn Future<Item=_, Error=_>>, _>((contexts, sink, message))
-                .or_else::<(Contexts, O, Message), _>(|(contexts, sink, message)| {
-                    match <PingResponder as MessageConsumer>::Message::filter(message) {
-                        Ok(message) => {
-                            let (ping_responder, graph, main_context) = contexts;
-                            Ok(Box::new(
-                                ping_responder.consume(sink, message)
-                                    .map(move |(ping_responder, s)| ((ping_responder, graph, main_context), s))
-                            ))
-                        },
-                        Err(message) => Err((contexts, sink, message)),
-                    }
-                })
-                .or_else::<(Contexts, O, Message), _>(|(contexts, sink, message)| {
-                    match <Graph as MessageConsumer>::Message::filter(message) {
-                        Ok(message) => {
-                            let (ping_responder, graph, main_context) = contexts;
-                            Ok(Box::new(
-                                graph.consume(sink, message)
-                                    .map(move |(graph, s)| ((ping_responder, graph, main_context), s))
-                            ))
-                        },
-                        Err(message) => Err((contexts, sink, message)),
-                    }
-                })
-                .or_else::<(Contexts, O, Message), _>(|(contexts, sink, message)| {
-                    match <MainContext as MessageConsumer>::Message::filter(message) {
-                        Ok(message) => {
-                            let (ping_responder, graph, main_context) = contexts;
-                            Ok(Box::new(
-                                main_context.consume(sink, message)
-                                    .map(move |(main_context, s)| ((ping_responder, graph, main_context), s))
-                            ))
-                        },
-                        Err(message) => Err((contexts, sink, message)),
-                    }
-                })
+            contexts.process(sink, message)
                 // if any previous MessageConsumer did not consumed the message
                 .or_else::<(), _>(|(contexts, sink, message)| {
                     println!("warning: skipped message {:?}", message);
