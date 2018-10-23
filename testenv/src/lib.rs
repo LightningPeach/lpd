@@ -9,6 +9,8 @@ extern crate futures;
 extern crate lazycell;
 extern crate hex;
 
+use std::process::Command;
+
 mod home;
 use self::home::Home;
 
@@ -19,12 +21,12 @@ mod ln;
 pub use self::ln::LnDaemon;
 pub use self::ln::LnRunning;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn cleanup(name: &str) {
     Command::new("killall").arg(name).output().unwrap();
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn cleanup(name: &str) {
     panic!("cannot stop other instance of `{}`, stop it manually", name)
 }
