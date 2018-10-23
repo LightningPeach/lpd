@@ -1,4 +1,4 @@
-use super::Home;
+use super::{Home, cleanup};
 
 use std::process::Command;
 use std::process::Child;
@@ -43,7 +43,13 @@ impl LnDaemon {
             peer_port: peer_port,
             rpc_port: rpc_port,
             rest_port: rest_port,
-            home: Home::new(name)?,
+            home: Home::new(name, false)
+                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
+                    cleanup("lnd");
+                    Home::new(name, true)
+                } else {
+                    Err(e)
+                })?,
         })
     }
 

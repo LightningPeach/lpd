@@ -39,7 +39,7 @@ impl Home {
         self.ext_path("rpc.key")
     }
 
-    pub fn new(name: &str) -> Result<Self, io::Error> {
+    pub fn new(name: &str, force: bool) -> Result<Self, io::Error> {
         let s = Home {
             name: name.to_owned(),
         };
@@ -48,6 +48,17 @@ impl Home {
             .or_else(|err|
                 if err.kind() == io::ErrorKind::NotFound { Ok(()) } else { Err(err) }
             )?;
+
+        let lock_path = s.ext_path(".lock");
+        if force {
+            fs::remove_file(&lock_path)
+                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
+                    Ok(())
+                } else {
+                    Err(e)
+                })?;
+        }
+        fs::File::create(lock_path)?;
 
         let _ = Command::new("gencerts")
             .current_dir(s.path()).output()?;
