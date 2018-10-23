@@ -19,6 +19,16 @@ mod ln;
 pub use self::ln::LnDaemon;
 pub use self::ln::LnRunning;
 
+#[cfg(target_os = "linux")]
+pub fn cleanup(name: &str) {
+    Command::new("killall").arg(name).output().unwrap();
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn cleanup(name: &str) {
+    panic!("cannot stop other instance of `{}`, stop it manually", name)
+}
+
 #[cfg(test)]
 mod tests {
     use super::BtcDaemon;

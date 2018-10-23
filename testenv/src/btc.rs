@@ -1,4 +1,4 @@
-use super::Home;
+use super::{Home, cleanup};
 
 use std::path::PathBuf;
 use std::process::Command;
@@ -27,7 +27,13 @@ impl BtcDaemon {
 
     pub fn new(name: &str) -> Result<Self, io::Error> {
         Ok(BtcDaemon {
-            home: Home::new(name)?,
+            home: Home::new(name, false)
+                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
+                    cleanup("btcd");
+                    Home::new(name, true)
+                } else {
+                    Err(e)
+                })?,
         })
     }
 
