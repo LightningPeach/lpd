@@ -23,7 +23,7 @@ pub use self::ln::LnRunning;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn cleanup(name: &str) {
-    Command::new("killall").arg(name).output().unwrap();
+    Command::new("killall").arg(name).output().map(|_| ()).unwrap_or(());
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
