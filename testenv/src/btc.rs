@@ -3,7 +3,7 @@ use super::{Home, cleanup};
 use std::path::PathBuf;
 use std::process::Command;
 use std::process::Child;
-use std::io;
+use std::{io, fs};
 use std::convert::AsRef;
 use std::convert::AsMut;
 
@@ -30,6 +30,7 @@ impl BtcDaemon {
             home: Home::new(name, false)
                 .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
                     cleanup("btcd");
+                    cleanup("bitcoind");
                     Home::new(name, true)
                 } else {
                     Err(e)
@@ -38,6 +39,20 @@ impl BtcDaemon {
     }
 
     fn run_internal(self, mining_address: Option<String>) -> Result<BtcRunning, io::Error> {
+        fs::create_dir(self.home.ext_path("data")).or_else(|e|
+            if e.kind() == io::ErrorKind::AlreadyExists {
+                Ok(())
+            } else {
+                Err(e)
+            }
+        )?;
+        fs::create_dir(self.home.ext_path("logs")).or_else(|e|
+            if e.kind() == io::ErrorKind::AlreadyExists {
+                Ok(())
+            } else {
+                Err(e)
+            }
+        )?;
         let mut args = vec![
             format!("--datadir={}", self.home.ext_path("data").to_str().unwrap()),
             format!("--logdir={}", self.home.ext_path("logs").to_str().unwrap()),

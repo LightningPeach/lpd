@@ -45,6 +45,7 @@ mod tests {
         use std::time::Duration;
 
         let btc_running = BtcDaemon::new("btcd").unwrap().run().unwrap();
+        thread::sleep(Duration::from_secs(5));
 
         // creating two nodes with base port 10000
         let btcd_pubkey_path = btc_running.as_ref().public_key_path();
