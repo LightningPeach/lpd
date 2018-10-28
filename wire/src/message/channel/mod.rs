@@ -1,3 +1,9 @@
+use super::types::*;
+use super::Signed;
+use super::SignedData;
+#[cfg(test)]
+use super::DataToSign;
+
 mod funding;
 pub use self::funding::*;
 
@@ -9,6 +15,9 @@ pub use self::operation::*;
 
 mod open;
 pub use self::open::*;
+
+mod keys;
+pub use self::keys::*;
 
 mod announcement;
 pub use self::announcement::*;
@@ -22,16 +31,16 @@ pub use self::query_short_channel_ids::*;
 mod query_channel_range;
 pub use self::query_channel_range::*;
 
-use super::types::*;
+use ::PackSized;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]
-    struct ChannelFlags: u8 {
+    pub struct ChannelFlags: u8 {
         const FF_ANNOUNCE_CHANNEL = 0b00000001;
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct ChannelId {
     data: [u8; 32],
 }
@@ -44,11 +53,23 @@ impl ChannelId {
     }
 }
 
+impl From<[u8; 32]> for ChannelId {
+    fn from(x: [u8; 32]) -> Self {
+        ChannelId{
+            data: x,
+        }
+    }
+}
+
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct ShortChannelId {
     block_height: u32,
     tx_index: u32,
     tx_position: u16,
+}
+
+impl PackSized for ShortChannelId {
+    const SIZE: usize = 8;
 }
 
 impl From<u64> for ShortChannelId {
@@ -136,10 +157,18 @@ mod rand {
             this
         }
     }
+
+    impl Distribution<ShortChannelId> for Standard {
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ShortChannelId {
+            let mut rng = rng;
+            From::<u64>::from(self.sample(&mut rng))
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use ::BinarySD;
     use super::ShortChannelId;
     use rand;
 
@@ -149,5 +178,12 @@ mod tests {
         let short_channel_id = ShortChannelId::from(value);
         let restored = short_channel_id.into();
         assert_eq!(value, restored);
+    }
+
+    #[test]
+    fn some_test() {
+        let v = vec![0u8, 1, 145, 0, 0, 1, 0, 0, ];
+        let t: ShortChannelId = BinarySD::deserialize(&v[..]).unwrap();
+        println!("{:?}", t);
     }
 }

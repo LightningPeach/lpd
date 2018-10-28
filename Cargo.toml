@@ -1,5 +1,9 @@
 [workspace]
-members = ["../lpd", "bincode", "wire", "brontide", "shachain", "hdkeychain", "wallet"]
+members = [
+    "../lpd", "bincode", "wire", "brontide", "shachain", "hdkeychain", "channel", "wallet",
+    "routing", "bitcoin-types", "common-types",
+    "testenv"
+]
 
 [package]
 name = "lpd"
@@ -21,17 +25,25 @@ name = "wasm-runner"
 [[example]]
 name = "run-lnd"
 
+
 [dependencies]
-wire = { path = "wire" }
+wire = { path = "wire", features = ["testing"] }
 brontide = { path = "brontide" }
 shachain = { path = "shachain" }
 hdkeychain = { path = "hdkeychain" }
+channel = { path = "channel" }
 wallet = { path = "wallet" }
+routing = { path = "routing" }
 
 rand = "0.5.4"
 secp256k1 = "0.9.2"
 hex = "0.3.2"
-serde = "1"
+hex-literal = "0.1.1"
+tokio = "0.1.11"
+futures = "0.1.25"
+
+bitcoin = "0.13.2"
+rust-crypto = "0.2.36"
 
 [dev-dependencies]
 serde_derive = "1.0.70"

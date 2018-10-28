@@ -7,7 +7,7 @@ use serde::Deserializer;
 
 use super::FeatureBit;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Default, Clone, Eq, PartialEq)]
 pub struct RawFeatureVector {
     set: HashSet<FeatureBit>,
 }
@@ -125,6 +125,27 @@ impl<'de> Deserialize<'de> for RawFeatureVector {
     }
 }
 
+mod debug {
+    use std::fmt;
+    use super::RawFeatureVector;
+
+    impl fmt::Debug for RawFeatureVector {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            if self.set.is_empty() {
+                write!(f, "RawFeatureVector [ ]")
+            } else {
+                write!(f, "RawFeatureVector [ {} ]", self.set.iter().fold(String::new(), |s, item| {
+                    if s.is_empty() {
+                        format!("{:?}", item)
+                    } else {
+                        format!("{}, {:?}", s, item)
+                    }
+                }))
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::RawFeatureVector;
@@ -152,5 +173,12 @@ mod test {
         let new_feature_vector = BinarySD::deserialize(&data[..]).unwrap();
 
         assert_eq!(feature_vector, new_feature_vector);
+    }
+
+    #[test]
+    fn empty() {
+        let v = vec![0u8, 0u8];
+        let t: RawFeatureVector = BinarySD::deserialize(&v[..]).unwrap();
+        println!("{:?}", t);
     }
 }

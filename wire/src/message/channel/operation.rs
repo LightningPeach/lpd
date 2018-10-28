@@ -8,7 +8,7 @@ use super::SatoshiPerKiloWeight;
 
 use ::SerdeVec;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct HtlcId {
     id: u64,
 }
@@ -29,19 +29,19 @@ impl HtlcId {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct UpdateAddHtlc {
-    channel_id: ChannelId,
-    id: HtlcId,
-    amount: MilliSatoshi,
-    payment: Hash256,
-    expiry: u32,
-    onion_blob: OnionBlob,
+    pub channel_id: ChannelId,
+    pub id: HtlcId,
+    pub amount: MilliSatoshi,
+    pub payment: Hash256,
+    pub expiry: u32,
+    pub onion_blob: OnionBlob,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct UpdateFulfillHtlc {
-    channel_id: ChannelId,
-    id: HtlcId,
-    payment_preimage: [u8; 32],
+    pub channel_id: ChannelId,
+    pub id: HtlcId,
+    pub payment_preimage: [u8; 32],
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -61,16 +61,16 @@ pub struct UpdateFailMalformedHtlc {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct CommitmentSigned {
-    channel_id: ChannelId,
-    signature: Signature,
-    htlc_signatures: SerdeVec<Signature>,
+    pub channel_id: ChannelId,
+    pub signature: Signature,
+    pub htlc_signatures: SerdeVec<Signature>,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct RevokeAndAck {
-    channel_id: ChannelId,
-    revocation_preimage: [u8; 32],
-    next_per_commitment_point: PublicKey,
+    pub channel_id: ChannelId,
+    pub revocation_preimage: [u8; 32],
+    pub next_per_commitment_point: PublicKey,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
