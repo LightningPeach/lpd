@@ -17,7 +17,7 @@ Basic of Lightning Technologies.
 
 - [partial]         BOLT 1: Base Protocol
 - [partial]         BOLT 2: Peer Protocol for Channel Management
-- [full]            BOLT 3: Bitcoin Transaction and Script Formats
+- [partial]         BOLT 3: Bitcoin Transaction and Script Formats
 - [full]            BOLT 4: Onion Routing Protocol
 - [not implemented] BOLT 5: Recommendations for On-chain Transaction Handling
 - [partial]         BOLT 7: P2P Node and Channel Discovery
@@ -27,7 +27,7 @@ Basic of Lightning Technologies.
 - [not implemented] BOLT 11: Invoice Protocol for Lightning Payments
 
 Currently there is no command or rpc interface. It is set of libs. Example of channel opening code in src/main.rs.
-To run it `cargo run`. It connects to external node (lnd) and waits for channel opening.
+To run it insert correct address of other node and `cargo run`. It connects to external node (lnd) and waits for channel opening.
 
 We firmly believe in the share early, share often approach. The basic premise of the approach is to announce your plans 
 before you start work, and once you have started working share your work when any progress is made.
