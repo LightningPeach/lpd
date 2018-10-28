@@ -11,19 +11,33 @@ use serde::de;
 use ::BinarySD;
 use std::io::Read;
 
+use std::mem;
+
+pub trait PackSized: Sized {
+    const SIZE: usize = mem::size_of::<Self>();
+
+    fn pack_size(&self) -> usize {
+        Self::SIZE
+    }
+}
+
 /// write size in byte rather then length of the vector
 #[derive(Eq, PartialEq, Debug)]
-pub struct SerdeVec<T>(pub Vec<T>) where T: Sized;
+pub struct SerdeVec<T>(pub Vec<T>) where T: PackSized;
 
-impl<T> Serialize for SerdeVec<T> where T: Serialize {
+impl<T> Serialize for SerdeVec<T> where T: PackSized + Serialize {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         use self::ser::SerializeTuple;
-        use std::mem;
 
         let &SerdeVec(ref data) = self;
-        let mut tuple = serializer.serialize_tuple(2 + data.len())?;
-        let size_in_bytes = mem::size_of::<T>() * data.len();
-        let _ = SerializeTuple::serialize_element(&mut tuple, &size_in_bytes)?;
+        let mut tuple = serializer.serialize_tuple(1 + data.len())?;
+        let size_in_bytes = if T::SIZE == 0 {
+            data.iter()
+                .fold(0, |accumulator, item| accumulator + item.pack_size())
+        } else {
+            T::SIZE * data.len()
+        };
+        let _ = SerializeTuple::serialize_element(&mut tuple, &(size_in_bytes as u16))?;
         for item in data {
             let _ = SerializeTuple::serialize_element(&mut tuple, item)?;
         }
@@ -32,17 +46,17 @@ impl<T> Serialize for SerdeVec<T> where T: Serialize {
     }
 }
 
-impl<'de, T> Deserialize<'de> for SerdeVec<T> where T: de::DeserializeOwned {
+impl<'de, T> Deserialize<'de> for SerdeVec<T> where T: PackSized + de::DeserializeOwned {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
         use std::fmt;
         use std::marker::PhantomData;
         use self::de::SeqAccess;
 
-        struct Visitor<T> where T: de::DeserializeOwned {
+        struct Visitor<T> where T: PackSized + de::DeserializeOwned {
             phantom_data: PhantomData<T>,
         }
 
-        impl<'de, T> de::Visitor<'de> for Visitor<T> where T: de::DeserializeOwned {
+        impl<'de, T> de::Visitor<'de> for Visitor<T> where T: PackSized + de::DeserializeOwned {
             type Value = SerdeVec<T>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -50,25 +64,26 @@ impl<'de, T> Deserialize<'de> for SerdeVec<T> where T: de::DeserializeOwned {
             }
 
             fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de>, {
-                use std::mem;
-
                 let mut seq = seq;
-                let size_in_bytes: u16 = seq.next_element()?
+
+                let mut size = seq.size_hint()
                     .ok_or(<A::Error as de::Error>::custom(format!("expected size")))?;
-
-                let size = (size_in_bytes as usize) / mem::size_of::<T>();
-                if (size_in_bytes as usize) % mem::size_of::<T>() != 0 {
-                    Err(<A::Error as de::Error>::custom(format!("cannot assemble integer amount of T")))
-                } else {
-                    let mut data = vec![];
-                    for _ in 0..size {
-                        let element = seq.next_element()?
-                            .ok_or(<A::Error as de::Error>::custom(format!("cannot read T")))?;
-                        data.push(element);
+                let mut data = Vec::new();
+                loop {
+                    if size == 0 { break; }
+                    let element: T = seq.next_element()?
+                        .ok_or(<A::Error as de::Error>::custom(format!("cannot read T")))?;
+                    if size == element.pack_size() {
+                        break;
+                    } else {
+                        if size < element.pack_size() {
+                            return Err(<A::Error as de::Error>::custom(format!("cannot assemble integer amount of T")))
+                        }
                     }
-
-                    Ok(SerdeVec(data))
+                    size -= element.pack_size();
+                    data.push(element);
                 }
+                Ok(SerdeVec(data))
             }
 
         }
@@ -83,12 +98,13 @@ impl<'de, T> Deserialize<'de> for SerdeVec<T> where T: de::DeserializeOwned {
 /// but serialization / deserialization will read / write zlib compressed data
 /// this is exactly desired by lnd specification
 #[derive(Eq, PartialEq, Debug)]
-pub struct UncompressedData<T>(pub SerdeVec<T>) where T: Sized;
+pub struct UncompressedData<T>(pub SerdeVec<T>) where T: PackSized;
 
-impl<T> Serialize for UncompressedData<T> where T: Serialize {
+impl<T> Serialize for UncompressedData<T> where T: PackSized + Serialize {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let mut bytes = Vec::<u8>::new();
-        BinarySD::serialize(&mut bytes, self)
+        let &UncompressedData(ref data) = self;
+        BinarySD::serialize(&mut bytes, data)
             .map_err(|e| <S::Error as ser::Error>::custom(format!("serialize error: {:?}", e)))?;
         let mut encoder = read::ZlibEncoder::new(bytes.as_slice(), Compression::fast());
         let mut compressed_bytes = Vec::<u8>::new();
@@ -98,7 +114,7 @@ impl<T> Serialize for UncompressedData<T> where T: Serialize {
     }
 }
 
-impl<'de, T> Deserialize<'de> for UncompressedData<T> where T: de::DeserializeOwned {
+impl<'de, T> Deserialize<'de> for UncompressedData<T> where T: PackSized + de::DeserializeOwned {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
         use std::fmt;
         use std::marker::PhantomData;
@@ -107,7 +123,7 @@ impl<'de, T> Deserialize<'de> for UncompressedData<T> where T: de::DeserializeOw
             phantom_data: PhantomData<T>,
         }
 
-        impl<'de, T> de::Visitor<'de> for Visitor<T> where T: de::DeserializeOwned {
+        impl<'de, T> de::Visitor<'de> for Visitor<T> where T: PackSized + de::DeserializeOwned {
             type Value = UncompressedData<T>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

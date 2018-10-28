@@ -1,4 +1,4 @@
-use secp256k1::{Secp256k1, SecretKey, PublicKey};
+use secp256k1::{Secp256k1, SecretKey, PublicKey, Error as CryptoError};
 use hex;
 use std::error::Error;
 use std::collections::HashMap;
@@ -25,34 +25,38 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
     let e_pub = PublicKey::from_secret_key(&Secp256k1::new(), &e_priv)?;
     assert_eq!(hex::encode(&e_pub.serialize()[..]), "036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f7");
 
-    let mut machine = Machine::new(true, ls_priv, rs_pub, &[])?;
-    machine.ephemeral_gen = || -> Result<SecretKey, Box<Error>> {
+    let mut machine = Machine::new::<fn(&mut Machine)>(true, ls_priv, rs_pub, &[])?;
+    machine.ephemeral_gen = || -> Result<SecretKey, CryptoError> {
 		let sk = SecretKey::from_slice(
-            &Secp256k1::new(),hex::decode("1212121212121212121212121212121212121212121212121212121212121212")?.as_slice())?;
+            &Secp256k1::new(),
+            hex::decode("1212121212121212121212121212121212121212121212121212121212121212").unwrap().as_slice()
+        )?;
         Ok(sk)
 	};
     assert_eq!(hex::encode(machine.handshake_state.symmetric_state.handshake_digest), "8401b3fdcaaa710b5405400536a3d5fd7792fe8e7fe29cd8b687216fe323ecbd");
 
     let act_one = machine.gen_act_one()?;
 
-    assert_eq!(hex::encode(&act_one[..]), "00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a");
+    assert_eq!(hex::encode(&act_one.bytes[..]), "00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a");
 
-    let mut responder_machine = Machine::new(false, rs_priv, ls_pub, &[])?;
-    responder_machine.ephemeral_gen = || -> Result<SecretKey, Box<Error>> {
+    let mut responder_machine = Machine::new::<fn(&mut Machine)>(false, rs_priv, ls_pub, &[])?;
+    responder_machine.ephemeral_gen = || -> Result<SecretKey, CryptoError> {
 		let sk = SecretKey::from_slice(
-            &Secp256k1::new(),hex::decode("2222222222222222222222222222222222222222222222222222222222222222")?.as_slice())?;
+            &Secp256k1::new(),
+            hex::decode("2222222222222222222222222222222222222222222222222222222222222222").unwrap().as_slice()
+        )?;
         Ok(sk)
 	};
 
     responder_machine.recv_act_one(act_one)?;
 
     let act_two = responder_machine.gen_act_two()?;
-    assert_eq!(hex::encode(&act_two[..]), "0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730ae");
+    assert_eq!(hex::encode(&act_two.bytes[..]), "0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730ae");
 
     machine.recv_act_two(act_two)?;
 
     let act_three = machine.gen_act_three()?;
-    assert_eq!(hex::encode(&act_three[..]), "00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba");
+    assert_eq!(hex::encode(&act_three.bytes[..]), "00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba");
 
     responder_machine.recv_act_three(act_three)?;
 

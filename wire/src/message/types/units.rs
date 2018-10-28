@@ -28,6 +28,30 @@ pub struct SatoshiPerVByte {
 mod wrappers {
     use super::*;
 
+    impl From<Satoshi> for u64 {
+        fn from(s: Satoshi) -> Self {
+            return s.raw;
+        }
+    }
+
+    impl From<SatoshiPerKiloWeight> for u32 {
+        fn from(s: SatoshiPerKiloWeight) -> Self {
+            return s.raw;
+        }
+    }
+
+    impl From<MilliSatoshi> for u64 {
+        fn from(m: MilliSatoshi) -> Self {
+            return m.raw;
+        }
+    }
+
+    impl From<CsvDelay> for u16 {
+        fn from(c: CsvDelay) -> Self {
+            return c.raw;
+        }
+    }
+
     // TODO: write custom derive for `Wrapper` and `BiWrapper`
     impl Wrapper for Satoshi {
         type Wrapped = u64;

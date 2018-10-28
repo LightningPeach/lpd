@@ -6,27 +6,26 @@ use super::SatoshiPerKiloWeight;
 use super::CsvDelay;
 use super::PublicKey;
 use super::ChannelFlags;
+use super::ChannelKeys;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[cfg(test)]
+use super::ChannelPrivateKeys;
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct OpenChannel {
-    chain_hash: Hash256,
-    temporary_channel_id: ChannelId,
-    funding: Satoshi,
-    push: MilliSatoshi,
-    dust_limit: Satoshi,
-    max_in_flight: MilliSatoshi,
-    channel_reserve: Satoshi,
-    htlc_minimum: MilliSatoshi,
-    fee: SatoshiPerKiloWeight,
-    csv_delay: CsvDelay,
-    max_accepted_htlc_number: u16,
-    funding_pubkey: PublicKey,
-    revocation_basepoint: PublicKey,
-    payment_basepoint: PublicKey,
-    delayed_payment_basepoint: PublicKey,
-    htlc_basepoint: PublicKey,
-    first_per_commitment_point: PublicKey,
-    flags: ChannelFlags,
+    pub chain_hash: Hash256,
+    pub temporary_channel_id: ChannelId,
+    pub funding: Satoshi,
+    pub push: MilliSatoshi,
+    pub dust_limit: Satoshi,
+    pub max_in_flight: MilliSatoshi,
+    pub channel_reserve: Satoshi,
+    pub htlc_minimum: MilliSatoshi,
+    pub fee: SatoshiPerKiloWeight,
+    pub csv_delay: CsvDelay,
+    pub max_accepted_htlc_number: u16,
+    pub keys: ChannelKeys,
+    pub flags: ChannelFlags,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -36,20 +35,31 @@ pub struct OpenChannelShutdownScript {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct AcceptChannel {
-    temporary_channel_id: ChannelId,
-    dust_limit: Satoshi,
-    max_htlc_value_in_flight: MilliSatoshi,
-    chanel_reserve: Satoshi,
-    htlc_minimum: MilliSatoshi,
-    minimum_accept_depth: u32,
-    csv_delay: CsvDelay,
-    max_accepted_htlc_number: u16,
-    funding_pubkey: PublicKey,
-    revocation_point: PublicKey,
-    payment_point: PublicKey,
-    delayed_payment_point: PublicKey,
-    htlc_point: PublicKey,
-    first_per_commitment_point: PublicKey,
+    pub temporary_channel_id: ChannelId,
+    pub dust_limit: Satoshi,
+    pub max_htlc_value_in_flight: MilliSatoshi,
+    pub chanel_reserve: Satoshi,
+    pub htlc_minimum: MilliSatoshi,
+    pub minimum_accept_depth: u32,
+    pub csv_delay: CsvDelay,
+    pub max_accepted_htlc_number: u16,
+    pub keys: ChannelKeys,
+}
+
+impl AcceptChannel {
+    pub fn accept(open_channel: &OpenChannel, keys: &ChannelKeys) -> Self {
+        AcceptChannel {
+            temporary_channel_id: open_channel.temporary_channel_id.clone(),
+            dust_limit: open_channel.dust_limit.clone(),
+            max_htlc_value_in_flight: open_channel.max_in_flight.clone(),
+            chanel_reserve: open_channel.channel_reserve.clone(),
+            htlc_minimum: open_channel.htlc_minimum.clone(),
+            minimum_accept_depth: 1,
+            csv_delay: open_channel.csv_delay.clone(),
+            max_accepted_htlc_number: open_channel.max_accepted_htlc_number.clone(),
+            keys: keys.clone(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -73,6 +83,7 @@ mod test {
         use rand::thread_rng;
 
         let mut rng = thread_rng();
+        let private: ChannelPrivateKeys = rng.gen();
         let mut vec = vec![];
         let msg = OpenChannel {
             chain_hash: rng.gen(),
@@ -86,12 +97,7 @@ mod test {
             fee: SatoshiPerKiloWeight::default(),
             csv_delay: CsvDelay::default(),
             max_accepted_htlc_number: Default::default(),
-            funding_pubkey: rng.gen(),
-            revocation_basepoint: rng.gen(),
-            payment_basepoint: rng.gen(),
-            delayed_payment_basepoint: rng.gen(),
-            htlc_basepoint: rng.gen(),
-            first_per_commitment_point: rng.gen(),
+            keys: ChannelKeys::new(&private).unwrap(),
             flags: ChannelFlags::FF_ANNOUNCE_CHANNEL,
         };
 
@@ -99,7 +105,7 @@ mod test {
         let estimated_size = size_of::<Hash256>() + size_of::<ChannelId>()
             + size_of::<Satoshi>() * 3 + size_of::<MilliSatoshi>() * 3
             + size_of::<SatoshiPerKiloWeight>() + size_of::<CsvDelay>()
-            + size_of::<u16>() + size_of::<PublicKey>() * 6 + size_of::<u8>();
+            + size_of::<u16>() + 33 * 6 + size_of::<u8>();
 
         let _ = BinarySD::serialize(&mut vec, &msg).unwrap();
         println!("{:?} == {:?}", vec.len(), estimated_size);

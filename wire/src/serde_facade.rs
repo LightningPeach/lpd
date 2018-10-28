@@ -13,13 +13,15 @@ use bincode::config;
 
 use super::message::MessageSize;
 
+pub type WireError = Error;
+
 /// LengthSDOptions is the delegate that overrides
 /// serialization/deserialization of the length of some sequence
 #[derive(Copy, Clone)]
 struct LengthSD;
 
 impl LengthSDOptions for LengthSD {
-    fn serialized_length_size(&self, length: u64) -> Result<usize, Error> {
+    fn serialized_length_size(&self, length: u64) -> Result<usize, WireError> {
         let _ = length;
         Ok(2)
     }
@@ -52,14 +54,14 @@ impl LengthSDOptions for LengthSD {
 pub struct BinarySD;
 
 impl BinarySD {
-    pub fn serialize<T: Serialize, W: io::Write>(w: W, value: &T) -> Result<(), Error> {
+    pub fn serialize<T: Serialize, W: io::Write>(w: W, value: &T) -> Result<(), WireError> {
         let mut temp = config();
         let bc_config = temp.big_endian();
 
         bc_config.serialize_custom_length_into(w, value, LengthSD)
     }
 
-    pub fn deserialize<T: DeserializeOwned, R: io::Read>(r: R) -> Result<T, Error> {
+    pub fn deserialize<T: DeserializeOwned, R: io::Read>(r: R) -> Result<T, WireError> {
         let mut temp = config();
         let bc_config = temp.big_endian();
 
