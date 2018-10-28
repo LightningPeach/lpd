@@ -26,9 +26,8 @@ Basic of Lightning Technologies.
 - [not implemented] BOLT 10: DNS Bootstrap and Assisted Node Location
 - [not implemented] BOLT 11: Invoice Protocol for Lightning Payments
 
-Currently development is done in a few separate branches that will be merged in master when they are ready.
-- routing - BOLT-7
-- state_machine - BOLT-2, BOLT-3
+Currently there is no command or rpc interface. It is set of libs. Example of channel opening code in src/main.rs.
+To run it `cargo run`. It connects to external node (lnd) and waits for channel opening.
 
 We firmly believe in the share early, share often approach. The basic premise of the approach is to announce your plans 
 before you start work, and once you have started working share your work when any progress is made.
