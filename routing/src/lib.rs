@@ -29,12 +29,7 @@ extern crate hex;
 
 extern crate tokio;
 
-//pub mod tcp_connection;
-
-//pub mod discovery;
-//pub mod topology;
-//pub mod synchronization;
-//pub mod peer;
+pub mod tcp_connection;
 mod graph;
 
 use wire::{
