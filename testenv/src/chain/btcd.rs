@@ -1,36 +1,44 @@
-use super::{Home, cleanup};
+use super::super::{Home, cleanup};
+use super::{BitcoinConfig, BitcoinInstance};
 
-use std::path::PathBuf;
-use std::process::Command;
-use std::process::Child;
+use std::process::{Command, Child};
 use std::{io, fs};
-use std::convert::AsRef;
-use std::convert::AsMut;
 
-pub struct BtcDaemon {
+pub struct Btcd {
     home: Home,
 }
 
-pub struct BtcRunning {
-    daemon: BtcDaemon,
+pub struct BtcdRunning {
+    daemon: Btcd,
     instance: Child,
 }
 
-impl BtcDaemon {
-    pub fn name(&self) -> &str {
-        self.home.name()
+impl AsMut<Btcd> for BtcdRunning {
+    fn as_mut(&mut self) -> &mut Btcd {
+        &mut self.daemon
     }
+}
 
-    pub fn public_key_path(&self) -> PathBuf {
-        self.home.public_key_path()
+impl AsRef<Btcd> for BtcdRunning {
+    fn as_ref(&self) -> &Btcd {
+        &self.daemon
     }
+}
 
-    pub fn new(name: &str) -> Result<Self, io::Error> {
-        Ok(BtcDaemon {
+impl Drop for BtcdRunning {
+    fn drop(&mut self) {
+        self.instance.kill().unwrap()
+    }
+}
+
+impl BitcoinConfig for Btcd {
+    type Instance = BtcdRunning;
+
+    fn new(name: &str) -> Result<Self, io::Error> {
+        Ok(Btcd {
             home: Home::new(name, false)
                 .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
                     cleanup("btcd");
-                    cleanup("bitcoind");
                     Home::new(name, true)
                 } else {
                     Err(e)
@@ -38,7 +46,23 @@ impl BtcDaemon {
         })
     }
 
-    fn run_internal(self, mining_address: Option<String>) -> Result<BtcRunning, io::Error> {
+    fn run(self) -> Result<Self::Instance, io::Error> {
+        self.run_internal(None)
+    }
+
+    fn params(&self) -> Vec<String> {
+        vec![
+            "--bitcoin.active".to_owned(),
+            "--bitcoin.simnet".to_owned(),
+            "--btcd.rpcuser=devuser".to_owned(),
+            "--btcd.rpcpass=devpass".to_owned(),
+            format!("--btcd.rpccert={}", self.home.public_key_path().to_str().unwrap()),
+        ]
+    }
+}
+
+impl Btcd {
+    fn run_internal(self, mining_address: Option<String>) -> Result<BtcdRunning, io::Error> {
         fs::create_dir(self.home.ext_path("data")).or_else(|e|
             if e.kind() == io::ErrorKind::AlreadyExists {
                 Ok(())
@@ -66,31 +90,29 @@ impl BtcDaemon {
         }
 
         Command::new("btcd")
-            .args(&["--simnet", "--txindex", "--rpcuser=devuser", "--rpcpass=devpass"])
+            .args(&[
+                "--simnet", "--txindex", "--rpcuser=devuser", "--rpcpass=devpass"
+            ])
             .args(args)
             .spawn()
-            .map(|instance| BtcRunning {
+            .map(|instance| BtcdRunning {
                 daemon: self,
                 instance: instance,
             })
     }
-
-    pub fn run(self) -> Result<BtcRunning, io::Error> {
-        self.run_internal(None)
-    }
 }
 
-impl BtcRunning {
-    pub fn rerun_with_mining_address(self, address: String) -> Result<BtcRunning, io::Error> {
+impl BitcoinInstance for BtcdRunning {
+    fn set_mining_address(self, address: String) -> Result<Self, io::Error> {
         use std::mem;
 
         let mut s = self;
-        let daemon = BtcDaemon::new("fake")?;
+        let daemon = Btcd::new("fake")?;
         mem::replace(&mut s.daemon, daemon)
             .run_internal(Some(address))
     }
 
-    pub fn generate(&mut self, count: usize) -> Result<(), io::Error> {
+    fn generate(&mut self, count: usize) -> Result<(), io::Error> {
         Command::new("btcctl")
             .args(&["--simnet", "--rpcuser=devuser", "--rpcpass=devpass"])
             .arg(format!("--rpccert={}", self.daemon.home.public_key_path().to_str().unwrap()))
@@ -101,27 +123,8 @@ impl BtcRunning {
                 if output.status.success() {
                     Ok(())
                 } else {
-                    // TODO: process it
                     panic!()
                 }
             )
-    }
-}
-
-impl AsMut<BtcDaemon> for BtcRunning {
-    fn as_mut(&mut self) -> &mut BtcDaemon {
-        &mut self.daemon
-    }
-}
-
-impl AsRef<BtcDaemon> for BtcRunning {
-    fn as_ref(&self) -> &BtcDaemon {
-        &self.daemon
-    }
-}
-
-impl Drop for BtcRunning {
-    fn drop(&mut self) {
-        self.instance.kill().unwrap()
     }
 }

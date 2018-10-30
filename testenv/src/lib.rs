@@ -14,16 +14,16 @@ use std::process::Command;
 mod home;
 use self::home::Home;
 
-mod btc;
-pub use self::btc::BtcDaemon;
+mod chain;
+pub use self::chain::*;
 
 mod ln;
 pub use self::ln::LnDaemon;
 pub use self::ln::LnRunning;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-pub fn cleanup(name: &str) {
-    Command::new("killall").arg(name).output().map(|_| ()).unwrap_or(());
+pub fn cleanup(process: &str) {
+    Command::new("killall").arg(process).output().map(|_| ()).unwrap_or(());
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
@@ -33,7 +33,9 @@ pub fn cleanup(name: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::BtcDaemon;
+    use super::Bitcoind;
+    use super::Btcd;
+    use super::{BitcoinConfig, BitcoinInstance};
     use super::LnRunning;
 
     use futures::Future;
@@ -44,16 +46,15 @@ mod tests {
         use std::thread;
         use std::time::Duration;
 
-        let btc_running = BtcDaemon::new("btcd").unwrap().run().unwrap();
+        let btc_running = Btcd::new("b").unwrap().run().unwrap();
         thread::sleep(Duration::from_secs(5));
 
         // creating two nodes with base port 10000
-        let btcd_pubkey_path = btc_running.as_ref().public_key_path();
-        let nodes = LnRunning::batch(2, 10000, btcd_pubkey_path.to_str().unwrap());
+        let nodes = LnRunning::batch(2, 10000, btc_running.as_ref());
         thread::sleep(Duration::from_secs(10));
 
         let mining_address = nodes[0].new_address().wait().unwrap();
-        let mut btc_running = btc_running.rerun_with_mining_address(mining_address).unwrap();
+        let mut btc_running = btc_running.set_mining_address(mining_address).unwrap();
         thread::sleep(Duration::from_secs(10));
 
         btc_running.generate(400).unwrap();
