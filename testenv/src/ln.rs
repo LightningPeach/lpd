@@ -1,4 +1,5 @@
 use super::{Home, cleanup};
+use super::chain::BitcoinConfig;
 
 use std::process::Command;
 use std::process::Child;
@@ -53,24 +54,26 @@ impl LnDaemon {
         })
     }
 
-    pub fn run(self, btcd_pubkey_path: &str) -> Result<LnRunning, io::Error> {
+    pub fn run<B>(self, b: &B) -> Result<LnRunning, io::Error>
+    where
+        B: BitcoinConfig,
+    {
         Command::new("lnd")
             .args(&[
-                "--bitcoin.active", "--bitcoin.simnet", "--noencryptwallet", "--no-macaroons",
-                "--btcd.rpcuser=devuser", "--btcd.rpcpass=devpass"
+                "--noencryptwallet", "--no-macaroons",
             ])
             .args(&[
                 format!("--datadir={}", self.home.ext_path("data").to_str().unwrap()),
                 format!("--logdir={}", self.home.ext_path("logs").to_str().unwrap()),
                 format!("--tlscertpath={}", self.home.public_key_path().to_str().unwrap()),
                 format!("--tlskeypath={}", self.home.private_key_path().to_str().unwrap()),
-                format!("--btcd.rpccert={}", btcd_pubkey_path),
             ])
             .args(&[
                 format!("--listen=localhost:{}", self.peer_port),
                 format!("--rpclisten=localhost:{}", self.rpc_port),
                 format!("--restlisten=localhost:{}", self.rest_port),
             ])
+            .args(b.params())
             .spawn()
             .map(|instance| {
                 LnRunning {
@@ -85,7 +88,10 @@ impl LnDaemon {
 
 impl LnRunning {
     // errors ignored
-    pub fn batch(limit: u16, base_port: u16, btcd_pubkey_path: &str) -> Vec<Self> {
+    pub fn batch<B>(limit: u16, base_port: u16, b: &B) -> Vec<Self>
+    where
+        B: BitcoinConfig,
+    {
         (0..limit).into_iter()
             .map(|index| -> Result<LnRunning, io::Error> {
                 let p_peer = base_port + index * 10;
@@ -94,7 +100,7 @@ impl LnRunning {
                 let name = format!("lnd-node-{}", index);
                 LnDaemon::new(
                     p_peer, p_rpc, p_rest, name.as_str()
-                )?.run(btcd_pubkey_path)
+                )?.run(b)
             })
             .filter_map(Result::ok)
             .collect()
