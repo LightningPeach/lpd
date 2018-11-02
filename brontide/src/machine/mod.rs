@@ -2,20 +2,22 @@
 mod test_bolt0008;
 mod async_stream;
 mod serde;
+mod cipher_state;
+
 pub use self::async_stream::BrontideStream;
 
 use std::{fmt, io, error, cell};
 use secp256k1::{PublicKey, SecretKey, Error as EcdsaError};
 use sha2::{Sha256, Digest};
-use byteorder::{ByteOrder, LittleEndian};
 
 use hex;
 use hkdf;
 use std;
 use rand;
-use chacha20_poly1305_aead;
 
 use tokio::timer::timeout;
+
+use self::cipher_state::CipherState;
 
 #[derive(Debug)]
 pub enum HandshakeError {
@@ -67,10 +69,6 @@ const MAC_SIZE: usize = 16;
 // length of a message payload.
 const LENGTH_HEADER_SIZE: usize = 2;
 
-// keyRotationInterval is the number of messages sent on a single
-// cipher stream before the keys are rotated forwards.
-const KEY_ROTATION_INTERVAL: u16 = 1000;
-
 // ERR_MAX_MESSAGE_LENGTH_EXCEEDED is returned a message to be written to
 // the cipher session exceeds the maximum allowed message payload.
 static ERR_MAX_MESSAGE_LENGTH_EXCEEDED: &'static str = "the generated payload exceeds the max allowed message length of (2^16)-1";
@@ -94,119 +92,6 @@ fn ecdh(pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], EcdsaError> {
 
 // TODO(evg): we have changed encrypt/decrypt and encrypt_and_hash/decrypt_and_hash method signatures
 // so it should be reflect in doc
-
-// CipherState encapsulates the state for the AEAD which will be used to
-// encrypt+authenticate any payloads sent during the handshake, and messages
-// sent once the handshake has completed.
-struct CipherState {
-    // nonce is the nonce passed into the chacha20-poly1305 instance for
-    // encryption+decryption. The nonce is incremented after each successful
-    // encryption/decryption.
-    //
-    // TODO(roasbeef): this should actually be 96 bit
-    nonce: u64,
-
-    // secret_key is the shared symmetric key which will be used to
-    // instantiate the cipher.
-    //
-    // TODO(roasbeef): m-lock??
-    secret_key: [u8; 32],
-
-    // salt is an additional secret which is used during key rotation to
-    // generate new keys.
-    salt: [u8; 32],
-
-    // cipher is an instance of the ChaCha20-Poly1305 AEAD construction
-    // created using the secretKey above.
-//	cipher cipher.AEAD
-}
-
-impl fmt::Debug for CipherState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, r#"
-        nonce:      {:?}
-	    secret_key: {:?}
-	    salt:       {:?}
-        "#, self.nonce, hex::encode(self.secret_key), hex::encode(self.salt),
-        )
-    }
-}
-
-impl CipherState {
-    // TODO(evg): implement Default instead?
-    fn empty() -> Self {
-        Self {
-            nonce: 0,
-            secret_key: [0; 32],
-            salt: [0; 32],
-        }
-    }
-
-    // encrypt returns a ciphertext which is the encryption of the plainText
-    // observing the passed associatedData within the AEAD construction.
-    fn encrypt<W: io::Write>(&mut self, associated_data: &[u8], cipher_text: &mut W, plain_text: &[u8]) -> Result<[u8; MAC_SIZE], io::Error> {
-        let mut nonce: [u8; 12] = [0; 12];
-        LittleEndian::write_u64(&mut nonce[4..], self.nonce);
-        let tag = chacha20_poly1305_aead::encrypt(
-            &self.secret_key, &nonce, associated_data, plain_text, cipher_text)?;
-
-        self.nonce += 1;
-        if self.nonce == KEY_ROTATION_INTERVAL as u64 {
-            self.rotate_key();
-        }
-        Ok(tag)
-    }
-
-    // decrypt attempts to decrypt the passed ciphertext observing the specified
-    // associatedData within the AEAD construction. In the case that the final MAC
-    // check fails, then a non-nil error will be returned.
-    fn decrypt<W: io::Write>(&mut self, associated_data: &[u8], plain_text: &mut W, cipher_text: &[u8], tag: [u8; MAC_SIZE]) -> Result<(), io::Error> {
-        let mut nonce: [u8; 12] = [0; 12];
-        LittleEndian::write_u64(&mut nonce[4..], self.nonce);
-        chacha20_poly1305_aead::decrypt(
-            &self.secret_key, &nonce, associated_data, cipher_text, &tag, plain_text)?;
-
-        self.nonce += 1;
-        if self.nonce == KEY_ROTATION_INTERVAL as u64 {
-            self.rotate_key();
-        }
-        Ok(())
-    }
-
-    // initialize_key initializes the secret key and AEAD cipher scheme based off of
-    // the passed key.
-    fn initialize_key(&mut self, key: [u8; 32]) {
-        self.secret_key = key;
-        self.nonce = 0;
-
-        // Safe to ignore the error here as our key is properly sized
-        // (32-bytes).
-        // c.cipher, _ = chacha20poly1305.New(c.secretKey[:])
-    }
-
-    // initialize_key_with_salt is identical to InitializeKey however it also sets the
-    // cipherState's salt field which is used for key rotation.
-    fn initialize_key_with_salt(&mut self, salt: [u8; 32], key: [u8; 32]) {
-        self.salt = salt;
-        self.initialize_key(key);
-    }
-
-    // rotate_key rotates the current encryption/decryption key for this cipherState
-    // instance. Key rotation is performed by ratcheting the current key forward
-    // using an HKDF invocation with the cipherState's salt as the salt, and the
-    // current key as the input.
-    fn rotate_key(&mut self) {
-        let hkdf = hkdf::Hkdf::<Sha256>::extract(Some(&self.salt), &self.secret_key);
-        let info: &[u8] = &[];
-        let okm = hkdf.expand(info, 64);
-
-        self.salt.copy_from_slice(&okm.as_slice()[..32]);
-        let mut next_key: [u8; 32] = [0; 32];
-        next_key.copy_from_slice(&okm.as_slice()[32..]);
-
-        self.initialize_key(next_key);
-    }
-}
 
 // SymmetricState encapsulates a cipherState object and houses the ephemeral
 // handshake digest state. This struct is used during the handshake to derive
@@ -249,7 +134,7 @@ impl fmt::Debug for SymmetricState {
 impl SymmetricState {
     fn empty() -> Self {
         Self {
-            cipher_state: CipherState::empty(),
+            cipher_state: CipherState::new(),
             chaining_key: [0; 32],
             temp_key: [0; 32],
             handshake_digest: [0; 32],
@@ -465,8 +350,8 @@ impl Machine {
         let handshake = HandshakeState::new(initiator, "lightning".as_bytes(), local_priv, remote_pub)?;
 
         let mut m = Machine {
-            send_cipher: cell::RefCell::new(CipherState::empty()),
-            recv_cipher: cell::RefCell::new(CipherState::empty()),
+            send_cipher: cell::RefCell::new(CipherState::new()),
+            recv_cipher: cell::RefCell::new(CipherState::new()),
             // With the initial base machine created, we'll assign our default
             // version of the ephemeral key generator.
             ephemeral_gen: || {
