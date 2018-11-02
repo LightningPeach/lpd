@@ -5,9 +5,9 @@ mod serde;
 pub use self::async_stream::BrontideStream;
 
 use std::{fmt, io, error, cell};
-use secp256k1::{PublicKey, SecretKey, Error};
+use secp256k1::{PublicKey, SecretKey, Error as EcdsaError};
 use sha2::{Sha256, Digest};
-use byteorder::{ByteOrder, LittleEndian, BigEndian};
+use byteorder::{ByteOrder, LittleEndian};
 
 use hex;
 use hkdf;
@@ -21,13 +21,13 @@ use tokio::timer::timeout;
 pub enum HandshakeError {
     Io(io::Error),
     IoTimeout(timeout::Error<io::Error>),
-    Crypto(Error),
+    Crypto(EcdsaError),
     UnknownHandshakeVersion(String),
     NotInitializedYet,
 }
 
 impl error::Error for HandshakeError {
-    fn cause(&self) -> Option<&dyn error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         use self::HandshakeError::*;
 
         match self {
@@ -77,7 +77,7 @@ static ERR_MAX_MESSAGE_LENGTH_EXCEEDED: &'static str = "the generated payload ex
 
 // ecdh performs an ECDH operation between public and private. The returned value is
 // the sha256 of the compressed shared point.
-fn ecdh(pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], Error> {
+fn ecdh(pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], EcdsaError> {
     use secp256k1::Secp256k1;
 
     let mut pk_cloned = pk.clone();
@@ -389,7 +389,7 @@ impl HandshakeState {
     // with the prologue and protocol name. If this is the responder's handshake
     // state, then the remotePub can be nil.
     fn new(initiator: bool, prologue: &[u8],
-           local_priv: SecretKey, remote_pub: PublicKey) -> Result<Self, Error> {
+           local_priv: SecretKey, remote_pub: PublicKey) -> Result<Self, EcdsaError> {
         use secp256k1::Secp256k1;
 
         let mut h = HandshakeState{
@@ -427,7 +427,7 @@ pub struct Machine {
     send_cipher: cell::RefCell<CipherState>,
     recv_cipher: cell::RefCell<CipherState>,
 
-    ephemeral_gen: fn() -> Result<SecretKey, Error>,
+    ephemeral_gen: fn() -> Result<SecretKey, EcdsaError>,
 
     handshake_state: HandshakeState,
 
@@ -459,7 +459,7 @@ impl Machine {
     // string "lightning" as the prologue. The last parameter is a set of variadic
     // arguments for adding additional options to the brontide Machine
     // initialization.
-    pub fn new<F>(initiator: bool, local_priv: SecretKey, remote_pub: PublicKey, options: &[F]) -> Result<Self, Error> where F: Fn(&mut Self) {
+    pub fn new<F>(initiator: bool, local_priv: SecretKey, remote_pub: PublicKey, options: &[F]) -> Result<Self, EcdsaError> where F: Fn(&mut Self) {
         use secp256k1::{Secp256k1, constants::SECRET_KEY_SIZE};
 
         let handshake = HandshakeState::new(initiator, "lightning".as_bytes(), local_priv, remote_pub)?;
@@ -546,7 +546,7 @@ impl ActOne {
         }
     }
 
-    fn key(&self) -> Result<PublicKey, Error> {
+    fn key(&self) -> Result<PublicKey, EcdsaError> {
         use secp256k1::Secp256k1;
 
         PublicKey::from_slice(&Secp256k1::new(), &self.bytes[1..34])
@@ -857,75 +857,5 @@ impl Machine {
             send_key.copy_from_slice(&okm.as_slice()[32..]);
             self.send_cipher.borrow_mut().initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, send_key);
         }
-    }
-
-    // write_message writes the next message p to the passed io.Writer. The
-    // ciphertext of the message is prepended with an encrypt+auth'd length which
-    // must be used as the AD to the AEAD construction when being decrypted by the
-    // other side.
-    pub fn write_message<W: io::Write>(&mut self, w: &mut W, p: &[u8]) -> Result<(), io::Error> {
-        // The total length of each message payload including the MAC size
-        // payload exceed the largest number encodable within a 16-bit unsigned
-        // integer.
-        if p.len() > std::u16::MAX as usize {
-            panic!(ERR_MAX_MESSAGE_LENGTH_EXCEEDED);
-        }
-
-        // The full length of the packet is only the packet length, and does
-        // NOT include the MAC.
-        let full_length = p.len() as u16;
-
-        let mut pkt_len: [u8; LENGTH_HEADER_SIZE] = [0; LENGTH_HEADER_SIZE];
-        BigEndian::write_u16(&mut pkt_len, full_length);
-
-        // First, write out the encrypted+MAC'd length prefix for the packet.
-        let mut cipher_len = Vec::new();
-        let tag = self.send_cipher.borrow_mut().encrypt(&[], &mut cipher_len, &pkt_len)?;
-        w.write_all(&cipher_len)?;
-        w.write_all(&tag)?;
-
-        // Finally, write out the encrypted packet itself. We only write out a
-        // single packet, as any fragmentation should have taken place at a
-        // higher level.
-        let mut cipher_text = Vec::new();
-        let tag = self.send_cipher.borrow_mut().encrypt(&[], &mut cipher_text, p)?;
-        w.write_all(&cipher_text)?;
-        w.write_all(&tag)?;
-        Ok(())
-    }
-
-    // read_message attempts to read the next message from the passed io.Reader. In
-    // the case of an authentication error, a non-nil error is returned.
-    pub fn read_message<R: io::Read>(&mut self, r: &mut R) -> Result<Vec<u8>, io::Error> {
-        let mut header = [0; LENGTH_HEADER_SIZE];
-        r.read_exact(&mut header)?;
-
-        // Attempt to decrypt+auth the packet length present in the stream.
-        let mut pkt_len_bytes = Vec::new();
-        let mut tag: [u8; MAC_SIZE] = [0; MAC_SIZE];
-        r.read_exact(&mut tag[..])?;
-        tag.copy_from_slice(&header[LENGTH_HEADER_SIZE..]);
-        self.recv_cipher.borrow_mut().decrypt(
-            &[],
-            &mut pkt_len_bytes,
-            &header[..],
-            tag
-        )?;
-
-        // Next, using the length read from the packet header, read the
-        // encrypted packet itself.
-        let pkt_len = BigEndian::read_u16(&pkt_len_bytes[..]) as usize + MAC_SIZE;
-        r.read_exact(&mut self.message_buffer.borrow_mut()[..pkt_len])?;
-
-        let mut plaintext = Vec::new();
-        let mut tag = [0; MAC_SIZE];
-        r.read_exact(&mut tag[..])?;
-        self.recv_cipher.borrow_mut().decrypt(
-            &[], &mut plaintext,
-            &self.message_buffer.borrow()[..],
-            tag
-        )?;
-
-        Ok(plaintext)
     }
 }

@@ -66,12 +66,12 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
     let recv_key = "bb9020b8965f4df047e07f955f3c4b88418984aadc5cdb35096b9ea8fa5c3442";
     let chain_key = "919219dbb2920afa8db80f9a51787a840bcf111ed8d588caf9ab4be716e42b01";
 
-    assert_eq!(hex::encode(&machine.send_cipher.secret_key[..]), send_key);
-    assert_eq!(hex::encode(&machine.recv_cipher.secret_key[..]), recv_key);
+    assert_eq!(hex::encode(&machine.send_cipher.borrow().secret_key[..]), send_key);
+    assert_eq!(hex::encode(&machine.recv_cipher.borrow().secret_key[..]), recv_key);
     assert_eq!(hex::encode(&machine.handshake_state.symmetric_state.chaining_key[..]), chain_key);
 
-    assert_eq!(hex::encode(&responder_machine.send_cipher.secret_key[..]), recv_key);
-    assert_eq!(hex::encode(&responder_machine.recv_cipher.secret_key[..]), send_key);
+    assert_eq!(hex::encode(&responder_machine.send_cipher.borrow().secret_key[..]), recv_key);
+    assert_eq!(hex::encode(&responder_machine.recv_cipher.borrow().secret_key[..]), send_key);
     assert_eq!(hex::encode(&responder_machine.handshake_state.symmetric_state.chaining_key[..]), chain_key);
 
     // Now test as per section "transport-message test" in Test Vectors

@@ -27,7 +27,7 @@ fn main() {
     let node = listener.incoming()
         .for_each(move |stream| {
             let connection = brontide::BrontideStream::incoming(stream, node_secret)
-                .map(|(stream, identity)| println!("new connection: {}@{}", hex::encode(&identity.serialize()[..]), stream.as_ref().peer_addr().unwrap()))
+                .map(|stream| println!("new connection: {}@{}", hex::encode(&stream.remote_key().serialize()[..]), stream.as_ref().peer_addr().unwrap()))
                 .map_err(|e| println!("handshake error: {:?}", e));
             tokio::spawn(connection);
             Ok(())
