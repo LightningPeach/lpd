@@ -25,7 +25,7 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
     }
 
     pub fn outgoing(stream: T, local_secret: SecretKey, remote_public: PublicKey) -> impl Future<Item=Self, Error=HandshakeError> {
-        use tokio::prelude::{FutureExt, IntoFuture};
+        use tokio::prelude::IntoFuture;
 
         Machine::new::<fn(&mut Machine)>(true, local_secret, remote_public, &[])
             .map_err(HandshakeError::Crypto)
