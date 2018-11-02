@@ -1,5 +1,5 @@
-use std::{fmt, io};
 use super::CipherState;
+use std::{fmt, io};
 
 // TODO: needed MAC type encapsulating the array [u8; MAC_SIZE]
 const MAC_SIZE: usize = 16;
@@ -26,18 +26,23 @@ pub struct SymmetricState {
 
 impl fmt::Debug for SymmetricState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, r#"
+        write!(
+            f,
+            r#"
         cipher_state:     {:?}
         chaining_key:     {:?}
         handshake_digest: {:?}
-        "#, self.cipher_state, hex::encode(self.chaining_key), hex::encode(self.handshake_digest),
+        "#,
+            self.cipher_state,
+            hex::encode(self.chaining_key),
+            hex::encode(self.handshake_digest),
         )
     }
 }
 
 impl SymmetricState {
     pub fn new(protocol_name: &str) -> Self {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
 
         let digest = {
             let mut hasher = Sha256::default();
@@ -80,7 +85,7 @@ impl SymmetricState {
     // The running result of this value (h) is used as the associated data in all
     // decryption/encryption operations.
     pub fn mix_hash(&mut self, data: &[u8]) {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
 
         let mut hasher = Sha256::default();
         hasher.input(&self.handshake_digest);
@@ -92,19 +97,19 @@ impl SymmetricState {
     // encrypt_and_hash returns the authenticated encryption of the passed plaintext.
     // When encrypting the handshake digest (h) is used as the associated data to
     // the AEAD cipher
-    pub fn encrypt_and_hash(&mut self, plaintext: &[u8], cipher_text: &mut Vec<u8>) -> Result<[u8; MAC_SIZE], io::Error> {
-        let tag = self.cipher_state.encrypt(
-            &self.handshake_digest, cipher_text, plaintext)?;
+    pub fn encrypt_and_hash(
+        &mut self,
+        plain_text: &[u8],
+        cipher_text: &mut Vec<u8>,
+    ) -> Result<[u8; MAC_SIZE], io::Error> {
+        let tag = self
+            .cipher_state
+            .encrypt(&self.handshake_digest, cipher_text, plain_text)?;
 
         // To be compliant with golang's implementation of chacha20poly1305 and brontide packages
         // we concatenate cipher_text and mac for mixing with internal state.
-        let mut cipher_text_with_mac: Vec<u8> = Vec::new();
-        for item in cipher_text.clone() {
-            cipher_text_with_mac.push(item.clone());
-        }
-        for item in &tag {
-            cipher_text_with_mac.push(item.clone());
-        }
+        let mut cipher_text_with_mac = cipher_text.clone();
+        cipher_text_with_mac.extend(&tag);
 
         self.mix_hash(&mut cipher_text_with_mac);
 
@@ -114,21 +119,21 @@ impl SymmetricState {
     // decrypt_and_hash returns the authenticated decryption of the passed
     // ciphertext.  When encrypting the handshake digest (h) is used as the
     // associated data to the AEAD cipher.
-    pub fn decrypt_and_hash(&mut self, ciphertext: &[u8], tag: [u8; MAC_SIZE]) -> Result<Vec<u8>, io::Error> {
-        let mut plaintext: Vec<u8> = Vec::new();
-        self.cipher_state.decrypt(&self.handshake_digest, &mut plaintext, ciphertext, tag)?;
+    pub fn decrypt_and_hash(
+        &mut self,
+        cipher_text: &[u8],
+        tag: [u8; MAC_SIZE],
+    ) -> Result<Vec<u8>, io::Error> {
+        let mut plain_text = Vec::new();
+        self.cipher_state
+            .decrypt(&self.handshake_digest, &mut plain_text, cipher_text, tag)?;
 
-        let mut cipher_text_with_mac: Vec<u8> = Vec::new();
-        for item in ciphertext.clone() {
-            cipher_text_with_mac.push(item.clone());
-        }
-        for item in &tag {
-            cipher_text_with_mac.push(item.clone());
-        }
+        let mut cipher_text_with_mac = cipher_text.to_vec();
+        cipher_text_with_mac.extend(&tag);
 
         self.mix_hash(&cipher_text_with_mac);
 
-        Ok(plaintext)
+        Ok(plain_text)
     }
 
     #[cfg(test)]
