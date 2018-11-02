@@ -94,25 +94,24 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
     transport_message_vectors.insert(1001, String::from(
         "2ecd8c8a5629d0d02ab457a0fdd0f7b90a192cd46be5ecb6ca570bfc5e268338b1a16cf4ef2d36"));
 
-    // Payload for every message is the string "hello".
-	let payload = "hello".as_bytes();
-
+    let payload = ('h' as u8, 'e' as u8, 'l' as u8, 'l' as u8, 'o' as u8);
     for i in 0..1002 {
-        let mut buff = Vec::new();
-        machine.write_message(&mut buff, payload)?;
+        use bytes::BytesMut;
+
+        let mut buffer = BytesMut::with_capacity(0x100);
+        machine.write(payload.clone(), &mut buffer)?;
 
         if transport_message_vectors.get(&i).is_some() {
-            let actual = hex::encode(buff.as_slice());
+            let actual = hex::encode(buffer.as_mut());
             let expected = transport_message_vectors.get(&i).unwrap();
             assert_eq!(&actual, expected);
         }
 
-
         // Responder decrypts the bytes, in every iteration, and
 		// should always be able to decrypt the same payload message.
-        let plaintext = responder_machine.read_message(&mut buff.as_slice())?;
+        let plaintext = responder_machine.read(&mut buffer)?;
         // Ensure decryption succeeded
-        assert_eq!(plaintext.as_slice(), payload);
+        assert_eq!(plaintext, Some(payload));
     }
 
     Ok(())

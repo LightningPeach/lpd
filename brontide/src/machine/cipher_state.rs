@@ -24,7 +24,8 @@ pub struct CipherState {
     // instantiate the cipher.
     //
     // TODO: protect it somehow
-    secret_key: [u8; 32],
+    // TODO: should be private, needed for tests
+    pub secret_key: [u8; 32],
 
     // salt is an additional secret which is used during key rotation to
     // generate new keys.
