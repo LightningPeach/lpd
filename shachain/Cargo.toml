@@ -1,7 +1,7 @@
 [package]
 name = "shachain"
 version = "0.1.0"
-authors = ["BitfuryLightning <lightning@bitfury.com>"]
+authors = ["evgeniy.scherbina <evgeniy.scherbina@bitfury.com>"]
 
 [dependencies]
 sha2 = "0.7.1"
