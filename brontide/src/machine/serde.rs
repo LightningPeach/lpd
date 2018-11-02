@@ -3,12 +3,14 @@ use super::*;
 use tokio::codec::{Encoder, Decoder};
 use bytes::BytesMut;
 use wire::{BinarySD, Message, WireError};
+use serde::{Serialize, de::DeserializeOwned};
 
-impl Encoder for Box<Machine> {
-    type Item = Message;
-    type Error = WireError;
+impl Machine {
+    pub fn write<T>(&mut self, item: T, dst: &mut BytesMut) -> Result<(), WireError>
+    where
+        T: Serialize,
+    {
 
-    fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
         use bytes::BufMut;
 
         let length = {
@@ -38,13 +40,11 @@ impl Encoder for Box<Machine> {
 
         Ok(())
     }
-}
 
-impl Decoder for Box<Machine> {
-    type Item = Message;
-    type Error = WireError;
-
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+    pub fn read<T>(&mut self, src: &mut BytesMut) -> Result<Option<T>, WireError>
+    where
+        T: DeserializeOwned,
+    {
         use chacha20_poly1305_aead::DecryptError;
         use serde::ser::Error;
 
@@ -101,5 +101,23 @@ impl Decoder for Box<Machine> {
                     .map(Some)
             }
         }
+    }
+}
+
+impl Encoder for Box<Machine> {
+    type Item = Message;
+    type Error = WireError;
+
+    fn encode(&mut self, item: Self::Item, dst: &mut BytesMut) -> Result<(), Self::Error> {
+        self.write(item, dst)
+    }
+}
+
+impl Decoder for Box<Machine> {
+    type Item = Message;
+    type Error = WireError;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        self.read(src)
     }
 }

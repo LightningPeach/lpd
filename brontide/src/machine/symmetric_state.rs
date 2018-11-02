@@ -26,7 +26,8 @@ pub struct SymmetricState {
     // messages sent from start to finish. This value is never transmitted
     // to the other side, but will be used as the AD when
     // encrypting/decrypting messages using our AEAD construction.
-    handshake_digest: [u8; 32],
+    // TODO: should be private, needed for tests
+    pub handshake_digest: [u8; 32],
 }
 
 impl fmt::Debug for SymmetricState {
