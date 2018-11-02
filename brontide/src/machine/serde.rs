@@ -45,6 +45,9 @@ impl Decoder for Box<Machine> {
     type Error = WireError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        use chacha20_poly1305_aead::DecryptError;
+        use serde::ser::Error;
+
         if src.len() < LENGTH_HEADER_SIZE + MAC_SIZE {
             Ok(None)
         } else {
@@ -65,7 +68,12 @@ impl Decoder for Box<Machine> {
                     &mut plain.as_mut(),
                     cipher.as_ref(),
                     tag
-                ).map_err(WireError::from)?;
+                ).map_err(|e| {
+                    match e {
+                        DecryptError::IoError(e) => WireError::from(e),
+                        DecryptError::TagMismatch => WireError::custom("tag")
+                    }
+                })?;
 
                 let length: u16 = BinarySD::deserialize(&plain[..])?;
                 length as usize
@@ -82,7 +90,12 @@ impl Decoder for Box<Machine> {
                     &mut self.message_buffer.borrow_mut().as_mut(),
                     cipher.as_ref(),
                     tag
-                ).map_err(WireError::from)?;
+                ).map_err(|e| {
+                    match e {
+                        DecryptError::IoError(e) => WireError::from(e),
+                        DecryptError::TagMismatch => WireError::custom("tag")
+                    }
+                })?;
 
                 BinarySD::deserialize(self.message_buffer.borrow().as_ref())
                     .map(Some)
