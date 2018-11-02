@@ -17,17 +17,11 @@ pub struct SymmetricState {
     // encryption/decryption.
     pub chaining_key: [u8; 32],
 
-    // temp_key is the latter 32 bytes resulted from the latest HKDF
-    // iteration. This key is used to encrypt/decrypt any handshake
-    // messages or payloads sent until the next DH operation is executed.
-    temp_key: [u8; 32],
-
     // handshake_digest is the cumulative hash digest of all handshake
     // messages sent from start to finish. This value is never transmitted
     // to the other side, but will be used as the AD when
     // encrypting/decrypting messages using our AEAD construction.
-    // TODO: should be private, needed for tests
-    pub handshake_digest: [u8; 32],
+    handshake_digest: [u8; 32],
 }
 
 impl fmt::Debug for SymmetricState {
@@ -35,22 +29,28 @@ impl fmt::Debug for SymmetricState {
         write!(f, r#"
         cipher_state:     {:?}
         chaining_key:     {:?}
-        temp_key:         {:?}
         handshake_digest: {:?}
-        "#, self.cipher_state, hex::encode(self.chaining_key),
-               hex::encode(self.temp_key), hex::encode(self.handshake_digest),
+        "#, self.cipher_state, hex::encode(self.chaining_key), hex::encode(self.handshake_digest),
         )
     }
 }
 
-// TODO: add new constructors
 impl SymmetricState {
-    pub fn new() -> Self {
-        Self {
-            cipher_state: CipherState::new(),
-            chaining_key: [0; 32],
-            temp_key: [0; 32],
-            handshake_digest: [0; 32],
+    pub fn new(protocol_name: &str) -> Self {
+        use sha2::{Sha256, Digest};
+
+        let digest = {
+            let mut hasher = Sha256::default();
+            hasher.input(protocol_name.as_bytes());
+            let mut digest: [u8; 32] = [0; 32];
+            digest.copy_from_slice(&hasher.result()[..]);
+            digest
+        };
+
+        SymmetricState {
+            cipher_state: CipherState::new([0; 32], [0; 32]),
+            chaining_key: digest,
+            handshake_digest: digest,
         }
     }
 
@@ -64,15 +64,16 @@ impl SymmetricState {
 
         let mut salt: [u8; 32] = [0; 32];
         salt.copy_from_slice(&self.chaining_key);
-        let hkdf = hkdf::Hkdf::<Sha256>::extract(Some(&salt), input);
 
-        let info: &[u8] = &[];
-        let okm = hkdf.expand(info, 64);
+        let hkdf = hkdf::Hkdf::<Sha256>::extract(Some(&salt), input);
+        let okm = hkdf.expand(&[], 64);
 
         self.chaining_key.copy_from_slice(&okm.as_slice()[..32]);
-        self.temp_key.copy_from_slice(&okm.as_slice()[32..]);
 
-        self.cipher_state.initialize_key(self.temp_key);
+        let mut temp_key = [0; 32];
+        temp_key.copy_from_slice(&okm.as_slice()[32..]);
+
+        self.cipher_state = CipherState::new([0; 32], temp_key);
     }
 
     // mix_hash hashes the passed input data into the cumulative handshake digest.
@@ -130,17 +131,8 @@ impl SymmetricState {
         Ok(plaintext)
     }
 
-    // initialize_symmetric initializes the symmetric state by setting the handshake
-    // digest (h) and the chaining key (ck) to protocol name.
-    pub fn initialize_symmetric(&mut self, protocol_name: &[u8]) {
-        use sha2::{Sha256, Digest};
-
-        let empty: [u8; 32] = [0; 32];
-
-        let mut hasher = Sha256::default();
-        hasher.input(protocol_name);
-        self.handshake_digest.copy_from_slice(&hasher.result()[..]);
-        self.chaining_key = self.handshake_digest;
-        self.cipher_state.initialize_key(empty);
+    #[cfg(test)]
+    pub fn inspect(&self, digest: &str) {
+        assert_eq!(hex::encode(&self.handshake_digest[..]), digest);
     }
 }

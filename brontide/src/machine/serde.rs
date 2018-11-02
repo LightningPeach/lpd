@@ -10,7 +10,6 @@ impl Machine {
     where
         T: Serialize,
     {
-
         use bytes::BufMut;
 
         let length = {
@@ -24,14 +23,14 @@ impl Machine {
 
         dst.reserve(length + LENGTH_HEADER_SIZE + MAC_SIZE * 2);
 
-        let tag = self.send_cipher.borrow_mut().encrypt(
+        let tag = self.send_cipher.as_mut().unwrap().encrypt(
             &[],
             &mut dst.writer(),
             &length_buffer[..]
         )?;
         dst.put_slice(&tag[..]);
 
-        let tag = self.send_cipher.borrow_mut().encrypt(
+        let tag = self.send_cipher.as_mut().unwrap().encrypt(
             &[],
             &mut dst.writer(),
             &self.message_buffer.borrow()[..length]
@@ -63,7 +62,7 @@ impl Machine {
                 let tag = tag(src);
 
                 let mut plain = [0; LENGTH_HEADER_SIZE];
-                self.recv_cipher.borrow_mut().decrypt(
+                self.recv_cipher.as_mut().unwrap().decrypt(
                     &[],
                     &mut plain.as_mut(),
                     cipher.as_ref(),
@@ -85,7 +84,7 @@ impl Machine {
                 let cipher = src.split_to(length);
                 let tag = tag(src);
 
-                self.recv_cipher.borrow_mut().decrypt(
+                self.recv_cipher.as_mut().unwrap().decrypt(
                     &[],
                     &mut self.message_buffer.borrow_mut().as_mut(),
                     cipher.as_ref(),

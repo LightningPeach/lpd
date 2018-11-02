@@ -25,7 +25,7 @@ pub struct CipherState {
     //
     // TODO: protect it somehow
     // TODO: should be private, needed for tests
-    pub secret_key: [u8; 32],
+    secret_key: [u8; 32],
 
     // salt is an additional secret which is used during key rotation to
     // generate new keys.
@@ -49,12 +49,11 @@ impl fmt::Debug for CipherState {
 }
 
 impl CipherState {
-    // no `Default` trait due to different semantic
-    pub fn new() -> Self {
+    pub fn new(salt: [u8; 32], key: [u8; 32]) -> Self {
         CipherState {
             nonce: 0,
-            secret_key: [0; 32],
-            salt: [0; 32],
+            secret_key: key,
+            salt: salt,
         }
     }
 
@@ -71,7 +70,7 @@ impl CipherState {
         let mut nonce: [u8; 12] = [0; 12];
         LittleEndian::write_u64(&mut nonce[4..], self.nonce);
         encrypt(&self.secret_key, &nonce, associated_data, plain_text, cipher_text)
-            .map(|t| { self.increment_nonce(); t })
+            .map(|t| { self.next(); t })
     }
 
     /// `decrypt` attempts to decrypt the passed `cipher_text` observing the specified
@@ -89,47 +88,29 @@ impl CipherState {
         let mut nonce: [u8; 12] = [0; 12];
         LittleEndian::write_u64(&mut nonce[4..], self.nonce);
         decrypt(&self.secret_key, &nonce, associated_data, cipher_text, &tag, plain_text)
-            .map(|t| { self.increment_nonce(); t })
+            .map(|t| { self.next(); t })
     }
 
-    /// initializes the secret key and AEAD cipher scheme based off of
-    /// the passed key.
-    // TODO: investigate if is could become a constructor
-    pub fn initialize_key(&mut self, key: [u8; 32]) {
-        self.secret_key = key;
-        self.nonce = 0;
-    }
-
-    /// is identical to `initialize_key` however it also sets the
-    /// cipherState's salt field which is used for key rotation.
-    // TODO: investigate if is could become a constructor
-    pub fn initialize_key_with_salt(&mut self, salt: [u8; 32], key: [u8; 32]) {
-        self.salt = salt;
-        self.initialize_key(key);
-    }
-
-    // rotate_key rotates the current encryption/decryption key for this cipherState
-    // instance. Key rotation is performed by ratcheting the current key forward
-    // using an HKDF invocation with the cipherState's salt as the salt, and the
-    // current key as the input.
-    fn rotate_key(&mut self) {
+    // ratcheting the current key forward
+    // using an HKDF invocation with the salt for the `CipherState` as the salt,
+    // and the current key as the input
+    fn next(&mut self) {
         use sha2::Sha256;
+        use hkdf::Hkdf;
 
-        let hkdf = hkdf::Hkdf::<Sha256>::extract(Some(&self.salt), &self.secret_key);
-        let info: &[u8] = &[];
-        let okm = hkdf.expand(info, 64);
-
-        self.salt.copy_from_slice(&okm.as_slice()[..32]);
-        let mut next_key: [u8; 32] = [0; 32];
-        next_key.copy_from_slice(&okm.as_slice()[32..]);
-
-        self.initialize_key(next_key);
-    }
-
-    fn increment_nonce(&mut self) {
         self.nonce += 1;
         if self.nonce == KEY_ROTATION_INTERVAL {
-            self.rotate_key();
+            let hkdf = Hkdf::<Sha256>::extract(Some(&self.salt), &self.secret_key);
+            let okm = hkdf.expand(&[], 64);
+
+            self.salt.copy_from_slice(&okm.as_slice()[..32]);
+            self.secret_key.copy_from_slice(&okm.as_slice()[32..]);
+            self.nonce = 0;
         }
+    }
+
+    #[cfg(test)]
+    pub fn inspect(&self, key: &str) {
+        assert_eq!(hex::encode(&self.secret_key[..]), key);
     }
 }

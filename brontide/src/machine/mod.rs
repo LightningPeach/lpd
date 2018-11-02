@@ -149,7 +149,7 @@ impl HandshakeState {
         use secp256k1::Secp256k1;
 
         let mut h = HandshakeState{
-            symmetric_state: SymmetricState::new(),
+            symmetric_state: SymmetricState::new(PROTOCOL_NAME),
             initiator,
             local_static:     local_priv,
             local_ephemeral:  None,
@@ -161,7 +161,6 @@ impl HandshakeState {
         // protocol name, and additionally mix in the prologue. If either sides
         // disagree about the prologue or protocol name, then the handshake
         // will fail.
-        h.symmetric_state.initialize_symmetric(PROTOCOL_NAME.as_bytes());
         h.symmetric_state.mix_hash(prologue);
 
         // In Noise_XK, then initiator should know the responder's static
@@ -180,8 +179,8 @@ impl HandshakeState {
 }
 
 pub struct Machine {
-    send_cipher: cell::RefCell<CipherState>,
-    recv_cipher: cell::RefCell<CipherState>,
+    send_cipher: Option<CipherState>,
+    recv_cipher: Option<CipherState>,
 
     ephemeral_gen: fn() -> Result<SecretKey, EcdsaError>,
 
@@ -221,8 +220,8 @@ impl Machine {
         let handshake = HandshakeState::new(initiator, "lightning".as_bytes(), local_priv, remote_pub)?;
 
         let mut m = Machine {
-            send_cipher: cell::RefCell::new(CipherState::new()),
-            recv_cipher: cell::RefCell::new(CipherState::new()),
+            send_cipher: None,
+            recv_cipher: None,
             // With the initial base machine created, we'll assign our default
             // version of the ephemeral key generator.
             ephemeral_gen: || {
@@ -602,16 +601,16 @@ impl Machine {
         // responder the opposite is true.
         if self.handshake_state.initiator {
             send_key.copy_from_slice(&okm.as_slice()[..32]);
-            self.send_cipher.borrow_mut().initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, send_key);
+            self.send_cipher = Some(CipherState::new(self.handshake_state.symmetric_state.chaining_key, send_key));
 
             recv_key.copy_from_slice(&okm.as_slice()[32..]);
-            self.recv_cipher.borrow_mut().initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, recv_key);
+            self.recv_cipher = Some(CipherState::new(self.handshake_state.symmetric_state.chaining_key, recv_key));
         } else {
             recv_key.copy_from_slice(&okm.as_slice()[..32]);
-            self.recv_cipher.borrow_mut().initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, recv_key);
+            self.recv_cipher = Some(CipherState::new(self.handshake_state.symmetric_state.chaining_key, recv_key));
 
             send_key.copy_from_slice(&okm.as_slice()[32..]);
-            self.send_cipher.borrow_mut().initialize_key_with_salt(self.handshake_state.symmetric_state.chaining_key, send_key);
+            self.send_cipher = Some(CipherState::new(self.handshake_state.symmetric_state.chaining_key, send_key));
         }
     }
 }
