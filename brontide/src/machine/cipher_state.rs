@@ -48,6 +48,7 @@ impl fmt::Debug for CipherState {
 }
 
 impl CipherState {
+    // no `Default` trait due to different semantic
     pub fn new() -> Self {
         CipherState {
             nonce: 0,
@@ -92,6 +93,7 @@ impl CipherState {
 
     /// initializes the secret key and AEAD cipher scheme based off of
     /// the passed key.
+    // TODO: investigate if is could become a constructor
     pub fn initialize_key(&mut self, key: [u8; 32]) {
         self.secret_key = key;
         self.nonce = 0;
@@ -99,6 +101,7 @@ impl CipherState {
 
     /// is identical to `initialize_key` however it also sets the
     /// cipherState's salt field which is used for key rotation.
+    // TODO: investigate if is could become a constructor
     pub fn initialize_key_with_salt(&mut self, salt: [u8; 32], key: [u8; 32]) {
         self.salt = salt;
         self.initialize_key(key);
