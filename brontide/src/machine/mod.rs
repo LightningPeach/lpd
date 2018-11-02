@@ -117,10 +117,10 @@ struct HandshakeState {
 
 impl fmt::Debug for HandshakeState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut remote_ephemeral_str = String::from("None");
-        if self.remote_ephemeral.is_some() {
-            remote_ephemeral_str = hex::encode(&self.remote_ephemeral.unwrap().serialize()[..]);
-        }
+        let remote_ephemeral_str = match self.remote_ephemeral {
+            None => "None".to_owned(),
+            Some(k) => hex::encode(&k.serialize()[..]),
+        };
 
         write!(f, r#"
         symmetric_state: {:?}
@@ -134,7 +134,8 @@ impl fmt::Debug for HandshakeState {
         remote_ephemeral: {:?}
         "#, self.symmetric_state, self.initiator,
                self.local_static, self.local_ephemeral,
-               hex::encode(&self.remote_static.serialize()[..]), remote_ephemeral_str,
+               hex::encode(&self.remote_static.serialize()[..]),
+               remote_ephemeral_str,
         )
     }
 }
