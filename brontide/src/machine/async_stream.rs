@@ -5,7 +5,7 @@ use tokio::prelude::Future;
 use secp256k1::{PublicKey, SecretKey};
 use std::time::Duration;
 
-use super::{Machine, HandshakeError};
+use super::{Machine, HandshakeError, HandshakeNew};
 
 pub struct BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
     // the Machine holds a lot of byte arrays,
@@ -27,31 +27,30 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
     pub fn outgoing(stream: T, local_secret: SecretKey, remote_public: PublicKey) -> impl Future<Item=Self, Error=HandshakeError> {
         use tokio::prelude::IntoFuture;
 
-        Machine::new::<fn(&mut Machine)>(true, local_secret, remote_public, &[])
+        HandshakeNew::new(true, local_secret, remote_public)
             .map_err(HandshakeError::Crypto)
-            .and_then(|mut noise|
+            .and_then(|noise|
                 noise.gen_act_one()
-                    .map(|a| (Box::new(noise), a))
+                    .map(|(a, noise)| (Box::new(noise), a))
             )
             .into_future()
             .and_then(move |(noise, a)|
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
-                    .map(move |(stream, _)| BrontideStream { noise: noise, stream: stream })
+                    .map(move |(stream, _)| (noise, stream))
             )
-            .and_then(|BrontideStream { noise: mut noise, stream: stream }|
+            .and_then(|(noise, stream)|
                 io::read_exact(stream, Default::default())
                     .map_err(HandshakeError::Io)
                     .and_then(move |(stream, a)| {
-                        noise.recv_act_two(a)?;
-                        let a = noise.gen_act_three()?;
-                        Ok((BrontideStream { noise: noise, stream: stream }, a))
+                        let noise = noise.recv_act_two(a)?;
+                        Ok((stream, noise.gen_act_three()?))
                     })
             )
-            .and_then(|(BrontideStream { noise: noise, stream: stream }, a)|
+            .and_then(|(stream, (a, noise))|
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
-                    .map(move |(stream, _)| BrontideStream { noise: noise, stream: stream })
+                    .map(move |(stream, _)| BrontideStream { noise: Box::new(noise), stream: stream })
             )
     }
 
@@ -62,33 +61,31 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
             .timeout(Self::read_timeout())
             .map_err(HandshakeError::IoTimeout)
             .and_then(move |(stream, a)| {
-                Machine::new::<fn(&mut Machine)>(false, local_secret, PublicKey::new(), &[])
+                HandshakeNew::new(false, local_secret, PublicKey::new())
                     .map_err(HandshakeError::Crypto)
                     .map(Box::new)
-                    .and_then(move |mut noise| {
-                        noise.recv_act_one(a)?;
-                        let a = noise.gen_act_two()?;
-                        Ok((BrontideStream { noise: noise, stream: stream }, a))
+                    .and_then(move |noise| {
+                        let noise = noise.recv_act_one(a)?;
+                        Ok((stream, noise.gen_act_two()?))
                     })
             })
-            .and_then(|(BrontideStream { noise: noise, stream: stream }, a)|
+            .and_then(|(stream, (a, noise))|
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
-                    .map(move |(stream, _)| BrontideStream { noise: noise, stream: stream })
+                    .map(move |(stream, _)| (noise, stream))
             )
-            .and_then(|BrontideStream { noise: mut noise, stream: stream }|
+            .and_then(|(noise, stream)|
                 io::read_exact(stream, Default::default())
                     .timeout(Self::read_timeout())
                     .map_err(HandshakeError::IoTimeout)
                     .and_then(move |(stream, a)| {
-                        noise.recv_act_three(a)?;
-                        Ok(BrontideStream { noise: noise, stream: stream })
+                        Ok(BrontideStream { noise: Box::new(noise.recv_act_three(a)?), stream: stream })
                     })
             )
     }
 
     pub fn remote_key(&self) -> &PublicKey {
-        &self.noise.handshake_state.remote_static
+        &self.noise.remote_static()
     }
 
     pub fn framed(self) -> Framed<T, Box<Machine>> {
