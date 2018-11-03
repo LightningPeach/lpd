@@ -1,9 +1,8 @@
 use std::{io, fmt, error, cell};
 use tokio::timer::timeout;
-use super::cipher_state::CipherState;
-use super::symmetric_state::SymmetricState;
-pub use super::symmetric_state::MAC_SIZE;
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
+use super::cipher_state::CipherState;
+use super::symmetric_state::{SymmetricState, MAC_SIZE};
 
 // ecdh performs an ECDH operation between public and private. The returned value is
 // the sha256 of the compressed shared point.
@@ -111,7 +110,7 @@ impl ActOne {
     fn version(&self) -> Result<HandshakeVersion, ()> {
         match self.bytes[0] {
             0 => Ok(HandshakeVersion::_0),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 
@@ -169,7 +168,12 @@ impl AsMut<[u8]> for ActThree {
 impl ActThree {
     const SIZE: usize = 1 + 33 + 2 * MAC_SIZE;
 
-    fn new(version: HandshakeVersion, key: Vec<u8>, tag_first: [u8; MAC_SIZE], tag_second: [u8; MAC_SIZE]) -> Self {
+    fn new(
+        version: HandshakeVersion,
+        key: Vec<u8>,
+        tag_first: [u8; MAC_SIZE],
+        tag_second: [u8; MAC_SIZE],
+    ) -> Self {
         let mut s = ActThree {
             bytes: [0; Self::SIZE],
         };
@@ -183,7 +187,7 @@ impl ActThree {
     fn version(&self) -> Result<HandshakeVersion, ()> {
         match self.bytes[0] {
             0 => Ok(HandshakeVersion::_0),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 
@@ -219,7 +223,11 @@ pub struct HandshakeNew {
 }
 
 impl HandshakeNew {
-    pub fn new(initiator: bool, local_secret: SecretKey, remote_public: PublicKey) -> Result<Self, EcdsaError> {
+    pub fn new(
+        initiator: bool,
+        local_secret: SecretKey,
+        remote_public: PublicKey,
+    ) -> Result<Self, EcdsaError> {
         use secp256k1::{Secp256k1, constants::SECRET_KEY_SIZE};
 
         let mut symmetric_state = SymmetricState::new(PROTOCOL_NAME);
@@ -253,8 +261,7 @@ impl HandshakeNew {
         use secp256k1::Secp256k1;
 
         // e
-        let local_ephemeral = (self.ephemeral_gen)()
-            .map_err(HandshakeError::Crypto)?;
+        let local_ephemeral = (self.ephemeral_gen)().map_err(HandshakeError::Crypto)?;
 
         let local_ephemeral_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_ephemeral)
             .map_err(HandshakeError::Crypto)?;
@@ -262,11 +269,11 @@ impl HandshakeNew {
         self.symmetric_state.mix_hash(&ephemeral);
 
         // es
-        let s = ecdh(&self.remote_static, &local_ephemeral)
-            .map_err(HandshakeError::Crypto)?;
+        let s = ecdh(&self.remote_static, &local_ephemeral).map_err(HandshakeError::Crypto)?;
         self.symmetric_state.mix_key(&s);
 
-        let auth_payload = self.symmetric_state
+        let auth_payload = self
+            .symmetric_state
             .encrypt_and_hash(&[], &mut Vec::new())
             .map_err(HandshakeError::Io)?;
 
@@ -287,17 +294,15 @@ impl HandshakeNew {
         // immediately.
         if let Err(()) = act_one.version() {
             let msg = format!("Act One: invalid handshake version: {}", act_one.bytes[0]);
-            return Err(HandshakeError::UnknownHandshakeVersion(msg))
+            return Err(HandshakeError::UnknownHandshakeVersion(msg));
         }
 
         // e
-        let remote_ephemeral = act_one.key()
-            .map_err(HandshakeError::Crypto)?;
+        let remote_ephemeral = act_one.key().map_err(HandshakeError::Crypto)?;
         self.symmetric_state.mix_hash(&remote_ephemeral.serialize());
 
         // es
-        let s = ecdh(&remote_ephemeral, &self.local_static)
-            .map_err(HandshakeError::Crypto)?;
+        let s = ecdh(&remote_ephemeral, &self.local_static).map_err(HandshakeError::Crypto)?;
         self.symmetric_state.mix_key(&s);
 
         // If the initiator doesn't know our static key, then this operation
@@ -342,11 +347,12 @@ impl HandshakeActOne {
         self.base.symmetric_state.mix_hash(&ephemeral);
 
         // ee
-        let s = ecdh(&self.remote_ephemeral, &local_ephemeral)
-            .map_err(HandshakeError::Crypto)?;
+        let s = ecdh(&self.remote_ephemeral, &local_ephemeral).map_err(HandshakeError::Crypto)?;
         self.base.symmetric_state.mix_key(&s);
 
-        let auth_payload = self.base.symmetric_state
+        let auth_payload = self
+            .base
+            .symmetric_state
             .encrypt_and_hash(&[], &mut Vec::new())
             .map_err(HandshakeError::Io)?;
 
@@ -374,20 +380,21 @@ impl HandshakeInitiatorActOne {
         // immediately.
         if let Err(()) = act_two.version() {
             let msg = format!("Act Two: invalid handshake version: {}", act_two.bytes[0]);
-            return Err(HandshakeError::UnknownHandshakeVersion(msg))
+            return Err(HandshakeError::UnknownHandshakeVersion(msg));
         }
 
         // e
-        let remote_ephemeral = act_two.key()
-            .map_err(HandshakeError::Crypto)?;
-        self.base.symmetric_state.mix_hash(&remote_ephemeral.serialize());
+        let remote_ephemeral = act_two.key().map_err(HandshakeError::Crypto)?;
+        self.base
+            .symmetric_state
+            .mix_hash(&remote_ephemeral.serialize());
 
         // ee
-        let s = ecdh(&remote_ephemeral, &self.local_ephemeral)
-            .map_err(HandshakeError::Crypto)?;
+        let s = ecdh(&remote_ephemeral, &self.local_ephemeral).map_err(HandshakeError::Crypto)?;
         self.base.symmetric_state.mix_key(&s);
 
-        self.base.symmetric_state
+        self.base
+            .symmetric_state
             .decrypt_and_hash(&mut Vec::new(), act_two.tag())
             .map_err(HandshakeError::Io)?;
 
@@ -416,11 +423,14 @@ impl Handshake {
     pub fn gen_act_three(mut self) -> Result<(ActThree, Machine), HandshakeError> {
         use secp256k1::{Secp256k1, constants::PUBLIC_KEY_SIZE};
 
-        let local_static_pub = PublicKey::from_secret_key(&Secp256k1::new(), &self.base.local_static)
-            .map_err(HandshakeError::Crypto)?;
+        let local_static_pub =
+            PublicKey::from_secret_key(&Secp256k1::new(), &self.base.local_static)
+                .map_err(HandshakeError::Crypto)?;
         let our_pubkey = local_static_pub.serialize();
         let mut cipher_text = Vec::with_capacity(PUBLIC_KEY_SIZE);
-        let tag = self.base.symmetric_state
+        let tag = self
+            .base
+            .symmetric_state
             .encrypt_and_hash(&our_pubkey, &mut cipher_text)
             .map_err(HandshakeError::Io)?;
 
@@ -428,7 +438,9 @@ impl Handshake {
             .map_err(HandshakeError::Crypto)?;
         self.base.symmetric_state.mix_key(&s);
 
-        let auth_payload = self.base.symmetric_state
+        let auth_payload = self
+            .base
+            .symmetric_state
             .encrypt_and_hash(&[], &mut Vec::new())
             .map_err(HandshakeError::Io)?;
 
@@ -449,12 +461,18 @@ impl Handshake {
         // If the handshake version is unknown, then the handshake fails
         // immediately.
         if let Err(()) = act_three.version() {
-            let msg = format!("Act Three: invalid handshake version: {}", act_three.bytes[0]);
-            return Err(HandshakeError::UnknownHandshakeVersion(msg))
+            let msg = format!(
+                "Act Three: invalid handshake version: {}",
+                act_three.bytes[0]
+            );
+            return Err(HandshakeError::UnknownHandshakeVersion(msg));
         }
 
         // s
-        let remote_pub = self.base.symmetric_state.decrypt_and_hash(act_three.key(), act_three.tag_first())
+        let remote_pub = self
+            .base
+            .symmetric_state
+            .decrypt_and_hash(act_three.key(), act_three.tag_first())
             .map_err(HandshakeError::Io)?;
         self.base.remote_static = PublicKey::from_slice(&Secp256k1::new(), &remote_pub)
             .map_err(HandshakeError::Crypto)?;
@@ -464,7 +482,8 @@ impl Handshake {
             .map_err(HandshakeError::Crypto)?;
         self.base.symmetric_state.mix_key(&se);
 
-        self.base.symmetric_state
+        self.base
+            .symmetric_state
             .decrypt_and_hash(&[], act_three.tag_second())
             .map_err(HandshakeError::Io)?;
 
@@ -490,6 +509,10 @@ impl Handshake {
     }
 }
 
+use bytes::BytesMut;
+use wire::{BinarySD, WireError};
+use serde::{Serialize, de::DeserializeOwned};
+
 pub struct Machine {
     send_cipher: CipherState,
     recv_cipher: CipherState,
@@ -499,9 +522,19 @@ pub struct Machine {
     message_buffer: cell::RefCell<[u8; std::u16::MAX as usize]>,
 }
 
-use bytes::BytesMut;
-use wire::{BinarySD, WireError};
-use serde::{Serialize, de::DeserializeOwned};
+impl fmt::Debug for Machine {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            r#"
+        send_cipher:     {:?}
+        recv_cipher:     {:?}
+        remote_static:   {:?}
+        "#,
+            self.send_cipher, self.recv_cipher, self.remote_static,
+        )
+    }
+}
 
 // LENGTH_HEADER_SIZE is the number of bytes used to prefix encode the
 // length of a message payload.
@@ -509,7 +542,8 @@ const LENGTH_HEADER_SIZE: usize = 2;
 
 // ERR_MAX_MESSAGE_LENGTH_EXCEEDED is returned a message to be written to
 // the cipher session exceeds the maximum allowed message payload.
-static ERR_MAX_MESSAGE_LENGTH_EXCEEDED: &'static str = "the generated payload exceeds the max allowed message length of (2^16)-1";
+static ERR_MAX_MESSAGE_LENGTH_EXCEEDED: &'static str =
+    "the generated payload exceeds the max allowed message length of (2^16)-1";
 
 impl Machine {
     pub fn remote_static(&self) -> &PublicKey {
@@ -538,17 +572,15 @@ impl Machine {
 
         dst.reserve(length + LENGTH_HEADER_SIZE + MAC_SIZE * 2);
 
-        let tag = self.send_cipher.encrypt(
-            &[],
-            &mut dst.writer(),
-            &length_buffer[..]
-        )?;
+        let tag = self
+            .send_cipher
+            .encrypt(&[], &mut dst.writer(), &length_buffer[..])?;
         dst.put_slice(&tag[..]);
 
         let tag = self.send_cipher.encrypt(
             &[],
             &mut dst.writer(),
-            &self.message_buffer.borrow()[..length]
+            &self.message_buffer.borrow()[..length],
         )?;
         dst.put_slice(&tag[..]);
 
@@ -577,17 +609,12 @@ impl Machine {
                 let tag = tag(src);
 
                 let mut plain = [0; LENGTH_HEADER_SIZE];
-                self.recv_cipher.decrypt(
-                    &[],
-                    &mut plain.as_mut(),
-                    cipher.as_ref(),
-                    tag
-                ).map_err(|e| {
-                    match e {
+                self.recv_cipher
+                    .decrypt(&[], &mut plain.as_mut(), cipher.as_ref(), tag)
+                    .map_err(|e| match e {
                         DecryptError::IoError(e) => WireError::from(e),
-                        DecryptError::TagMismatch => WireError::custom("tag")
-                    }
-                })?;
+                        DecryptError::TagMismatch => WireError::custom("tag"),
+                    })?;
 
                 let length: u16 = BinarySD::deserialize(&plain[..])?;
                 length as usize
@@ -599,20 +626,18 @@ impl Machine {
                 let cipher = src.split_to(length);
                 let tag = tag(src);
 
-                self.recv_cipher.decrypt(
-                    &[],
-                    &mut self.message_buffer.borrow_mut().as_mut(),
-                    cipher.as_ref(),
-                    tag
-                ).map_err(|e| {
-                    match e {
+                self.recv_cipher
+                    .decrypt(
+                        &[],
+                        &mut self.message_buffer.borrow_mut().as_mut(),
+                        cipher.as_ref(),
+                        tag,
+                    ).map_err(|e| match e {
                         DecryptError::IoError(e) => WireError::from(e),
-                        DecryptError::TagMismatch => WireError::custom("tag")
-                    }
-                })?;
+                        DecryptError::TagMismatch => WireError::custom("tag"),
+                    })?;
 
-                BinarySD::deserialize(self.message_buffer.borrow().as_ref())
-                    .map(Some)
+                BinarySD::deserialize(self.message_buffer.borrow().as_ref()).map(Some)
             }
         }
     }

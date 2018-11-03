@@ -1,6 +1,5 @@
 use chacha20_poly1305_aead::DecryptError;
 use std::{fmt, io};
-use byteorder::{LittleEndian, ByteOrder};
 
 // keyRotationInterval is the number of messages sent on a single
 // cipher stream before the keys are rotated forwards.
@@ -65,11 +64,20 @@ impl CipherState {
         plain_text: &[u8],
     ) -> Result<[u8; MAC_SIZE], io::Error> {
         use chacha20_poly1305_aead::encrypt;
+        use byteorder::{LittleEndian, ByteOrder};
 
         let mut nonce: [u8; 12] = [0; 12];
         LittleEndian::write_u64(&mut nonce[4..], self.nonce);
-        encrypt(&self.secret_key, &nonce, associated_data, plain_text, cipher_text)
-            .map(|t| { self.next(); t })
+        encrypt(
+            &self.secret_key,
+            &nonce,
+            associated_data,
+            plain_text,
+            cipher_text,
+        ).map(|t| {
+            self.next();
+            t
+        })
     }
 
     /// `decrypt` attempts to decrypt the passed `cipher_text` observing the specified
@@ -83,11 +91,21 @@ impl CipherState {
         tag: [u8; MAC_SIZE],
     ) -> Result<(), DecryptError> {
         use chacha20_poly1305_aead::decrypt;
+        use byteorder::{LittleEndian, ByteOrder};
 
         let mut nonce: [u8; 12] = [0; 12];
         LittleEndian::write_u64(&mut nonce[4..], self.nonce);
-        decrypt(&self.secret_key, &nonce, associated_data, cipher_text, &tag, plain_text)
-            .map(|t| { self.next(); t })
+        decrypt(
+            &self.secret_key,
+            &nonce,
+            associated_data,
+            cipher_text,
+            &tag,
+            plain_text,
+        ).map(|t| {
+            self.next();
+            t
+        })
     }
 
     // ratcheting the current key forward

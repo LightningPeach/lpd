@@ -1,4 +1,4 @@
-use super::*;
+use super::handshake::Machine;
 
 use tokio::codec::{Encoder, Decoder};
 use bytes::BytesMut;

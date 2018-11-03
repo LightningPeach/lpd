@@ -4,11 +4,11 @@ use std::{fmt, io};
 // TODO: needed MAC type encapsulating the array [u8; MAC_SIZE]
 pub const MAC_SIZE: usize = 16;
 
-// SymmetricState encapsulates a cipherState object and houses the ephemeral
-// handshake digest state. This struct is used during the handshake to derive
-// new shared secrets based off of the result of ECDH operations. Ultimately,
-// the final key yielded by this struct is the result of an incremental
-// Triple-DH operation.
+/// `SymmetricState` encapsulates a `CipherState` object and houses the ephemeral
+/// handshake digest state. This struct is used during the handshake to derive
+/// new shared secrets based off of the result of ECDH operations. Ultimately,
+/// the final key yielded by this struct is the result of an incremental
+/// Triple-DH operation.
 pub struct SymmetricState {
     cipher_state: CipherState,
 
@@ -54,7 +54,7 @@ impl SymmetricState {
 
         SymmetricState {
             cipher_state: CipherState::new([0; 32], [0; 32]),
-            chaining_key: digest,
+            chaining_key: digest.clone(),
             handshake_digest: digest,
         }
     }
@@ -66,11 +66,9 @@ impl SymmetricState {
     // operations until another DH operation is performed.
     pub fn mix_key(&mut self, input: &[u8]) {
         use sha2::Sha256;
+        use hkdf::Hkdf;
 
-        let mut salt: [u8; 32] = [0; 32];
-        salt.copy_from_slice(&self.chaining_key);
-
-        let hkdf = hkdf::Hkdf::<Sha256>::extract(Some(&salt), input);
+        let hkdf = Hkdf::<Sha256>::extract(Some(&self.chaining_key), input);
         let okm = hkdf.expand(&[], 64);
 
         self.chaining_key.copy_from_slice(&okm.as_slice()[..32]);
@@ -151,7 +149,7 @@ impl SymmetricState {
         let salt = self.chaining_key;
         (
             CipherState::new(salt.clone(), send_key),
-            CipherState::new(salt, recv_key)
+            CipherState::new(salt, recv_key),
         )
     }
 
