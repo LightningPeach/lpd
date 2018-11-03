@@ -74,7 +74,6 @@ where
             .and_then(move |(stream, a)| {
                 HandshakeNew::new(false, local_secret, PublicKey::new())
                     .map_err(HandshakeError::Crypto)
-                    .map(Box::new)
                     .and_then(move |noise| {
                         let noise = noise.recv_act_one(a)?;
                         Ok((stream, noise.gen_act_two()?))
