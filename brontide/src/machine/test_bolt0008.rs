@@ -2,7 +2,7 @@ use secp256k1::{Secp256k1, SecretKey, PublicKey, Error as CryptoError};
 use hex;
 use std::error::Error;
 use std::collections::HashMap;
-use super::Machine;
+use super::*;
 
 #[test]
 fn test_bolt0008() {
@@ -25,7 +25,7 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
     let e_pub = PublicKey::from_secret_key(&Secp256k1::new(), &e_priv)?;
     assert_eq!(hex::encode(&e_pub.serialize()[..]), "036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f7");
 
-    let mut machine = Machine::new::<fn(&mut Machine)>(true, ls_priv, rs_pub, &[])?;
+    let mut machine = HandshakeNew::new(true, ls_priv, rs_pub)?;
     machine.ephemeral_gen = || -> Result<SecretKey, CryptoError> {
 		let sk = SecretKey::from_slice(
             &Secp256k1::new(),
@@ -33,13 +33,13 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
         )?;
         Ok(sk)
 	};
-    machine.handshake_state.symmetric_state.inspect("8401b3fdcaaa710b5405400536a3d5fd7792fe8e7fe29cd8b687216fe323ecbd");
+    assert_eq!(hex::encode(machine.handshake_digest()), "8401b3fdcaaa710b5405400536a3d5fd7792fe8e7fe29cd8b687216fe323ecbd");
 
-    let act_one = machine.gen_act_one()?;
+    let (act_one, machine) = machine.gen_act_one()?;
 
     assert_eq!(hex::encode(&act_one.bytes[..]), "00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a");
 
-    let mut responder_machine = Machine::new::<fn(&mut Machine)>(false, rs_priv, ls_pub, &[])?;
+    let mut responder_machine = HandshakeNew::new(false, rs_priv, ls_pub)?;
     responder_machine.ephemeral_gen = || -> Result<SecretKey, CryptoError> {
 		let sk = SecretKey::from_slice(
             &Secp256k1::new(),
@@ -48,31 +48,31 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
         Ok(sk)
 	};
 
-    responder_machine.recv_act_one(act_one)?;
+    let responder_machine = responder_machine.recv_act_one(act_one)?;
 
-    let act_two = responder_machine.gen_act_two()?;
+    let (act_two, responder_machine) = responder_machine.gen_act_two()?;
     assert_eq!(hex::encode(&act_two.bytes[..]), "0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730ae");
 
-    machine.recv_act_two(act_two)?;
+    let machine = machine.recv_act_two(act_two)?;
 
-    let act_three = machine.gen_act_three()?;
+    let (act_three, mut machine) = machine.gen_act_three()?;
     assert_eq!(hex::encode(&act_three.bytes[..]), "00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba");
 
-    responder_machine.recv_act_three(act_three)?;
+    let mut responder_machine = responder_machine.recv_act_three(act_three)?;
 
-    println!("{:?}", responder_machine);
+    //println!("{:?}", responder_machine);
 
     let send_key =  "969ab31b4d288cedf6218839b27a3e2140827047f2c0f01bf5c04435d43511a9";
     let recv_key = "bb9020b8965f4df047e07f955f3c4b88418984aadc5cdb35096b9ea8fa5c3442";
     let chain_key = "919219dbb2920afa8db80f9a51787a840bcf111ed8d588caf9ab4be716e42b01";
 
-    machine.send_cipher.as_ref().unwrap().inspect(send_key);
-    machine.recv_cipher.as_ref().unwrap().inspect(recv_key);
-    assert_eq!(hex::encode(&machine.handshake_state.symmetric_state.chaining_key[..]), chain_key);
+    assert_eq!(hex::encode(&machine.send_cipher_key()[..]), send_key);
+    assert_eq!(hex::encode(&machine.recv_cipher_key()[..]), recv_key);
+    assert_eq!(hex::encode(&machine.chaining_key()[..]), chain_key);
 
-    responder_machine.send_cipher.as_ref().unwrap().inspect(recv_key);
-    responder_machine.recv_cipher.as_ref().unwrap().inspect(send_key);
-    assert_eq!(hex::encode(&responder_machine.handshake_state.symmetric_state.chaining_key[..]), chain_key);
+    assert_eq!(hex::encode(&responder_machine.send_cipher_key()[..]), recv_key);
+    assert_eq!(hex::encode(&responder_machine.recv_cipher_key()[..]), send_key);
+    assert_eq!(hex::encode(&responder_machine.chaining_key()[..]), chain_key);
 
     // Now test as per section "transport-message test" in Test Vectors
 	// (the transportMessageVectors ciphertexts are from this section of BOLT 8);

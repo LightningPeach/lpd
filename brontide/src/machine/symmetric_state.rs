@@ -1,8 +1,8 @@
-use super::CipherState;
+use super::cipher_state::CipherState;
 use std::{fmt, io};
 
 // TODO: needed MAC type encapsulating the array [u8; MAC_SIZE]
-const MAC_SIZE: usize = 16;
+pub const MAC_SIZE: usize = 16;
 
 // SymmetricState encapsulates a cipherState object and houses the ephemeral
 // handshake digest state. This struct is used during the handshake to derive
@@ -15,7 +15,7 @@ pub struct SymmetricState {
     // chaining_key is used as the salt to the HKDF function to derive a new
     // chaining key as well as a new tempKey which is used for
     // encryption/decryption.
-    pub chaining_key: [u8; 32],
+    chaining_key: [u8; 32],
 
     // handshake_digest is the cumulative hash digest of all handshake
     // messages sent from start to finish. This value is never transmitted
@@ -117,7 +117,7 @@ impl SymmetricState {
     }
 
     // decrypt_and_hash returns the authenticated decryption of the passed
-    // ciphertext.  When encrypting the handshake digest (h) is used as the
+    // cipher_text. When encrypting the handshake digest (h) is used as the
     // associated data to the AEAD cipher.
     pub fn decrypt_and_hash(
         &mut self,
@@ -136,8 +136,32 @@ impl SymmetricState {
         Ok(plain_text)
     }
 
+    pub fn into_pair(self) -> (CipherState, CipherState) {
+        use sha2::Sha256;
+
+        let hkdf = hkdf::Hkdf::<Sha256>::extract(Some(&self.chaining_key), &[]);
+        let okm = hkdf.expand(&[], 64);
+
+        let mut send_key: [u8; 32] = [0; 32];
+        send_key.copy_from_slice(&okm.as_slice()[..32]);
+
+        let mut recv_key: [u8; 32] = [0; 32];
+        recv_key.copy_from_slice(&okm.as_slice()[32..]);
+
+        let salt = self.chaining_key;
+        (
+            CipherState::new(salt.clone(), send_key),
+            CipherState::new(salt, recv_key)
+        )
+    }
+
     #[cfg(test)]
-    pub fn inspect(&self, digest: &str) {
-        assert_eq!(hex::encode(&self.handshake_digest[..]), digest);
+    pub fn chaining_key(&self) -> [u8; 32] {
+        self.chaining_key.clone()
+    }
+
+    #[cfg(test)]
+    pub fn handshake_digest(&self) -> [u8; 32] {
+        self.handshake_digest.clone()
     }
 }

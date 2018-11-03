@@ -24,7 +24,6 @@ pub struct CipherState {
     // instantiate the cipher.
     //
     // TODO: protect it somehow
-    // TODO: should be private, needed for tests
     secret_key: [u8; 32],
 
     // salt is an additional secret which is used during key rotation to
@@ -110,7 +109,7 @@ impl CipherState {
     }
 
     #[cfg(test)]
-    pub fn inspect(&self, key: &str) {
-        assert_eq!(hex::encode(&self.secret_key[..]), key);
+    pub fn secret_key(&self) -> [u8; 32] {
+        self.secret_key.clone()
     }
 }
