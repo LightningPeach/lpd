@@ -5,9 +5,12 @@ use tokio::prelude::Future;
 use secp256k1::{PublicKey, SecretKey};
 use std::time::Duration;
 
-use super::{Machine, HandshakeError, HandshakeNew};
+use super::handshake::{Machine, HandshakeNew, HandshakeError};
 
-pub struct BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
+pub struct BrontideStream<T>
+where
+    T: io::AsyncRead + io::AsyncWrite,
+{
     // the Machine holds a lot of byte arrays,
     // combined with tokio runtime it overflows stack,
     // let us put it in the box
@@ -15,7 +18,10 @@ pub struct BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
     stream: T,
 }
 
-impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
+impl<T> BrontideStream<T>
+where
+    T: io::AsyncRead + io::AsyncWrite,
+{
     // HANDSHAKE_READ_TIMEOUT is a read timeout that will be enforced when
     // waiting for data payloads during the various acts of Brontide. If
     // the remote party fails to deliver the proper payload within this
@@ -24,37 +30,42 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
         Duration::new(5, 0)
     }
 
-    pub fn outgoing(stream: T, local_secret: SecretKey, remote_public: PublicKey) -> impl Future<Item=Self, Error=HandshakeError> {
+    pub fn outgoing(
+        stream: T,
+        local_secret: SecretKey,
+        remote_public: PublicKey,
+    ) -> impl Future<Item = Self, Error = HandshakeError> {
         use tokio::prelude::IntoFuture;
 
         HandshakeNew::new(true, local_secret, remote_public)
             .map_err(HandshakeError::Crypto)
-            .and_then(|noise|
-                noise.gen_act_one()
-                    .map(|(a, noise)| (Box::new(noise), a))
-            )
+            .and_then(|noise| noise.gen_act_one().map(|(a, noise)| (Box::new(noise), a)))
             .into_future()
-            .and_then(move |(noise, a)|
+            .and_then(move |(noise, a)| {
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
                     .map(move |(stream, _)| (noise, stream))
-            )
-            .and_then(|(noise, stream)|
+            }).and_then(|(noise, stream)| {
                 io::read_exact(stream, Default::default())
                     .map_err(HandshakeError::Io)
                     .and_then(move |(stream, a)| {
                         let noise = noise.recv_act_two(a)?;
                         Ok((stream, noise.gen_act_three()?))
                     })
-            )
-            .and_then(|(stream, (a, noise))|
+            }).and_then(|(stream, (a, noise))| {
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
-                    .map(move |(stream, _)| BrontideStream { noise: Box::new(noise), stream: stream })
-            )
+                    .map(move |(stream, _)| BrontideStream {
+                        noise: Box::new(noise),
+                        stream: stream,
+                    })
+            })
     }
 
-    pub fn incoming(stream: T, local_secret: SecretKey) -> impl Future<Item=Self, Error=HandshakeError> {
+    pub fn incoming(
+        stream: T,
+        local_secret: SecretKey,
+    ) -> impl Future<Item = Self, Error = HandshakeError> {
         use tokio::prelude::FutureExt;
 
         io::read_exact(stream, Default::default())
@@ -68,20 +79,21 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
                         let noise = noise.recv_act_one(a)?;
                         Ok((stream, noise.gen_act_two()?))
                     })
-            })
-            .and_then(|(stream, (a, noise))|
+            }).and_then(|(stream, (a, noise))| {
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
                     .map(move |(stream, _)| (noise, stream))
-            )
-            .and_then(|(noise, stream)|
+            }).and_then(|(noise, stream)| {
                 io::read_exact(stream, Default::default())
                     .timeout(Self::read_timeout())
                     .map_err(HandshakeError::IoTimeout)
                     .and_then(move |(stream, a)| {
-                        Ok(BrontideStream { noise: Box::new(noise.recv_act_three(a)?), stream: stream })
+                        Ok(BrontideStream {
+                            noise: Box::new(noise.recv_act_three(a)?),
+                            stream: stream,
+                        })
                     })
-            )
+            })
     }
 
     pub fn remote_key(&self) -> &PublicKey {
@@ -93,13 +105,19 @@ impl<T> BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
     }
 }
 
-impl<T> AsRef<T> for BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
+impl<T> AsRef<T> for BrontideStream<T>
+where
+    T: io::AsyncRead + io::AsyncWrite,
+{
     fn as_ref(&self) -> &T {
         &self.stream
     }
 }
 
-impl<T> AsMut<T> for BrontideStream<T> where T: io::AsyncRead + io::AsyncWrite {
+impl<T> AsMut<T> for BrontideStream<T>
+where
+    T: io::AsyncRead + io::AsyncWrite,
+{
     fn as_mut(&mut self) -> &mut T {
         &mut self.stream
     }
