@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "../lpd", "bincode", "wire", "brontide", "shachain", "channel", "wallet",
+    "../lpd", "bincode", "wire", "brontide", "shachain", "chainntfs", "channel", "wallet",
     "routing", "bitcoin-types", "common-types",
     "testenv"
 ]
@@ -30,7 +30,7 @@ name = "run-lnd"
 wire = { path = "wire", features = ["testing"] }
 brontide = { path = "brontide" }
 shachain = { path = "shachain" }
-# hdkeychain = { path = "hdkeychain" }
+chainntfs = { path = "chainntfs" }
 channel = { path = "channel" }
 wallet = { path = "wallet" }
 routing = { path = "routing" }
