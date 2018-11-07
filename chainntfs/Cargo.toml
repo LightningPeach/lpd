@@ -1,0 +1,11 @@
+[package]
+name = "chainntfs"
+version = "0.1.0"
+authors = ["evgeniy.scherbina <evgeniy.scherbina@bitfury.com>"]
+
+[dependencies]
+bitcoin = "0.14.2"
+zmq = "0.8.2"
+bitcoin_rpc_client = "0.2.0"
+futures = "0.1.13"
+tokio-core = "0.1.7"
