@@ -39,7 +39,6 @@ impl Graph {
             AnnouncementChannel(v) => AnnouncementChannelSystem::from(v).run_now(&mut self.world.res),
             UpdateChannel(v) => UpdateChannelSystem::from(v).run_now(&mut self.world.res),
             AnnouncementNode(v) => UseOnce::from(v).run_now(&mut self.world.res),
-            _ => (),
         }
         self.world.maintain();
     }

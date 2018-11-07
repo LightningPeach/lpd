@@ -400,14 +400,27 @@ fn main() {
     // Connect to lnd node
     let ctx = Secp256k1::new();
     let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
-    let local_priv = SecretKey::from_slice(&ctx, &local_priv_bytes).unwrap();
-    let local_pk = PublicKey::from_secret_key(&ctx, &local_priv).unwrap();
-    println!("local_pk={}", hex::encode(&local_pk.serialize()[..]));
+    let local_private = SecretKey::from_slice(&ctx, &local_priv_bytes).unwrap();
+    let local_public = PublicKey::from_secret_key(&ctx, &local_private).unwrap();
+    println!("local_pk={}", hex::encode(&local_public.serialize()[..]));
 
-    let remote_pub = public_key!("02fb00d61694b34a4e07116457770c9f191040a6e2379d21e60f275ab30ec7c109");
-    let socket_addr = "127.0.0.1:10000".parse().unwrap();
+    let address = "127.0.0.1:10100".parse().unwrap();
+    tokio::run(net::TcpListener::bind(&address)
+        .unwrap()
+        .incoming()
+        .for_each(move |stream| {
+            BrontideStream::incoming(stream, local_private)
+                .map(|stream| {
+                    println!("incoming: {:?}", stream.remote_key());
+                })
+                .map_err(|e| { panic!("error: {:?}", e); unimplemented!() })
+        })
+        .map_err(|e| panic!("error: {:?}", e))
+    );
 
-    let task = connect(local_priv, &socket_addr, remote_pub)
+    let remote_pub = public_key!("02050883052b49e6cf63ed6e7de10bf419d7c846c989af57d817c7471d37a29586");
+    let address = "127.0.0.1:10000".parse().unwrap();
+    let task = connect(local_private, &address, remote_pub)
         .and_then(move |s| {
             let (sink, stream) = s.split();
             process(stream, sink)
