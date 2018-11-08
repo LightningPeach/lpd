@@ -11,4 +11,6 @@ hmac = "0.6.3"
 chacha = "0.1.0"
 bytes = "0.4.10"
 rand = "0.5.5"
+
 wire = { path = "../wire" }
+common-types = { path = "../common-types" }

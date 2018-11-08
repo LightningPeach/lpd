@@ -8,7 +8,15 @@ pub struct Hash256 {
 
 impl From<Hash256> for [u8; 32] {
     fn from(h: Hash256) -> Self {
-        return h.data;
+        h.data
+    }
+}
+
+impl From<[u8; 32]> for Hash256 {
+    fn from(v: [u8; 32]) -> Self {
+        Hash256 {
+            data: v
+        }
     }
 }
 
@@ -20,6 +28,20 @@ impl Hash256 {
     pub const TEST_HASH: Self = Hash256 {
         data: hex!("38faad210ccb4b018c866049827661643433f1a261a54a8b3faa9e682341158d"),
     };
+}
+
+impl<'a> From<&'a [u8]> for Hash256 {
+    fn from(v: &'a [u8]) -> Self {
+        use sha2::{Sha256, Digest};
+
+        let mut hasher = Sha256::default();
+        hasher.input(v);
+        let hash = hasher.result();
+
+        let mut array: [u8; 32] = [0; 32];
+        array.copy_from_slice(&hash);
+        array.into()
+    }
 }
 
 mod debug {
