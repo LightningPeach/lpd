@@ -67,7 +67,7 @@ pub fn generate_shared_secrets(
     let hash_s = |xs: &[&[u8]]| -> Hash256 { Hash256::from(xs) };
     let hash_to_sk = |hash: &Hash256| SecretKey::from_slice(&context, hash.as_ref());
 
-    // hardcoded public key
+    // secp256k1 base point G
     let base_point = {
         let s = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
         PublicKey::from_slice(&context, hex::decode(s).unwrap().as_slice()).unwrap()
