@@ -73,7 +73,7 @@ pub fn generate_shared_secrets(
         PublicKey::from_slice(&context, hex::decode(s).unwrap().as_slice()).unwrap()
     };
 
-    let context = (
+    let initial = (
         Vec::with_capacity(payment_path.len()),
         session_key.clone(),
         PublicKey::from_secret_key(&context, session_key)?,
@@ -82,7 +82,7 @@ pub fn generate_shared_secrets(
 
     payment_path
         .iter()
-        .try_fold(context, |(mut v, secret, public, blinding), path_point| {
+        .try_fold(initial, |(mut v, secret, public, blinding), path_point| {
             let temp = mul_pk(&path_point, &secret)?;
             let result = hash(&temp.serialize()[..]);
             let secret = mul_sk(&secret, &hash_to_sk(&blinding)?)?;
