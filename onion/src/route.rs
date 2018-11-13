@@ -45,10 +45,13 @@ impl OnionRoute {
         use chacha::{ChaCha, KeyStream};
         use std::default::Default;
 
-        fn generate_shared_secrets(
-            payment_path: &[PublicKey],
+        fn generate_shared_secrets<'a, I>(
+            payment_path: I,
             session_key: &SecretKey,
-        ) -> Result<Vec<Hash256>, EcdsaError> {
+        ) -> Result<Vec<Hash256>, EcdsaError>
+        where
+            I: Iterator<Item=&'a PublicKey>,
+        {
             use secp256k1::Secp256k1;
 
             let context = Secp256k1::new();
@@ -76,16 +79,16 @@ impl OnionRoute {
             };
 
             let initial = (
-                Vec::with_capacity(payment_path.len()),
+                Vec::new(),
                 session_key.clone(),
                 PublicKey::from_secret_key(&context, session_key)?,
                 Hash256::from([0; 32]),
             );
 
+            let mut payment_path = payment_path;
             payment_path
-                .iter()
                 .try_fold(initial, |(mut v, secret, public, blinding), path_point| {
-                    let temp = mul_pk(&path_point, &secret)?;
+                    let temp = mul_pk(path_point, &secret)?;
                     let result = hash(&temp.serialize()[..]);
                     let secret = mul_sk(&secret, &hash_to_sk(&blinding)?)?;
                     let blinding = hash_s(&[&public.serialize()[..], result.as_ref()][..]);
@@ -146,6 +149,9 @@ impl OnionRoute {
 
         let context = Secp256k1::new();
         let public_key = PublicKey::from_secret_key(&context, &self.session_key)?;
+
+        let i = self.route.iter().map(|hop| hop.id());
+        let shared_secrets = generate_shared_secrets(i, &self.session_key);
 
         Ok(OnionPacket {
             version: OnionPacketVersion::_0,
