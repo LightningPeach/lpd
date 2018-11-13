@@ -1,10 +1,14 @@
-use super::hop::{Hop, HopData};
-use super::{NUM_MAX_HOPS, HMAC_SIZE};
+use super::hop::{Hop, HopBytes};
 
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
 use wire::PublicKey as WirePublicKey;
-use serde::{Serialize, Serializer};
 use serde_derive::Serialize;
+use smallvec::SmallVec;
+use std::ops::BitXorAssign;
+
+/// `NUM_MAX_HOPS` is the the maximum path length. This should be set to an
+/// estimate of the upper limit of the diameter of the node graph.
+pub const NUM_MAX_HOPS: usize = 20;
 
 #[repr(u8)]
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -19,6 +23,14 @@ pub struct OnionRoute {
     session_key: SecretKey,
     route: Vec<Hop>,
     associated_data: Vec<u8>,
+}
+
+#[derive(Serialize)]
+pub struct OnionPacket {
+    version: OnionPacketVersion,
+    ephemeral_key: WirePublicKey,
+    routing_info: SmallVec<[HopBytes; NUM_MAX_HOPS]>,
+    hmac: HmacData,
 }
 
 impl OnionRoute {
@@ -106,14 +118,14 @@ impl OnionRoute {
 
         fn generate_header_padding(key_type: &str, shared_secrets: &[Hash256]) -> Vec<u8> {
             let num = shared_secrets.len();
-            let mut filler = vec![0; (num - 1) * HopData::SIZE];
+            let mut filler = vec![0; (num - 1) * HopBytes::SIZE];
 
             for i in 1..num {
                 let stream_key = generate_key(key_type, shared_secrets[i - 1]);
                 let stream_bytes = generate_cipher_stream(stream_key, NUM_STREAM_BYTES);
 
-                for j in 0..(i * HopData::SIZE) {
-                    filler[j] ^= stream_bytes[(NUM_STREAM_BYTES - i * HopData::SIZE) + j];
+                for j in 0..(i * HopBytes::SIZE) {
+                    filler[j] ^= stream_bytes[(NUM_STREAM_BYTES - i * HopBytes::SIZE) + j];
                 }
             }
 
@@ -150,13 +162,25 @@ impl OnionRoute {
         let context = Secp256k1::new();
         let public_key = PublicKey::from_secret_key(&context, &self.session_key)?;
 
-        let i = self.route.iter().map(|hop| hop.id());
-        let shared_secrets = generate_shared_secrets(i, &self.session_key);
+        let (filler, hop_shared_secrets) = {
+            let i = self.route.iter().map(|hop| hop.id());
+            let hop_shared_secrets = generate_shared_secrets(i, &self.session_key)?;
+            (generate_header_padding("rho", hop_shared_secrets.as_slice()), hop_shared_secrets)
+        };
+
+        let mut hmac = HmacData::default();
+        let hops_bytes = self.route.into_iter().enumerate().rev().map(|(i, hop)| {
+            let rho_key = generate_key("rho", hop_shared_secrets[i]);
+            let mu_key = generate_key("mu", hop_shared_secrets[i]);
+            let stream_bytes = generate_cipher_stream(rho_key, NUM_STREAM_BYTES);
+
+            HopBytes::new(hop, hmac.clone())
+        }).rev().collect::<SmallVec<_>>();
 
         Ok(OnionPacket {
             version: OnionPacketVersion::_0,
             ephemeral_key: WirePublicKey::from(public_key),
-            routing_info: unimplemented!(),
+            routing_info: hops_bytes,
             hmac: HmacData::default(),
         })
     }
@@ -166,37 +190,21 @@ impl OnionRoute {
 // key stream implementing our stream cipher to encrypt/decrypt the mix
 // header. The last `HOP_DATA_SIZE` bytes are only used in order to
 // generate/check the MAC over the header.
-const NUM_STREAM_BYTES: usize = (NUM_MAX_HOPS + 1) * (HopData::SIZE + HMAC_SIZE);
+const NUM_STREAM_BYTES: usize = (NUM_MAX_HOPS + 1) * HopBytes::SIZE;
 
-#[derive(Default, Debug, Eq, PartialEq, Serialize)]
-struct HmacData {
-    data: [u8; HMAC_SIZE],
+#[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
+pub struct HmacData {
+    data: [u8; 32],
 }
 
-struct HopBytes {
-    data: [u8; HopData::SIZE],
-    hmac: HmacData,
+impl HmacData {
+    pub const SIZE: usize = 32;
 }
 
-impl Serialize for HopBytes {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        use serde::ser::SerializeTuple;
-
-        let mut tuple = serializer.serialize_tuple(3)?;
-        tuple.serialize_element(&self.data[0])?;
-        tuple.serialize_element(&self.data[1..])?;
-        tuple.serialize_element(&self.hmac)?;
-        tuple.end()
+impl BitXorAssign for HmacData {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        for i in 0..HmacData::SIZE {
+            self.data[i] ^= rhs.data[i];
+        }
     }
-}
-
-#[derive(Serialize)]
-pub struct OnionPacket {
-    version: OnionPacketVersion,
-    ephemeral_key: WirePublicKey,
-    routing_info: [HopBytes; NUM_MAX_HOPS],
-    hmac: HmacData,
 }

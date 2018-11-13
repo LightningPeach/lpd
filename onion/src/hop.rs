@@ -1,7 +1,9 @@
+use super::route::HmacData;
 use wire::{Satoshi, ShortChannelId};
 use secp256k1::PublicKey;
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use serde_derive::{Serialize, Deserialize};
+use std::ops::BitXorAssign;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Hop {
@@ -123,5 +125,49 @@ impl<'de> Deserialize<'de> for HopData {
         }
 
         deserializer.deserialize_tuple(5, V)
+    }
+}
+
+pub struct HopBytes {
+    data: [u8; HopData::SIZE],
+    hmac: HmacData,
+}
+
+impl HopBytes {
+    pub const SIZE: usize = HopData::SIZE + HmacData::SIZE;
+
+    pub fn new(hop: Hop, hmac: HmacData) -> Self {
+        use wire::BinarySD;
+
+        let mut r = HopBytes {
+            data: [0; HopData::SIZE],
+            hmac: hmac,
+        };
+        BinarySD::serialize(&mut r.data[..], &hop.data).unwrap();
+        r
+    }
+}
+
+impl Serialize for HopBytes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        use serde::ser::SerializeTuple;
+
+        let mut tuple = serializer.serialize_tuple(3)?;
+        tuple.serialize_element(&self.data[0])?;
+        tuple.serialize_element(&self.data[1..])?;
+        tuple.serialize_element(&self.hmac)?;
+        tuple.end()
+    }
+}
+
+impl BitXorAssign for HopBytes {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        for i in 0..HopData::SIZE {
+            self.data[i] ^= rhs.data[i];
+        }
+        self.hmac ^= rhs.hmac;
     }
 }
