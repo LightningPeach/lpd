@@ -17,6 +17,10 @@ impl Hop {
             data: data,
         }
     }
+
+    pub fn id(&self) -> &PublicKey {
+        &self.id
+    }
 }
 
 #[repr(u8)]
