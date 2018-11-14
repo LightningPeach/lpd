@@ -194,7 +194,6 @@ impl OnionRoute {
 enum KeyType {
     Rho,
     Mu,
-    Um,
 }
 
 impl KeyType {
@@ -211,7 +210,6 @@ impl KeyType {
         let key_type = match self {
             &Rho => "rho",
             &Mu => "mu",
-            &Um => "um",
         };
 
         let mut mac = Hmac::<Sha256>::new_varkey(key_type.as_bytes()).unwrap();
