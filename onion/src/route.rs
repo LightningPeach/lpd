@@ -2,7 +2,7 @@ use super::hop::{Hop, HopBytes};
 
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
 use wire::PublicKey as WirePublicKey;
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 use chacha::{ChaCha, KeyStream};
 use common_types::Hash256;
 use std::ops::BitXorAssign;
@@ -12,9 +12,20 @@ use std::ops::BitXorAssign;
 pub const NUM_MAX_HOPS: usize = 20;
 
 #[repr(u8)]
-#[derive(Debug, Eq, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize)]
 pub enum OnionPacketVersion {
     _0 = 0,
+}
+
+impl From<u8> for OnionPacketVersion {
+    fn from(v: u8) -> Self {
+        use self::OnionPacketVersion::*;
+
+        match v {
+            0 => _0,
+            _ => panic!("unknown onion packet version"),
+        }
+    }
 }
 
 /// `OnionRoute` is hop to hop routing information necessary to propagate a message
@@ -28,7 +39,7 @@ pub struct OnionRoute {
 
 #[derive(Serialize)]
 pub struct OnionPacket {
-    version: OnionPacketVersion,
+    version: u8,
     ephemeral_key: WirePublicKey,
     routing_info: [HopBytes; NUM_MAX_HOPS],
     hmac: HmacData,
@@ -183,7 +194,7 @@ impl OnionRoute {
             });
 
         Ok(OnionPacket {
-            version: version,
+            version: version as _,
             ephemeral_key: WirePublicKey::from(public_key),
             routing_info: hops_bytes,
             hmac: hmac,
@@ -241,7 +252,7 @@ impl KeyType {
     }
 }
 
-#[derive(Copy, Clone, Default, Debug, Eq, PartialEq, Serialize)]
+#[derive(Copy, Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct HmacData {
     data: [u8; 32],
 }
