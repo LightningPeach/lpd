@@ -24,9 +24,20 @@ impl Hop {
 }
 
 #[repr(u8)]
-#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum HopDataRealm {
     Bitcoin = 0,
+}
+
+impl From<u8> for HopDataRealm {
+    fn from(v: u8) -> Self {
+        use self::HopDataRealm::*;
+
+        match v {
+            0 => Bitcoin,
+            _ => panic!("unknown hop realm"),
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -67,11 +78,11 @@ impl Serialize for HopData {
         use serde::ser::SerializeTuple;
 
         let mut tuple = serializer.serialize_tuple(5)?;
-        tuple.serialize_element(&self.realm)?;
+        tuple.serialize_element(&(self.realm as u8))?;
         tuple.serialize_element(&self.next_address)?;
         tuple.serialize_element(&self.forward_amount)?;
         tuple.serialize_element(&self.outgoing_cltv)?;
-        tuple.serialize_element(&[0; Self::PAD_SIZE])?;
+        tuple.serialize_element(&[0u8; Self::PAD_SIZE])?;
         tuple.end()
     }
 }
@@ -98,7 +109,7 @@ impl<'de> Deserialize<'de> for HopData {
             where
                 A: SeqAccess<'de>,
             {
-                let realm = seq
+                let realm: u8 = seq
                     .next_element()?
                     .ok_or(Error::custom("expecting header byte, 0 for bitcoin"))?;
                 let next_address = seq
@@ -113,7 +124,7 @@ impl<'de> Deserialize<'de> for HopData {
                 ))?;
 
                 Ok(HopData {
-                    realm: realm,
+                    realm: realm.into(),
                     next_address: next_address,
                     forward_amount: forward_amount,
                     outgoing_cltv: outgoing_cltv,
