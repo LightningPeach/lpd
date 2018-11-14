@@ -37,7 +37,7 @@ pub struct OnionRoute {
     associated_data: Vec<u8>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct OnionPacket {
     version: u8,
     ephemeral_key: WirePublicKey,
@@ -101,22 +101,21 @@ impl OnionRoute {
             let initial = (
                 Vec::new(),
                 session_key.clone(),
-                PublicKey::from_secret_key(&context, session_key)?,
-                Hash256::from([0; 32]),
+                PublicKey::from_secret_key(context, session_key)?,
             );
 
             let mut payment_path = payment_path;
             payment_path
-                .try_fold(initial, |(mut v, secret, public, blinding), path_point| {
+                .try_fold(initial, |(mut v, secret, public), path_point| {
                     let temp = mul_pk(path_point, &secret)?;
                     let result = hash(&temp.serialize()[..]);
-                    let secret = mul_sk(&secret, &hash_to_sk(&blinding)?)?;
                     let blinding = hash_s(&[&public.serialize()[..], result.as_ref()][..]);
+                    let secret = mul_sk(&secret, &hash_to_sk(&blinding)?)?;
                     let public = mul_pk(&base_point, &secret)?;
 
                     v.push(result);
-                    Ok((v, secret, public, blinding))
-                }).map(|(v, _, _, _)| v)
+                    Ok((v, secret, public))
+                }).map(|(v, _, _)| v)
         }
 
         fn generate_header_padding(
