@@ -1,18 +1,17 @@
 use super::hop::{Hop, HopBytes};
+use super::crypto::{HmacData, KeyType};
 
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
 use wire::PublicKey as WirePublicKey;
 use serde_derive::{Serialize, Deserialize};
-use chacha::{ChaCha, KeyStream};
 use common_types::Hash256;
-use std::ops::BitXorAssign;
 
 /// `NUM_MAX_HOPS` is the the maximum path length. This should be set to an
 /// estimate of the upper limit of the diameter of the node graph.
 pub const NUM_MAX_HOPS: usize = 20;
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum OnionPacketVersion {
     _0 = 0,
 }
@@ -63,7 +62,7 @@ impl OnionRoute {
         }
     }
 
-    /// Compute the packet
+    /// Generate the packet
     pub fn packet(self) -> Result<OnionPacket, EcdsaError> {
         use secp256k1::Secp256k1;
         use wire::BinarySD;
@@ -94,6 +93,7 @@ impl OnionRoute {
 
             // secp256k1 base point G
             let base_point = {
+                // the string represents valid secp256k1 element, so both unwrap calls are safe
                 let s = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
                 PublicKey::from_slice(context, hex::decode(s).unwrap().as_slice()).unwrap()
             };
@@ -182,6 +182,7 @@ impl OnionRoute {
                 }
 
                 let mut data = Vec::with_capacity(HopBytes::SIZE * NUM_MAX_HOPS);
+                // it is believed that such serialization won't fail
                 BinarySD::serialize(&mut data, &hops_bytes).unwrap();
                 hmac = KeyType::Mu.hmac(
                     hop_shared_secrets[index],
@@ -195,70 +196,5 @@ impl OnionRoute {
             routing_info: hops_bytes,
             hmac: hmac,
         })
-    }
-}
-
-enum KeyType {
-    Rho,
-    Mu,
-}
-
-impl KeyType {
-    // `KEY_LEN` is the length of the keys used to generate cipher streams and
-    // encrypt payloads. Since we use SHA256 to generate the keys, the
-    // maximum length currently is 32 bytes.
-    const KEY_LEN: usize = 32;
-
-    fn key(&self, shared_key: Hash256) -> [u8; Self::KEY_LEN] {
-        use sha2::Sha256;
-        use hmac::{Hmac, Mac};
-        use self::KeyType::*;
-
-        let key_type = match self {
-            &Rho => "rho",
-            &Mu => "mu",
-        };
-
-        let mut mac = Hmac::<Sha256>::new_varkey(key_type.as_bytes()).unwrap();
-        mac.input(shared_key.as_ref());
-        let result = mac.result().code();
-        let mut array = [0; Self::KEY_LEN];
-        array.copy_from_slice(result.as_slice());
-        array
-    }
-
-    fn chacha(&self, shared_key: Hash256) -> ChaCha {
-        ChaCha::new_chacha20(&self.key(shared_key), &[0u8; 8])
-    }
-
-    fn hmac(&self, shared_key: Hash256, msg: &[&[u8]]) -> HmacData {
-        use sha2::Sha256;
-        use hmac::{Hmac, Mac};
-
-        let key = self.key(shared_key);
-        let mac = Hmac::<Sha256>::new_varkey(&key).unwrap();
-        let mut mac = msg.iter().fold(mac, |mut mac, &x| {
-            mac.input(x);
-            mac
-        });
-        let result = mac.result().code();
-        let mut hmac = HmacData::default();
-        hmac.data.copy_from_slice(result.as_slice());
-        hmac
-    }
-}
-
-#[derive(Copy, Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct HmacData {
-    data: [u8; 32],
-}
-
-impl HmacData {
-    pub const SIZE: usize = 32;
-}
-
-impl<'a> BitXorAssign<&'a mut ChaCha> for HmacData {
-    fn bitxor_assign(&mut self, rhs: &'a mut ChaCha) {
-        rhs.xor_read(&mut self.data[..]).unwrap()
     }
 }

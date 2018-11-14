@@ -1,4 +1,4 @@
-use super::route::HmacData;
+use super::crypto::HmacData;
 use wire::{Satoshi, ShortChannelId};
 use secp256k1::PublicKey;
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
@@ -24,7 +24,7 @@ impl Hop {
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum HopDataRealm {
     Bitcoin = 0,
 }
@@ -164,6 +164,7 @@ impl HopBytes {
             hmac: hmac,
         };
         let mut buffer = [0; HopData::SIZE];
+        // it is believed that such serialization won't fail
         BinarySD::serialize(&mut buffer[..], &hop.data).unwrap();
         r.data.0 = buffer[0];
         r.data.1.copy_from_slice(&buffer[1..]);

@@ -10,9 +10,12 @@ extern crate sha2;
 extern crate serde;
 extern crate serde_derive;
 
+mod crypto;
 mod hop;
 mod route;
+
+#[cfg(test)]
 mod tests;
 
 pub use self::route::{OnionPacketVersion, OnionRoute, OnionPacket};
-pub use self::hop::{Hop, HopBytes, HopData, HopDataRealm};
+pub use self::hop::{Hop, HopData, HopDataRealm};
