@@ -136,9 +136,10 @@ impl<'de> Deserialize<'de> for HopData {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct HopBytes {
-    data: [u8; HopData::SIZE],
+    // workaround to allow derive many traits,
+    data: (u8, [u8; HopData::SIZE - 1]),
     hmac: HmacData,
 }
 
@@ -150,7 +151,7 @@ impl HopBytes {
     /// it used only to generate an obfuscating padding
     pub fn zero() -> Self {
         HopBytes {
-            data: [0; HopData::SIZE],
+            data: (0, [0; HopData::SIZE - 1]),
             hmac: HmacData::default(),
         }
     }
@@ -159,32 +160,25 @@ impl HopBytes {
         use wire::BinarySD;
 
         let mut r = HopBytes {
-            data: [0; HopData::SIZE],
+            data: (0, [0; HopData::SIZE - 1]),
             hmac: hmac,
         };
-        BinarySD::serialize(&mut r.data[..], &hop.data).unwrap();
+        let mut buffer = [0; HopData::SIZE];
+        BinarySD::serialize(&mut buffer[..], &hop.data).unwrap();
+        r.data.0 = buffer[0];
+        r.data.1.copy_from_slice(&buffer[1..]);
         r
-    }
-}
-
-impl Serialize for HopBytes {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        use serde::ser::SerializeTuple;
-
-        let mut tuple = serializer.serialize_tuple(3)?;
-        tuple.serialize_element(&self.data[0])?;
-        tuple.serialize_element(&self.data[1..])?;
-        tuple.serialize_element(&self.hmac)?;
-        tuple.end()
     }
 }
 
 impl<'a> BitXorAssign<&'a mut ChaCha> for HopBytes {
     fn bitxor_assign(&mut self, rhs: &'a mut ChaCha) {
-        rhs.xor_read(&mut self.data[..]).unwrap();
+        let mut buffer = [0; HopData::SIZE];
+        buffer[0] = self.data.0;
+        buffer[1..].copy_from_slice(&self.data.1[..]);
+        rhs.xor_read(&mut buffer[..]).unwrap();
+        self.data.0 = buffer[0];
+        self.data.1.copy_from_slice(&buffer[1..]);
         self.hmac ^= rhs;
     }
 }
