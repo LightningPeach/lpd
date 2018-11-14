@@ -3,7 +3,8 @@ use super::hop::{Hop, HopBytes};
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
 use wire::PublicKey as WirePublicKey;
 use serde_derive::Serialize;
-use smallvec::SmallVec;
+use chacha::{ChaCha, KeyStream};
+use common_types::Hash256;
 use std::ops::BitXorAssign;
 
 /// `NUM_MAX_HOPS` is the the maximum path length. This should be set to an
@@ -29,7 +30,7 @@ pub struct OnionRoute {
 pub struct OnionPacket {
     version: OnionPacketVersion,
     ephemeral_key: WirePublicKey,
-    routing_info: SmallVec<[HopBytes; NUM_MAX_HOPS]>,
+    routing_info: [HopBytes; NUM_MAX_HOPS],
     hmac: HmacData,
 }
 
@@ -39,8 +40,10 @@ impl OnionRoute {
         version: OnionPacketVersion,
         session_key: SecretKey,
         route: Vec<Hop>,
-        associated_data: Vec<u8>
+        associated_data: Vec<u8>,
     ) -> Self {
+        assert!(route.len() <= NUM_MAX_HOPS);
+
         OnionRoute {
             version: version,
             session_key: session_key,
@@ -52,17 +55,14 @@ impl OnionRoute {
     /// Compute the packet
     pub fn packet(self) -> Result<OnionPacket, EcdsaError> {
         use secp256k1::Secp256k1;
-        use common_types::Hash256;
-        use hmac::{Hmac, Mac};
-        use chacha::{ChaCha, KeyStream};
-        use std::default::Default;
+        use wire::BinarySD;
 
         fn generate_shared_secrets<'a, I>(
             payment_path: I,
             session_key: &SecretKey,
         ) -> Result<Vec<Hash256>, EcdsaError>
         where
-            I: Iterator<Item=&'a PublicKey>,
+            I: Iterator<Item = &'a PublicKey>,
         {
             use secp256k1::Secp256k1;
 
@@ -111,52 +111,26 @@ impl OnionRoute {
                 }).map(|(v, _, _, _)| v)
         }
 
-        // `KEY_LEN` is the length of the keys used to generate cipher streams and
-        // encrypt payloads. Since we use SHA256 to generate the keys, the
-        // maximum length currently is 32 bytes.
-        const KEY_LEN: usize = 32;
-
-        fn generate_header_padding(key_type: &str, shared_secrets: &[Hash256]) -> Vec<u8> {
+        fn generate_header_padding(
+            key_type: &KeyType,
+            shared_secrets: &[Hash256],
+        ) -> Vec<HopBytes> {
             let num = shared_secrets.len();
-            let mut filler = vec![0; (num - 1) * HopBytes::SIZE];
+            let mut filler = vec![HopBytes::zero(); num - 1];
 
             for i in 1..num {
-                let stream_key = generate_key(key_type, shared_secrets[i - 1]);
-                let stream_bytes = generate_cipher_stream(stream_key, NUM_STREAM_BYTES);
+                use chacha::SeekableKeyStream;
 
-                for j in 0..(i * HopBytes::SIZE) {
-                    filler[j] ^= stream_bytes[(NUM_STREAM_BYTES - i * HopBytes::SIZE) + j];
+                let mut stream = key_type.chacha(shared_secrets[i - 1]);
+                stream
+                    .seek_to(((NUM_MAX_HOPS - i + 1) * HopBytes::SIZE) as _)
+                    .unwrap();
+                for j in 0..i {
+                    filler[j] ^= &mut stream;
                 }
             }
 
             filler
-        }
-
-        // generate_key generates a new key for usage in Sphinx packet
-        // construction/processing based off of the denoted keyType. Within Sphinx
-        // various keys are used within the same onion packet for padding generation,
-        // MAC generation, and encryption/decryption.
-        fn generate_key(key_type: &str, shared_key: Hash256) -> [u8; KEY_LEN] {
-            use sha2::Sha256;
-
-            let mut mac = Hmac::<Sha256>::new_varkey(key_type.as_bytes()).unwrap();
-            mac.input(shared_key.as_ref());
-            let result = mac.result().code();
-
-            let mut array: [u8; 32] = [0; 32];
-            array.copy_from_slice(result.as_slice());
-            array
-        }
-
-        // generate_cipher_stream generates a stream of cryptographic pseudo-random bytes
-        // intended to be used to encrypt a message using a one-time-pad like
-        // construction.
-        fn generate_cipher_stream(key: [u8; KEY_LEN], num_bytes: usize) -> Vec<u8> {
-            let mut output = vec![0; num_bytes];
-            ChaCha::new_chacha20(&key, &[0u8; 8])
-                .xor_read(output.as_mut_slice())
-                .unwrap();
-            output
         }
 
         let context = Secp256k1::new();
@@ -165,34 +139,111 @@ impl OnionRoute {
         let (filler, hop_shared_secrets) = {
             let i = self.route.iter().map(|hop| hop.id());
             let hop_shared_secrets = generate_shared_secrets(i, &self.session_key)?;
-            (generate_header_padding("rho", hop_shared_secrets.as_slice()), hop_shared_secrets)
+            (
+                generate_header_padding(&KeyType::Rho, hop_shared_secrets.as_slice()),
+                hop_shared_secrets,
+            )
         };
 
         let mut hmac = HmacData::default();
-        let hops_bytes = self.route.into_iter().enumerate().rev().map(|(i, hop)| {
-            let rho_key = generate_key("rho", hop_shared_secrets[i]);
-            let mu_key = generate_key("mu", hop_shared_secrets[i]);
-            let stream_bytes = generate_cipher_stream(rho_key, NUM_STREAM_BYTES);
+        let mut hops_bytes = [HopBytes::zero(); NUM_MAX_HOPS];
 
-            HopBytes::new(hop, hmac.clone())
-        }).rev().collect::<SmallVec<_>>();
+        // decompose self
+        let (version, route, associated_data) = (self.version, self.route, self.associated_data);
+
+        route
+            .into_iter()
+            .enumerate()
+            .rev()
+            .for_each(|(index, hop)| {
+                let mut rho_stream = KeyType::Rho.chacha(hop_shared_secrets[index]);
+
+                // shift right
+                for i in (1..NUM_MAX_HOPS).rev() {
+                    hops_bytes[i] = hops_bytes[i - 1];
+                }
+                hops_bytes[0] = HopBytes::new(hop, hmac.clone());
+
+                // xor with the rho stream
+                hops_bytes.iter_mut().for_each(|x| *x ^= &mut rho_stream);
+
+                // for first iteration
+                if index == filler.len() {
+                    for i in 0..filler.len() {
+                        hops_bytes[NUM_MAX_HOPS - filler.len() + i] = filler[i];
+                    }
+                }
+
+                let mut data = Vec::with_capacity(HopBytes::SIZE * NUM_MAX_HOPS);
+                BinarySD::serialize(&mut data, &hops_bytes).unwrap();
+                hmac = KeyType::Mu.hmac(
+                    hop_shared_secrets[index],
+                    &[data.as_slice(), associated_data.as_slice()],
+                );
+            });
 
         Ok(OnionPacket {
-            version: OnionPacketVersion::_0,
+            version: version,
             ephemeral_key: WirePublicKey::from(public_key),
             routing_info: hops_bytes,
-            hmac: HmacData::default(),
+            hmac: hmac,
         })
     }
 }
 
-// `NUM_STREAM_BYTES` is the number of bytes produced by our CSPRG for the
-// key stream implementing our stream cipher to encrypt/decrypt the mix
-// header. The last `HOP_DATA_SIZE` bytes are only used in order to
-// generate/check the MAC over the header.
-const NUM_STREAM_BYTES: usize = (NUM_MAX_HOPS + 1) * HopBytes::SIZE;
+enum KeyType {
+    Rho,
+    Mu,
+    Um,
+}
 
-#[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
+impl KeyType {
+    // `KEY_LEN` is the length of the keys used to generate cipher streams and
+    // encrypt payloads. Since we use SHA256 to generate the keys, the
+    // maximum length currently is 32 bytes.
+    const KEY_LEN: usize = 32;
+
+    fn key(&self, shared_key: Hash256) -> [u8; Self::KEY_LEN] {
+        use sha2::Sha256;
+        use hmac::{Hmac, Mac};
+        use self::KeyType::*;
+
+        let key_type = match self {
+            &Rho => "rho",
+            &Mu => "mu",
+            &Um => "um",
+        };
+
+        let mut mac = Hmac::<Sha256>::new_varkey(key_type.as_bytes()).unwrap();
+        mac.input(shared_key.as_ref());
+        let result = mac.result().code();
+        let mut array = [0; Self::KEY_LEN];
+        array.copy_from_slice(result.as_slice());
+        array
+    }
+
+    fn chacha(&self, shared_key: Hash256) -> ChaCha {
+        ChaCha::new_chacha20(&self.key(shared_key), &[0u8; 8])
+    }
+
+    fn hmac(&self, shared_key: Hash256, msg: &[&[u8]]) -> HmacData {
+        use sha2::Sha256;
+        use hmac::{Hmac, Mac};
+
+        let key = self.key(shared_key);
+        let mac = Hmac::<Sha256>::new_varkey(&key).unwrap();
+        let mut mac = msg.iter().fold(mac, |mut mac, &x| {
+            mac.input(x);
+            mac
+        });
+        let result = mac.result().code();
+        let mut hmac = HmacData::default();
+        hmac.data.copy_from_slice(result.as_slice());
+        hmac
+    }
+}
+
+#[derive(Copy, Clone, Default, Debug, Eq, PartialEq, Serialize)]
 pub struct HmacData {
     data: [u8; 32],
 }
@@ -201,10 +252,8 @@ impl HmacData {
     pub const SIZE: usize = 32;
 }
 
-impl BitXorAssign for HmacData {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        for i in 0..HmacData::SIZE {
-            self.data[i] ^= rhs.data[i];
-        }
+impl<'a> BitXorAssign<&'a mut ChaCha> for HmacData {
+    fn bitxor_assign(&mut self, rhs: &'a mut ChaCha) {
+        rhs.xor_read(&mut self.data[..]).unwrap()
     }
 }

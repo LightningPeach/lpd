@@ -3,6 +3,7 @@ use wire::{Satoshi, ShortChannelId};
 use secp256k1::PublicKey;
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use serde_derive::{Serialize, Deserialize};
+use chacha::{ChaCha, KeyStream};
 use std::ops::BitXorAssign;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -14,10 +15,7 @@ pub struct Hop {
 impl Hop {
     /// Dummy constructor
     pub fn new(id: PublicKey, data: HopData) -> Self {
-        Hop {
-            id: id,
-            data: data,
-        }
+        Hop { id: id, data: data }
     }
 
     pub fn id(&self) -> &PublicKey {
@@ -49,7 +47,7 @@ impl HopData {
         realm: HopDataRealm,
         next_address: ShortChannelId,
         forward_amount: Satoshi,
-        outgoing_cltv: u32
+        outgoing_cltv: u32,
     ) -> Self {
         HopData {
             realm: realm,
@@ -63,8 +61,8 @@ impl HopData {
 // we could not derive such implementation because padding
 impl Serialize for HopData {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         use serde::ser::SerializeTuple;
 
@@ -81,8 +79,8 @@ impl Serialize for HopData {
 // we could not derive such implementation because padding
 impl<'de> Deserialize<'de> for HopData {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         use serde::de::{Visitor, SeqAccess, Error};
         use std::fmt;
@@ -97,8 +95,8 @@ impl<'de> Deserialize<'de> for HopData {
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                where
-                    A: SeqAccess<'de>,
+            where
+                A: SeqAccess<'de>,
             {
                 let realm = seq
                     .next_element()?
@@ -110,10 +108,9 @@ impl<'de> Deserialize<'de> for HopData {
                     .next_element()?
                     .ok_or(Error::custom("expecting satoshi amount"))?;
                 let outgoing_cltv = seq.next_element()?.ok_or(Error::custom("expecting cltv"))?;
-                let _: [u8; HopData::PAD_SIZE] = seq.next_element()?.ok_or(Error::custom(format!(
-                    "expecting padding {} bytes",
-                    HopData::PAD_SIZE
-                )))?;
+                let _: [u8; HopData::PAD_SIZE] = seq.next_element()?.ok_or(Error::custom(
+                    format!("expecting padding {} bytes", HopData::PAD_SIZE),
+                ))?;
 
                 Ok(HopData {
                     realm: realm,
@@ -128,6 +125,7 @@ impl<'de> Deserialize<'de> for HopData {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct HopBytes {
     data: [u8; HopData::SIZE],
     hmac: HmacData,
@@ -135,6 +133,16 @@ pub struct HopBytes {
 
 impl HopBytes {
     pub const SIZE: usize = HopData::SIZE + HmacData::SIZE;
+
+    /// let's call it `zero` instead of `default` due to its semantic,
+    /// such instance is not fully valid,
+    /// it used only to generate an obfuscating padding
+    pub fn zero() -> Self {
+        HopBytes {
+            data: [0; HopData::SIZE],
+            hmac: HmacData::default(),
+        }
+    }
 
     pub fn new(hop: Hop, hmac: HmacData) -> Self {
         use wire::BinarySD;
@@ -150,8 +158,8 @@ impl HopBytes {
 
 impl Serialize for HopBytes {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         use serde::ser::SerializeTuple;
 
@@ -163,11 +171,9 @@ impl Serialize for HopBytes {
     }
 }
 
-impl BitXorAssign for HopBytes {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        for i in 0..HopData::SIZE {
-            self.data[i] ^= rhs.data[i];
-        }
-        self.hmac ^= rhs.hmac;
+impl<'a> BitXorAssign<&'a mut ChaCha> for HopBytes {
+    fn bitxor_assign(&mut self, rhs: &'a mut ChaCha) {
+        rhs.xor_read(&mut self.data[..]).unwrap();
+        self.hmac ^= rhs;
     }
 }
