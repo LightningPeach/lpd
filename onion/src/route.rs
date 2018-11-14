@@ -69,27 +69,24 @@ impl OnionRoute {
         use wire::BinarySD;
 
         fn generate_shared_secrets<'a, I>(
+            context: &Secp256k1,
             payment_path: I,
             session_key: &SecretKey,
         ) -> Result<Vec<Hash256>, EcdsaError>
         where
             I: Iterator<Item = &'a PublicKey>,
         {
-            use secp256k1::Secp256k1;
-
-            let context = Secp256k1::new();
-
             // functions
             // `mul_pk` and `mul_sk` obviously performs the multiplication in the elliptic curve group
             // `hash` or `hash_s` computes a sha256 hash from a given slice or slices
             // `hash_to_sk` obviously casts a sha256 hash into a secret key
             let mul_pk = |x: &PublicKey, sk: &SecretKey| {
                 let mut temp = x.clone();
-                temp.mul_assign(&context, sk).map(|()| temp)
+                temp.mul_assign(context, sk).map(|()| temp)
             };
             let mul_sk = |x: &SecretKey, sk: &SecretKey| {
                 let mut temp: SecretKey = x.clone();
-                temp.mul_assign(&context, sk).map(|()| temp)
+                temp.mul_assign(context, sk).map(|()| temp)
             };
             let hash = |x: &[u8]| -> Hash256 { Hash256::from(x) };
             let hash_s = |xs: &[&[u8]]| -> Hash256 { Hash256::from(xs) };
@@ -98,7 +95,7 @@ impl OnionRoute {
             // secp256k1 base point G
             let base_point = {
                 let s = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-                PublicKey::from_slice(&context, hex::decode(s).unwrap().as_slice()).unwrap()
+                PublicKey::from_slice(context, hex::decode(s).unwrap().as_slice()).unwrap()
             };
 
             let initial = (
@@ -149,7 +146,7 @@ impl OnionRoute {
 
         let (filler, hop_shared_secrets) = {
             let i = self.route.iter().map(|hop| hop.id());
-            let hop_shared_secrets = generate_shared_secrets(i, &self.session_key)?;
+            let hop_shared_secrets = generate_shared_secrets(&context, i, &self.session_key)?;
             (
                 generate_header_padding(&KeyType::Rho, hop_shared_secrets.as_slice()),
                 hop_shared_secrets,
