@@ -12,6 +12,7 @@ extern crate serde_derive;
 
 mod hop;
 mod route;
+mod tests;
 
 pub use self::route::{OnionPacketVersion, OnionRoute, OnionPacket};
 pub use self::hop::{Hop, HopBytes, HopData, HopDataRealm};
