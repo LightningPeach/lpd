@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![allow(non_shorthand_field_patterns)]
 
 extern crate secp256k1;
 

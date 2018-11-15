@@ -42,6 +42,7 @@ pub enum OnionPacketProcessingError {
     WrongHmac,
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum Processed {
     ExitNode,
     MoreHops {
