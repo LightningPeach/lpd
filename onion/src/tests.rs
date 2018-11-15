@@ -182,3 +182,69 @@ fn test_sphinx_correctness() {
 
     assert_eq!(none, None);
 }
+
+#[test]
+fn test_sphinx_single_hop() {
+    // We'd like to test the proper behavior of the correctness of onion
+    // packet processing for "single-hop" payments which bare a full onion
+    // packet.
+    let (keys, _, fwd_msg) = new_test_route(1);
+
+    // Simulating a direct single-hop payment, send the sphinx packet to
+    // the destination node, making it process the packet fully.
+    let processed = fwd_msg
+        .process(vec![], 1, keys[0].as_ref())
+        .expect("unable to process sphinx packet");
+
+    // The destination node should detect that the packet is destined for
+    // itself.
+    assert_eq!(processed, Processed::ExitNode);
+}
+
+#[test]
+#[should_panic]
+fn test_sphinx_assoc_data() {
+    // We want to make sure that the associated data is considered in the
+    // HMAC creation
+    let (keys, _, fwd_msg) = new_test_route(5);
+
+    let processed = fwd_msg
+        .process("something else".as_bytes().to_vec(), 1, keys[0].as_ref())
+        .unwrap();
+    match processed {
+        Processed::ExitNode => (),
+        Processed::MoreHops {
+            next: next,
+            forwarding_instructions: _,
+        } => {
+            let _ = next.validate().unwrap();
+        }
+    };
+}
+
+#[test]
+fn test_sphinx_serde() {
+    // Create some test data with a randomly populated, yet valid onion
+    // forwarding message.
+    let (_, _, fwd_msg) = new_test_route(5);
+
+    // Encode the created onion packet into an empty buffer. This should
+    // succeed without any errors.
+    let mut buffer = Vec::new();
+    BinarySD::serialize(&mut buffer, &fwd_msg).expect("unable to serialize message");
+
+    // Now decode the bytes encoded above. Again, this should succeed
+    // without any errors.
+    let new_fwd_msg: OnionPacket =
+        BinarySD::deserialize(buffer.as_slice()).expect("unable to deserialize message");
+    let new_fwd_msg = new_fwd_msg
+        .validate()
+        .expect("deserialized message is invalid");
+
+    // The two forwarding messages should now be identical.
+    assert_eq!(
+        fwd_msg, new_fwd_msg,
+        "forwarding messages don't match, {:?} vs {:?}",
+        fwd_msg, new_fwd_msg
+    );
+}
