@@ -12,12 +12,12 @@ extern crate serde_derive;
 
 mod crypto;
 mod hop;
-mod route;
 mod packet;
+mod route;
 
 #[cfg(test)]
 mod tests;
 
 pub use self::route::{OnionPacketVersion, OnionRoute};
-pub use self::packet::{OnionPacket, Processed};
+pub use self::packet::{OnionPacket, ValidOnionPacket, Processed};
 pub use self::hop::{Hop, HopData, HopDataRealm};

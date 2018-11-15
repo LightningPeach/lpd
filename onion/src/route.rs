@@ -1,6 +1,6 @@
 use super::hop::{Hop, HopBytes};
 use super::crypto::{HmacData, KeyType};
-use super::packet::OnionPacket;
+use super::packet::{OnionPacket, ValidOnionPacket};
 
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
 use wire::PublicKey as WirePublicKey;
@@ -51,7 +51,7 @@ impl OnionRoute {
     }
 
     /// Generate the packet
-    pub fn packet(self) -> Result<OnionPacket, EcdsaError> {
+    pub fn packet(self) -> Result<ValidOnionPacket, EcdsaError> {
         use secp256k1::Secp256k1;
         use wire::BinarySD;
 
@@ -178,11 +178,11 @@ impl OnionRoute {
                 );
             });
 
-        Ok(OnionPacket {
+        Ok(ValidOnionPacket(OnionPacket {
             version: version as _,
             ephemeral_key: WirePublicKey::from(public_key),
             routing_info: hops_bytes,
             hmac: hmac,
-        })
+        }))
     }
 }
