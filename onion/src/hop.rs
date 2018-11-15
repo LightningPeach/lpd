@@ -170,6 +170,17 @@ impl HopBytes {
         r.data.1.copy_from_slice(&buffer[1..]);
         r
     }
+
+    pub fn destruct(self) -> (HopData, HmacData) {
+        use wire::BinarySD;
+
+        let (f, d, hmac) = (self.data.0, self.data.1, self.hmac);
+        let mut buffer = [0; HopData::SIZE];
+        buffer[0] = f;
+        buffer[1..].copy_from_slice(&d[..]);
+
+        (BinarySD::deserialize(&buffer[..]).unwrap(), hmac)
+    }
 }
 
 impl<'a> BitXorAssign<&'a mut ChaCha> for HopBytes {

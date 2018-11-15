@@ -60,6 +60,10 @@ pub struct HmacData {
 
 impl HmacData {
     pub const SIZE: usize = 32;
+
+    pub fn is_zero(&self) -> bool {
+        self.data == [0; 32]
+    }
 }
 
 impl<'a> BitXorAssign<&'a mut ChaCha> for HmacData {
