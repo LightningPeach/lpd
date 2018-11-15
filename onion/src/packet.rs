@@ -64,7 +64,8 @@ impl ValidOnionPacket {
 
         let ValidOnionPacket(s) = self;
 
-        let (version, ephemeral_key, routing_info, hmac) = (s.version, s.ephemeral_key, s.routing_info, s.hmac);
+        let (version, ephemeral_key, routing_info, hmac) =
+            (s.version, s.ephemeral_key, s.routing_info, s.hmac);
 
         // TODO(vlad): reuse this code
         let mul_pk = |x: &PublicKey, sk: &SecretKey| {
@@ -96,11 +97,14 @@ impl ValidOnionPacket {
             let mut rho_stream = KeyType::Rho.chacha(shared_secret);
             let mut routing_info_extended = routing_info.to_vec();
             routing_info_extended.push(HopBytes::zero());
-            routing_info_extended.iter_mut().for_each(|x| { *x ^= &mut rho_stream });
+            routing_info_extended
+                .iter_mut()
+                .for_each(|x| *x ^= &mut rho_stream);
 
             let dh_key = ephemeral_key.as_ref();
             let blinding = hash_s(&[&dh_key.serialize()[..], shared_secret.as_ref()][..]);
-            let next_dh_key = mul_pk(&dh_key, &hash_to_sk(&blinding).map_err(EcdsaError)?).map_err(EcdsaError)?;
+            let next_dh_key =
+                mul_pk(&dh_key, &hash_to_sk(&blinding).map_err(EcdsaError)?).map_err(EcdsaError)?;
 
             // cut first
             let info = routing_info_extended.remove(0);
