@@ -1,4 +1,4 @@
-use super::{OnionPacketVersion, OnionRoute, Hop, HopData, HopDataRealm};
+use super::{OnionPacketVersion, OnionPacket, OnionRoute, Hop, HopData, HopDataRealm};
 
 // BOLT4_PUB_KEYS are the public keys of the hops used in the route.
 const BOLT4_PUB_KEYS: [&str; 5] = [
@@ -105,8 +105,10 @@ fn test_bolt4_packet() {
     );
 
     let packet = route.packet().unwrap();
-    let reference_packet = hex::decode(BOLT4_FINAL_PACKET_HEX.to_owned())
+    let reference_packet_bytes = hex::decode(BOLT4_FINAL_PACKET_HEX.to_owned())
         .expect("unable to decode BOLT 4 final onion packet from hex");
-    let reference_packet = BinarySD::deserialize(reference_packet.as_slice()).unwrap();
-    assert_eq!(packet, reference_packet);
+    let reference_packet: OnionPacket =
+        BinarySD::deserialize(reference_packet_bytes.as_slice()).unwrap();
+    let valid_reference_packet = reference_packet.validate().unwrap();
+    assert_eq!(packet, valid_reference_packet);
 }
