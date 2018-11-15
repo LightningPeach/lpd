@@ -1,14 +1,10 @@
 use super::hop::{Hop, HopBytes};
 use super::crypto::{HmacData, KeyType};
+use super::packet::OnionPacket;
 
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
 use wire::PublicKey as WirePublicKey;
-use serde_derive::{Serialize, Deserialize};
 use common_types::Hash256;
-
-/// `NUM_MAX_HOPS` is the the maximum path length. This should be set to an
-/// estimate of the upper limit of the diameter of the node graph.
-pub const NUM_MAX_HOPS: usize = 20;
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -36,14 +32,6 @@ pub struct OnionRoute {
     associated_data: Vec<u8>,
 }
 
-#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct OnionPacket {
-    version: u8,
-    ephemeral_key: WirePublicKey,
-    routing_info: [HopBytes; NUM_MAX_HOPS],
-    hmac: HmacData,
-}
-
 impl OnionRoute {
     /// Dummy constructor, `associated_data` could be empty
     pub fn new(
@@ -52,7 +40,7 @@ impl OnionRoute {
         route: Vec<Hop>,
         associated_data: Vec<u8>,
     ) -> Self {
-        assert!(route.len() <= NUM_MAX_HOPS);
+        assert!(route.len() <= OnionPacket::NUM_MAX_HOPS);
 
         OnionRoute {
             version: version,
@@ -130,7 +118,7 @@ impl OnionRoute {
 
                 let mut stream = key_type.chacha(shared_secrets[i - 1]);
                 stream
-                    .seek_to(((NUM_MAX_HOPS - i + 1) * HopBytes::SIZE) as _)
+                    .seek_to(((OnionPacket::NUM_MAX_HOPS - i + 1) * HopBytes::SIZE) as _)
                     .unwrap();
                 for j in 0..i {
                     filler[j] ^= &mut stream;
@@ -153,7 +141,7 @@ impl OnionRoute {
         };
 
         let mut hmac = HmacData::default();
-        let mut hops_bytes = [HopBytes::zero(); NUM_MAX_HOPS];
+        let mut hops_bytes = [HopBytes::zero(); OnionPacket::NUM_MAX_HOPS];
 
         // decompose self
         let (version, route, associated_data) = (self.version, self.route, self.associated_data);
@@ -166,7 +154,7 @@ impl OnionRoute {
                 let mut rho_stream = KeyType::Rho.chacha(hop_shared_secrets[index]);
 
                 // shift right
-                for i in (1..NUM_MAX_HOPS).rev() {
+                for i in (1..OnionPacket::NUM_MAX_HOPS).rev() {
                     hops_bytes[i] = hops_bytes[i - 1];
                 }
                 hops_bytes[0] = HopBytes::new(hop, hmac.clone());
@@ -177,11 +165,11 @@ impl OnionRoute {
                 // for first iteration
                 if index == filler.len() {
                     for i in 0..filler.len() {
-                        hops_bytes[NUM_MAX_HOPS - filler.len() + i] = filler[i];
+                        hops_bytes[OnionPacket::NUM_MAX_HOPS - filler.len() + i] = filler[i];
                     }
                 }
 
-                let mut data = Vec::with_capacity(HopBytes::SIZE * NUM_MAX_HOPS);
+                let mut data = Vec::with_capacity(HopBytes::SIZE * OnionPacket::NUM_MAX_HOPS);
                 // it is believed that such serialization won't fail
                 BinarySD::serialize(&mut data, &hops_bytes).unwrap();
                 hmac = KeyType::Mu.hmac(
