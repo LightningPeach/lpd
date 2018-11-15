@@ -36,6 +36,7 @@ impl OnionPacket {
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct ValidOnionPacket(pub(crate) OnionPacket);
 
+#[derive(Debug)]
 pub enum OnionPacketProcessingError {
     EcdsaError(EcdsaError),
     WrongHmac,

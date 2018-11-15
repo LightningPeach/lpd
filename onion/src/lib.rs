@@ -10,6 +10,9 @@ extern crate sha2;
 extern crate serde;
 extern crate serde_derive;
 
+#[cfg(test)]
+extern crate rand;
+
 mod crypto;
 mod hop;
 mod packet;
