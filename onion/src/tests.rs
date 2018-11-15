@@ -1,4 +1,6 @@
-use super::{OnionPacketVersion, OnionPacket, OnionRoute, Hop, HopData, HopDataRealm};
+use super::{OnionPacketVersion, OnionPacket, ValidOnionPacket, OnionRoute, Hop, HopData, HopDataRealm, Processed};
+use secp256k1::SecretKey;
+use wire::{BinarySD, Wrapper, Satoshi, SecretKey as WireSecretKey};
 
 // BOLT4_PUB_KEYS are the public keys of the hops used in the route.
 const BOLT4_PUB_KEYS: [&str; 5] = [
@@ -74,8 +76,7 @@ const BOLT4_FINAL_PACKET_HEX: &'static str = "\
 
 #[test]
 fn test_bolt4_packet() {
-    use secp256k1::{Secp256k1, PublicKey, SecretKey};
-    use wire::{BinarySD, Wrapper, Satoshi};
+    use secp256k1::{Secp256k1, PublicKey};
 
     let path = BOLT4_PUB_KEYS
         .iter()
@@ -111,4 +112,73 @@ fn test_bolt4_packet() {
         BinarySD::deserialize(reference_packet_bytes.as_slice()).unwrap();
     let valid_reference_packet = reference_packet.validate().unwrap();
     assert_eq!(packet, valid_reference_packet);
+}
+
+fn new_test_route(num_hops: usize) -> (Vec<WireSecretKey>, Vec<Hop>, ValidOnionPacket) {
+    use secp256k1::{Secp256k1, PublicKey};
+
+    let context = Secp256k1::new();
+
+    let keys = (0..num_hops)
+        .map(|_| rand::random())
+        .collect::<Vec<WireSecretKey>>();
+    let hops = keys
+        .iter()
+        .enumerate()
+        .map(|(i, secret_key)| {
+            let data = HopData::new(
+                HopDataRealm::Bitcoin,
+                BinarySD::deserialize(&[i as u8; 8][..]).unwrap(),
+                Satoshi::default().fmap(|_| i as _),
+                i as u32,
+            );
+            Hop::new(
+                PublicKey::from_secret_key(&context, secret_key.as_ref()).unwrap(),
+                data,
+            )
+        }).collect::<Vec<_>>();
+
+    // Generate a forwarding message to route to the final node via the
+    // generated intermediates nodes above. Destination should be Hash160,
+    // adding padding so parsing still works.
+    let route = OnionRoute::new(
+        OnionPacketVersion::_0,
+        SecretKey::from_slice(&Secp256k1::new(), BOLT4_SESSION_KEY.as_bytes()).unwrap(),
+        hops.clone(),
+        vec![],
+    );
+
+    (keys, hops, route.packet().unwrap())
+}
+
+#[test]
+fn test_sphinx_correctness() {
+    let (keys, hops, packet) = new_test_route(OnionPacket::NUM_MAX_HOPS);
+
+    // Now simulate the message propagating through the mix net eventually
+    // reaching the final destination.
+    let none = keys.iter().zip(hops).enumerate().fold(
+        Some(packet),
+        |maybe_packet, (i, (secret_key, expected_hop))| {
+            let packet = maybe_packet.unwrap();
+
+            println!("processing at hop: {}", i);
+            let processed = packet
+                .process(vec![], (i as u32) + 1, secret_key.as_ref())
+                .unwrap();
+
+            match processed {
+                Processed::ExitNode => None,
+                Processed::MoreHops {
+                    next: packet,
+                    forwarding_instructions: hop,
+                } => {
+                    assert_eq!(hop, expected_hop.data());
+                    Some(packet.validate().unwrap())
+                }
+            }
+        },
+    );
+
+    assert_eq!(none, None);
 }

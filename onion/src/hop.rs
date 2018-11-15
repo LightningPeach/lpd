@@ -6,7 +6,7 @@ use serde_derive::{Serialize, Deserialize};
 use chacha::{ChaCha, KeyStream};
 use std::ops::BitXorAssign;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Hop {
     id: PublicKey,
     data: HopData,
@@ -20,6 +20,11 @@ impl Hop {
 
     pub fn id(&self) -> &PublicKey {
         &self.id
+    }
+
+    #[cfg(test)]
+    pub fn data(self) -> HopData {
+        self.data
     }
 }
 
@@ -40,7 +45,7 @@ impl From<u8> for HopDataRealm {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct HopData {
     realm: HopDataRealm,
     next_address: ShortChannelId,
