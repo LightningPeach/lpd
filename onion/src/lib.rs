@@ -19,5 +19,5 @@ mod route;
 mod tests;
 
 pub use self::route::{OnionPacketVersion, OnionRoute};
-pub use self::packet::{OnionPacket, ValidOnionPacket, Processed};
+pub use self::packet::{OnionPacket, ValidOnionPacket, Processed, OnionPacketProcessingError};
 pub use self::hop::{Hop, HopData, HopDataRealm};
