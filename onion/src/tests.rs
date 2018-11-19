@@ -1,4 +1,4 @@
-use super::{OnionPacketVersion, OnionPacket, ValidOnionPacket, OnionRoute, Hop, HopData, HopDataRealm, Processed};
+use super::{OnionPacketVersion, OnionPacket, ValidOnionPacket, OnionRoute, Hop, HopData, BitcoinHopData, Processed};
 use secp256k1::SecretKey;
 use wire::{BinarySD, Wrapper, Satoshi, SecretKey as WireSecretKey};
 
@@ -89,12 +89,11 @@ fn test_bolt4_packet() {
 
             let next_address = BinarySD::deserialize(&[i as u8; 8][..]).unwrap();
 
-            let hop_data = HopData::new(
-                HopDataRealm::Bitcoin,
+            let hop_data = HopData::Bitcoin(BitcoinHopData::new(
                 next_address,
                 Satoshi::default().fmap(|_| i as _),
                 i as u32,
-            );
+            ));
             Hop::new(pk, hop_data)
         }).collect::<Vec<_>>();
 
@@ -126,12 +125,11 @@ fn new_test_route(num_hops: usize) -> (Vec<WireSecretKey>, Vec<Hop>, ValidOnionP
         .iter()
         .enumerate()
         .map(|(i, secret_key)| {
-            let data = HopData::new(
-                HopDataRealm::Bitcoin,
+            let data = HopData::Bitcoin(BitcoinHopData::new(
                 BinarySD::deserialize(&[i as u8; 8][..]).unwrap(),
                 Satoshi::default().fmap(|_| i as _),
                 i as u32,
-            );
+            ));
             Hop::new(
                 PublicKey::from_secret_key(&context, secret_key.as_ref()).unwrap(),
                 data,
