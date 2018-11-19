@@ -28,45 +28,28 @@ impl Hop {
     }
 }
 
-#[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum HopDataRealm {
-    Bitcoin = 0,
-}
-
-impl From<u8> for HopDataRealm {
-    fn from(v: u8) -> Self {
-        use self::HopDataRealm::*;
-
-        match v {
-            0 => Bitcoin,
-            _ => panic!("unknown hop realm"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct HopData {
-    realm: HopDataRealm,
-    next_address: ShortChannelId,
-    forward_amount: Satoshi,
-    // TODO: create type for the value
-    outgoing_cltv: u32,
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum HopData {
+    Bitcoin(BitcoinHopData),
+    // add more hop types here, it should implement `Serialize` and `Deserialize`,
+    // binary representation should fit in `HopData::SIZE`
 }
 
 impl HopData {
-    const PAD_SIZE: usize = 12;
     pub const SIZE: usize = 33;
+}
 
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct BitcoinHopData {
+    next_address: ShortChannelId,
+    forward_amount: Satoshi,
+    outgoing_cltv: u32,
+}
+
+impl BitcoinHopData {
     /// Dummy constructor
-    pub fn new(
-        realm: HopDataRealm,
-        next_address: ShortChannelId,
-        forward_amount: Satoshi,
-        outgoing_cltv: u32,
-    ) -> Self {
-        HopData {
-            realm: realm,
+    pub fn new(next_address: ShortChannelId, forward_amount: Satoshi, outgoing_cltv: u32) -> Self {
+        BitcoinHopData {
             next_address: next_address,
             forward_amount: forward_amount,
             outgoing_cltv: outgoing_cltv,
@@ -74,7 +57,6 @@ impl HopData {
     }
 }
 
-// we could not derive such implementation because padding
 impl Serialize for HopData {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -82,17 +64,17 @@ impl Serialize for HopData {
     {
         use serde::ser::SerializeTuple;
 
-        let mut tuple = serializer.serialize_tuple(5)?;
-        tuple.serialize_element(&(self.realm as u8))?;
-        tuple.serialize_element(&self.next_address)?;
-        tuple.serialize_element(&self.forward_amount)?;
-        tuple.serialize_element(&self.outgoing_cltv)?;
-        tuple.serialize_element(&[0u8; Self::PAD_SIZE])?;
+        let mut tuple = serializer.serialize_tuple(2)?;
+        match self {
+            &HopData::Bitcoin(ref bitcoin_data) => {
+                tuple.serialize_element(&0u8)?;
+                tuple.serialize_element(bitcoin_data)?;
+            }
+        }
         tuple.end()
     }
 }
 
-// we could not derive such implementation because padding
 impl<'de> Deserialize<'de> for HopData {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -117,27 +99,20 @@ impl<'de> Deserialize<'de> for HopData {
                 let realm: u8 = seq
                     .next_element()?
                     .ok_or(Error::custom("expecting header byte, 0 for bitcoin"))?;
-                let next_address = seq
-                    .next_element()?
-                    .ok_or(Error::custom("expecting addess"))?;
-                let forward_amount = seq
-                    .next_element()?
-                    .ok_or(Error::custom("expecting satoshi amount"))?;
-                let outgoing_cltv = seq.next_element()?.ok_or(Error::custom("expecting cltv"))?;
-                let _: [u8; HopData::PAD_SIZE] = seq.next_element()?.ok_or(Error::custom(
-                    format!("expecting padding {} bytes", HopData::PAD_SIZE),
-                ))?;
 
-                Ok(HopData {
-                    realm: realm.into(),
-                    next_address: next_address,
-                    forward_amount: forward_amount,
-                    outgoing_cltv: outgoing_cltv,
-                })
+                match realm {
+                    0 => {
+                        let bitcoin_data = seq
+                            .next_element()?
+                            .ok_or(Error::custom("expecting hop data"))?;
+                        Ok(HopData::Bitcoin(bitcoin_data))
+                    }
+                    t @ _ => panic!("unknown realm: {:?}", t),
+                }
             }
         }
 
-        deserializer.deserialize_tuple(5, V)
+        deserializer.deserialize_tuple(2, V)
     }
 }
 
