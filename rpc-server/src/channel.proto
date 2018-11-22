@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+service ChannelService {
+    rpc List (Void) returns (ChannelList) {}
+    rpc Pending (Void) returns (Void) {}
+    rpc Open (Void) returns (Void) {}
+    rpc Close (Void) returns (Void) {}
+}
+
+message Void {}
+
+message ChannelList {
+    repeated Channel channels = 1;
+}
+
+message Channel {
+    bool active = 1;
+    string remote_pubkey = 2;
+    string channel_point = 3;
+    ChannelId chan_id = 4;
+    Satoshi capacity = 5;
+    Satoshi local_balance = 6;
+    Satoshi remote_balance = 7;
+    Satoshi commit_fee = 8;
+    int64 commit_weight = 9;
+    Satoshi fee_per_kw = 10;
+    Satoshi unsettled_balance = 11;
+    Satoshi total_sent = 12;
+    Satoshi total_received = 13;
+    uint64 num_updates = 14;
+    repeated HTLC pending_htlcs = 15;
+    uint32 csv_delay = 16;
+    bool private = 17;
+}
+
+message HTLC {
+    bool incoming = 1 [json_name = "incoming"];
+    int64 amount = 2 [json_name = "amount"];
+    bytes hash_lock = 3 [json_name = "hash_lock"];
+    uint32 expiration_height = 4 [json_name = "expiration_height"];
+}
+
+message Satoshi {
+    uint64 value = 1;
+}
+
+message ChannelId {
+    uint32 block_height = 1;
+    uint32 index = 2;
+    uint32 output_index = 3;
+}
