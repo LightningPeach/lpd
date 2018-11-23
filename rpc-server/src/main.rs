@@ -17,6 +17,10 @@ mod routing;
 mod routing_grpc;
 mod routing_impl;
 
+mod payment;
+mod payment_grpc;
+mod payment_impl;
+
 mod config;
 use self::config::{Argument, Error as CommandLineReadError};
 
@@ -45,6 +49,7 @@ fn main() -> Result<(), Error> {
     server.http.set_cpu_pool_threads(4);
     server.add_service(channel_impl::service());
     server.add_service(routing_impl::service());
+    server.add_service(payment_impl::service());
     let _ = server.build().map_err(Grpc)?;
     loop {
         thread::park();
