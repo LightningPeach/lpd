@@ -24,7 +24,7 @@
 pub trait ChannelService {
     fn list(&self, o: ::grpc::RequestOptions, p: super::channel::ChannelFilter) -> ::grpc::SingleResponse<super::channel::ChannelList>;
 
-    fn pending(&self, o: ::grpc::RequestOptions, p: super::channel::Void) -> ::grpc::SingleResponse<super::channel::PendingChannelsResponse>;
+    fn pending(&self, o: ::grpc::RequestOptions, p: super::common::Void) -> ::grpc::SingleResponse<super::channel::PendingChannelsResponse>;
 
     fn open(&self, o: ::grpc::RequestOptions, p: super::channel::OpenChannelRequest) -> ::grpc::StreamingResponse<super::channel::OpenStatusUpdate>;
 
@@ -36,7 +36,7 @@ pub trait ChannelService {
 pub struct ChannelServiceClient {
     grpc_client: ::std::sync::Arc<::grpc::Client>,
     method_List: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::channel::ChannelFilter, super::channel::ChannelList>>,
-    method_Pending: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::channel::Void, super::channel::PendingChannelsResponse>>,
+    method_Pending: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::common::Void, super::channel::PendingChannelsResponse>>,
     method_Open: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::channel::OpenChannelRequest, super::channel::OpenStatusUpdate>>,
     method_Close: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::channel::CloseChannelRequest, super::channel::CloseStatusUpdate>>,
 }
@@ -78,7 +78,7 @@ impl ChannelService for ChannelServiceClient {
         self.grpc_client.call_unary(o, p, self.method_List.clone())
     }
 
-    fn pending(&self, o: ::grpc::RequestOptions, p: super::channel::Void) -> ::grpc::SingleResponse<super::channel::PendingChannelsResponse> {
+    fn pending(&self, o: ::grpc::RequestOptions, p: super::common::Void) -> ::grpc::SingleResponse<super::channel::PendingChannelsResponse> {
         self.grpc_client.call_unary(o, p, self.method_Pending.clone())
     }
 

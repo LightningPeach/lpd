@@ -1,0 +1,312 @@
+syntax = "proto3";
+
+import "common.proto";
+
+service PaymentService {
+    rpc SendPayment (stream SendRequest) returns (stream SendResponse) {}
+
+    /**
+    AddInvoice attempts to add a new invoice to the invoice database. Any
+    duplicated invoices are rejected, therefore all invoices *must* have a
+    unique payment preimage.
+    */
+    rpc AddInvoice (Invoice) returns (AddInvoiceResponse) {}
+
+    /**
+    ListInvoices returns a list of all the invoices currently stored within the
+    database. Any active debug invoices are ignored. It has full support for
+    paginated responses, allowing users to query for specific invoices through
+    their add_index. This can be done by using either the first_index_offset or
+    last_index_offset fields included in the response as the index_offset of the
+    next request. The reversed flag is set by default in order to paginate
+    backwards. If you wish to paginate forwards, you must explicitly set the
+    flag to false. If none of the parameters are specified, then the last 100
+    invoices will be returned.
+    */
+    rpc ListInvoices (ListInvoiceRequest) returns (ListInvoiceResponse) {}
+
+    rpc DecodePayReq (PayReqString) returns (PayReq) {}
+
+    rpc ListPayments (Void) returns (PaymentList) {}
+}
+
+message SendRequest {
+    /// The identity pubkey of the payment recipient
+    bytes destination = 1;
+
+    /// The hex-encoded identity pubkey of the payment recipient
+    string destination_string = 2;
+
+    /// Number of satoshis to send.
+    Satoshi amt = 3;
+
+    /// The hash to use within the payment's HTLC
+    bytes payment_hash = 4;
+
+    /// The hex-encoded hash to use within the payment's HTLC
+    string payment_hash_string = 5;
+
+    /**
+    A bare-bones invoice for a payment within the Lightning Network.  With the
+    details of the invoice, the sender has all the data necessary to send a
+    payment to the recipient.
+    */
+    string payment_request = 6;
+
+    /**
+    The CLTV delta from the current height that should be used to set the
+    timelock for the final hop.
+    */
+    int32 final_cltv_delta = 7;
+
+    /**
+    The maximum number of satoshis that will be paid as a fee of the payment.
+    This value can be represented either as a percentage of the amount being
+    sent, or as a fixed amount of the maximum fee the user is willing the pay to
+    send the payment.
+    */
+    FeeLimit fee_limit = 8;
+}
+
+message SendResponse {
+    string payment_error = 1 [json_name = "payment_error"];
+    bytes payment_preimage = 2 [json_name = "payment_preimage"];
+    Route payment_route = 3 [json_name = "payment_route"];
+}
+
+message Invoice {
+    /**
+    An optional memo to attach along with the invoice. Used for record keeping
+    purposes for the invoice's creator, and will also be set in the description
+    field of the encoded payment request if the description_hash field is not
+    being used.
+    */
+    string memo = 1 [json_name = "memo"];
+
+    /// An optional cryptographic receipt of payment
+    bytes receipt = 2 [json_name = "receipt"];
+
+    /**
+    The hex-encoded preimage (32 byte) which will allow settling an incoming
+    HTLC payable to this preimage
+    */
+    bytes r_preimage = 3 [json_name = "r_preimage"];
+
+    /// The hash of the preimage
+    bytes r_hash = 4 [json_name = "r_hash"];
+
+    /// The value of this invoice in satoshis
+    Satoshi value = 5 [json_name = "value"];
+
+    /// Whether this invoice has been fulfilled
+    bool settled = 6 [json_name = "settled"];
+
+    /// When this invoice was created
+    int64 creation_date = 7 [json_name = "creation_date"];
+
+    /// When this invoice was settled
+    int64 settle_date = 8 [json_name = "settle_date"];
+
+    /**
+    A bare-bones invoice for a payment within the Lightning Network.  With the
+    details of the invoice, the sender has all the data necessary to send a
+    payment to the recipient.
+    */
+    string payment_request = 9 [json_name = "payment_request"];
+
+    /**
+    Hash (SHA-256) of a description of the payment. Used if the description of
+    payment (memo) is too long to naturally fit within the description field
+    of an encoded payment request.
+    */
+    bytes description_hash = 10 [json_name = "description_hash"];
+
+    /// Payment request expiry time in seconds. Default is 3600 (1 hour).
+    int64 expiry = 11 [json_name = "expiry"];
+
+    /// Fallback on-chain address.
+    string fallback_addr = 12 [json_name = "fallback_addr"];
+
+    /// Delta to use for the time-lock of the CLTV extended to the final hop.
+    uint64 cltv_expiry = 13 [json_name = "cltv_expiry"];
+
+    /**
+    Route hints that can each be individually used to assist in reaching the
+    invoice's destination.
+    */
+    repeated RouteHint route_hints = 14 [json_name = "route_hints"];
+
+    /// Whether this invoice should include routing hints for private channels.
+    bool private = 15 [json_name = "private"];
+
+    /**
+    The "add" index of this invoice. Each newly created invoice will increment
+    this index making it monotonically increasing. Callers to the
+    SubscribeInvoices call can use this to instantly get notified of all added
+    invoices with an add_index greater than this one.
+    */
+    uint64 add_index = 16 [json_name = "add_index"];
+
+    /**
+    The "settle" index of this invoice. Each newly settled invoice will
+    increment this index making it monotonically increasing. Callers to the
+    SubscribeInvoices call can use this to instantly get notified of all
+    settled invoices with an settle_index greater than this one.
+    */
+    uint64 settle_index = 17 [json_name = "settle_index"];
+
+    /// Deprecated, use amt_paid_sat or amt_paid_msat.
+    int64 amt_paid = 18 [json_name = "amt_paid", deprecated = true];
+
+    /**
+    The amount that was accepted for this invoice, in satoshis. This will ONLY
+    be set if this invoice has been settled. We provide this field as if the
+    invoice was created with a zero value, then we need to record what amount
+    was ultimately accepted. Additionally, it's possible that the sender paid
+    MORE that was specified in the original invoice. So we'll record that here
+    as well.
+    */
+    int64 amt_paid_sat = 19 [json_name = "amt_paid_sat"];
+
+    /**
+    The amount that was accepted for this invoice, in millisatoshis. This will
+    ONLY be set if this invoice has been settled. We provide this field as if
+    the invoice was created with a zero value, then we need to record what
+    amount was ultimately accepted. Additionally, it's possible that the sender
+    paid MORE that was specified in the original invoice. So we'll record that
+    here as well.
+    */
+    int64 amt_paid_msat = 20 [json_name = "amt_paid_msat"];
+}
+message AddInvoiceResponse {
+    bytes r_hash = 1 [json_name = "r_hash"];
+
+    /**
+    A bare-bones invoice for a payment within the Lightning Network.  With the
+    details of the invoice, the sender has all the data necessary to send a
+    payment to the recipient.
+    */
+    string payment_request = 2 [json_name = "payment_request"];
+
+    /**
+    The "add" index of this invoice. Each newly created invoice will increment
+    this index making it monotonically increasing. Callers to the
+    SubscribeInvoices call can use this to instantly get notified of all added
+    invoices with an add_index greater than this one.
+    */
+    uint64 add_index = 16 [json_name = "add_index"];
+}
+
+message ListInvoiceRequest {
+    /// If set, only unsettled invoices will be returned in the response.
+    bool pending_only = 1 [json_name = "pending_only"];
+
+    /**
+    The index of an invoice that will be used as either the start or end of a
+    query to determine which invoices should be returned in the response.
+    */
+    uint64 index_offset = 4 [json_name = "index_offset"];
+
+    /// The max number of invoices to return in the response to this query.
+    uint64 num_max_invoices = 5 [json_name = "num_max_invoices"];
+
+    /**
+    If set, the invoices returned will result from seeking backwards from the
+    specified index offset. This can be used to paginate backwards.
+    */
+    bool reversed = 6 [json_name = "reversed"];
+}
+message ListInvoiceResponse {
+    /**
+    A list of invoices from the time slice of the time series specified in the
+    request.
+    */
+    repeated Invoice invoices = 1 [json_name = "invoices"];
+
+    /**
+    The index of the last item in the set of returned invoices. This can be used
+    to seek further, pagination style.
+    */
+    uint64 last_index_offset = 2 [json_name = "last_index_offset"];
+
+    /**
+    The index of the last item in the set of returned invoices. This can be used
+    to seek backwards, pagination style.
+    */
+    uint64 first_index_offset = 3 [json_name = "first_index_offset"];
+}
+
+message PaymentList {
+    /// The list of payments
+    repeated Payment payments = 1 [json_name = "payments"];
+}
+message Payment {
+    /// The payment hash
+    string payment_hash = 1 [json_name = "payment_hash"];
+
+    /// Deprecated, use value_sat or value_msat.
+    int64 value = 2 [json_name = "value", deprecated = true];
+
+    /// The date of this payment
+    int64 creation_date = 3 [json_name = "creation_date"];
+
+    /// The path this payment took
+    repeated string path = 4 [ json_name = "path" ];
+
+    /// The fee paid for this payment in satoshis
+    Satoshi fee = 5 [json_name = "fee"];
+
+    /// The payment preimage
+    string payment_preimage = 6 [json_name = "payment_preimage"];
+
+    /// The value of the payment in satoshis
+    Satoshi value_sat = 7 [json_name = "value_sat"];
+
+    /// The value of the payment in milli-satoshis
+    MilliSatoshi value_msat = 8 [json_name = "value_msat"];
+}
+
+message PayReqString {
+    /// The payment request string to be decoded
+    string pay_req = 1;
+}
+message PayReq {
+    string destination = 1 [json_name = "destination"];
+    string payment_hash = 2 [json_name = "payment_hash"];
+    int64 num_satoshis = 3 [json_name = "num_satoshis"];
+    int64 timestamp = 4 [json_name = "timestamp"];
+    int64 expiry = 5 [json_name = "expiry"];
+    string description = 6 [json_name = "description"];
+    string description_hash = 7 [json_name = "description_hash"];
+    string fallback_addr = 8 [json_name = "fallback_addr"];
+    int64 cltv_expiry = 9 [json_name = "cltv_expiry"];
+    repeated RouteHint route_hints = 10 [json_name = "route_hints"];
+}
+
+message HopHint {
+    /// The public key of the node at the start of the channel.
+    string node_id = 1 [json_name = "node_id"];
+
+    /// The unique identifier of the channel.
+    uint64 chan_id = 2 [json_name = "chan_id"];
+
+    /// The base fee of the channel denominated in millisatoshis.
+    MilliSatoshi fee_base_msat = 3 [json_name = "fee_base_msat"];
+
+    /**
+    The fee rate of the channel for sending one satoshi across it denominated in
+    millionths of a satoshi.
+    */
+    uint32 fee_proportional_millionths = 4 [json_name = "fee_proportional_millionths"];
+
+    /// The time-lock delta of the channel.
+    uint32 cltv_expiry_delta = 5 [json_name = "cltv_expiry_delta"];
+}
+
+message RouteHint {
+    /**
+    A list of hop hints that when chained together can assist in reaching a
+    specific destination.
+    */
+    repeated HopHint hop_hints = 1 [json_name = "hop_hints"];
+}

@@ -1,10 +1,10 @@
 use grpc::{rt::ServerServiceDefinition, RequestOptions, SingleResponse, StreamingResponse};
 use super::channel_grpc::{ChannelServiceServer, ChannelService};
 use super::channel::{
-    ChannelFilter, ChannelList, Void, PendingChannelsResponse,
+    ChannelFilter, ChannelList, PendingChannelsResponse,
     OpenChannelRequest, OpenStatusUpdate, CloseChannelRequest, CloseStatusUpdate,
-    Satoshi as ProtoSatoshi, MilliSatoshi as ProtoMilliSatoshi,
 };
+use super::common::{Void, Satoshi as ProtoSatoshi, MilliSatoshi as ProtoMilliSatoshi};
 
 use wire::{Wrapper, Satoshi, MilliSatoshi};
 

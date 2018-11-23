@@ -22,126 +22,6 @@ use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
 #[derive(PartialEq,Clone,Default)]
-pub struct Void {
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl Void {
-    pub fn new() -> Void {
-        ::std::default::Default::default()
-    }
-}
-
-impl ::protobuf::Message for Void {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &::std::any::Any {
-        self as &::std::any::Any
-    }
-    fn as_any_mut(&mut self) -> &mut ::std::any::Any {
-        self as &mut ::std::any::Any
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<::std::any::Any> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Void {
-        Void::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let fields = ::std::vec::Vec::new();
-                ::protobuf::reflect::MessageDescriptor::new::<Void>(
-                    "Void",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static Void {
-        static mut instance: ::protobuf::lazy::Lazy<Void> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const Void,
-        };
-        unsafe {
-            instance.get(Void::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for Void {
-    fn clear(&mut self) {
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Void {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Void {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
 pub struct ChannelList {
     // message fields
     pub channels: ::protobuf::RepeatedField<Channel>,
@@ -318,15 +198,15 @@ pub struct Channel {
     pub remote_pubkey: ::std::string::String,
     pub channel_point: ::std::string::String,
     pub chan_id: ::protobuf::SingularPtrField<ChannelId>,
-    pub capacity: ::protobuf::SingularPtrField<Satoshi>,
-    pub local_balance: ::protobuf::SingularPtrField<Satoshi>,
-    pub remote_balance: ::protobuf::SingularPtrField<Satoshi>,
-    pub commit_fee: ::protobuf::SingularPtrField<Satoshi>,
+    pub capacity: ::protobuf::SingularPtrField<super::common::Satoshi>,
+    pub local_balance: ::protobuf::SingularPtrField<super::common::Satoshi>,
+    pub remote_balance: ::protobuf::SingularPtrField<super::common::Satoshi>,
+    pub commit_fee: ::protobuf::SingularPtrField<super::common::Satoshi>,
     pub commit_weight: i64,
-    pub fee_per_kw: ::protobuf::SingularPtrField<Satoshi>,
-    pub unsettled_balance: ::protobuf::SingularPtrField<Satoshi>,
-    pub total_sent: ::protobuf::SingularPtrField<Satoshi>,
-    pub total_received: ::protobuf::SingularPtrField<Satoshi>,
+    pub fee_per_kw: ::protobuf::SingularPtrField<super::common::Satoshi>,
+    pub unsettled_balance: ::protobuf::SingularPtrField<super::common::Satoshi>,
+    pub total_sent: ::protobuf::SingularPtrField<super::common::Satoshi>,
+    pub total_received: ::protobuf::SingularPtrField<super::common::Satoshi>,
     pub num_updates: u64,
     pub pending_htlcs: ::protobuf::RepeatedField<HTLC>,
     pub csv_delay: u32,
@@ -452,13 +332,13 @@ impl Channel {
     }
 
     // Param is passed by value, moved
-    pub fn set_capacity(&mut self, v: Satoshi) {
+    pub fn set_capacity(&mut self, v: super::common::Satoshi) {
         self.capacity = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_capacity(&mut self) -> &mut Satoshi {
+    pub fn mut_capacity(&mut self) -> &mut super::common::Satoshi {
         if self.capacity.is_none() {
             self.capacity.set_default();
         }
@@ -466,12 +346,12 @@ impl Channel {
     }
 
     // Take field
-    pub fn take_capacity(&mut self) -> Satoshi {
-        self.capacity.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_capacity(&mut self) -> super::common::Satoshi {
+        self.capacity.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_capacity(&self) -> &Satoshi {
-        self.capacity.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_capacity(&self) -> &super::common::Satoshi {
+        self.capacity.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // .Satoshi local_balance = 6;
@@ -485,13 +365,13 @@ impl Channel {
     }
 
     // Param is passed by value, moved
-    pub fn set_local_balance(&mut self, v: Satoshi) {
+    pub fn set_local_balance(&mut self, v: super::common::Satoshi) {
         self.local_balance = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_local_balance(&mut self) -> &mut Satoshi {
+    pub fn mut_local_balance(&mut self) -> &mut super::common::Satoshi {
         if self.local_balance.is_none() {
             self.local_balance.set_default();
         }
@@ -499,12 +379,12 @@ impl Channel {
     }
 
     // Take field
-    pub fn take_local_balance(&mut self) -> Satoshi {
-        self.local_balance.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_local_balance(&mut self) -> super::common::Satoshi {
+        self.local_balance.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_local_balance(&self) -> &Satoshi {
-        self.local_balance.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_local_balance(&self) -> &super::common::Satoshi {
+        self.local_balance.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // .Satoshi remote_balance = 7;
@@ -518,13 +398,13 @@ impl Channel {
     }
 
     // Param is passed by value, moved
-    pub fn set_remote_balance(&mut self, v: Satoshi) {
+    pub fn set_remote_balance(&mut self, v: super::common::Satoshi) {
         self.remote_balance = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_remote_balance(&mut self) -> &mut Satoshi {
+    pub fn mut_remote_balance(&mut self) -> &mut super::common::Satoshi {
         if self.remote_balance.is_none() {
             self.remote_balance.set_default();
         }
@@ -532,12 +412,12 @@ impl Channel {
     }
 
     // Take field
-    pub fn take_remote_balance(&mut self) -> Satoshi {
-        self.remote_balance.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_remote_balance(&mut self) -> super::common::Satoshi {
+        self.remote_balance.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_remote_balance(&self) -> &Satoshi {
-        self.remote_balance.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_remote_balance(&self) -> &super::common::Satoshi {
+        self.remote_balance.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // .Satoshi commit_fee = 8;
@@ -551,13 +431,13 @@ impl Channel {
     }
 
     // Param is passed by value, moved
-    pub fn set_commit_fee(&mut self, v: Satoshi) {
+    pub fn set_commit_fee(&mut self, v: super::common::Satoshi) {
         self.commit_fee = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_commit_fee(&mut self) -> &mut Satoshi {
+    pub fn mut_commit_fee(&mut self) -> &mut super::common::Satoshi {
         if self.commit_fee.is_none() {
             self.commit_fee.set_default();
         }
@@ -565,12 +445,12 @@ impl Channel {
     }
 
     // Take field
-    pub fn take_commit_fee(&mut self) -> Satoshi {
-        self.commit_fee.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_commit_fee(&mut self) -> super::common::Satoshi {
+        self.commit_fee.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_commit_fee(&self) -> &Satoshi {
-        self.commit_fee.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_commit_fee(&self) -> &super::common::Satoshi {
+        self.commit_fee.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // int64 commit_weight = 9;
@@ -599,13 +479,13 @@ impl Channel {
     }
 
     // Param is passed by value, moved
-    pub fn set_fee_per_kw(&mut self, v: Satoshi) {
+    pub fn set_fee_per_kw(&mut self, v: super::common::Satoshi) {
         self.fee_per_kw = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_fee_per_kw(&mut self) -> &mut Satoshi {
+    pub fn mut_fee_per_kw(&mut self) -> &mut super::common::Satoshi {
         if self.fee_per_kw.is_none() {
             self.fee_per_kw.set_default();
         }
@@ -613,12 +493,12 @@ impl Channel {
     }
 
     // Take field
-    pub fn take_fee_per_kw(&mut self) -> Satoshi {
-        self.fee_per_kw.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_fee_per_kw(&mut self) -> super::common::Satoshi {
+        self.fee_per_kw.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_fee_per_kw(&self) -> &Satoshi {
-        self.fee_per_kw.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_fee_per_kw(&self) -> &super::common::Satoshi {
+        self.fee_per_kw.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // .Satoshi unsettled_balance = 11;
@@ -632,13 +512,13 @@ impl Channel {
     }
 
     // Param is passed by value, moved
-    pub fn set_unsettled_balance(&mut self, v: Satoshi) {
+    pub fn set_unsettled_balance(&mut self, v: super::common::Satoshi) {
         self.unsettled_balance = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_unsettled_balance(&mut self) -> &mut Satoshi {
+    pub fn mut_unsettled_balance(&mut self) -> &mut super::common::Satoshi {
         if self.unsettled_balance.is_none() {
             self.unsettled_balance.set_default();
         }
@@ -646,12 +526,12 @@ impl Channel {
     }
 
     // Take field
-    pub fn take_unsettled_balance(&mut self) -> Satoshi {
-        self.unsettled_balance.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_unsettled_balance(&mut self) -> super::common::Satoshi {
+        self.unsettled_balance.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_unsettled_balance(&self) -> &Satoshi {
-        self.unsettled_balance.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_unsettled_balance(&self) -> &super::common::Satoshi {
+        self.unsettled_balance.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // .Satoshi total_sent = 12;
@@ -665,13 +545,13 @@ impl Channel {
     }
 
     // Param is passed by value, moved
-    pub fn set_total_sent(&mut self, v: Satoshi) {
+    pub fn set_total_sent(&mut self, v: super::common::Satoshi) {
         self.total_sent = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_total_sent(&mut self) -> &mut Satoshi {
+    pub fn mut_total_sent(&mut self) -> &mut super::common::Satoshi {
         if self.total_sent.is_none() {
             self.total_sent.set_default();
         }
@@ -679,12 +559,12 @@ impl Channel {
     }
 
     // Take field
-    pub fn take_total_sent(&mut self) -> Satoshi {
-        self.total_sent.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_total_sent(&mut self) -> super::common::Satoshi {
+        self.total_sent.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_total_sent(&self) -> &Satoshi {
-        self.total_sent.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_total_sent(&self) -> &super::common::Satoshi {
+        self.total_sent.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // .Satoshi total_received = 13;
@@ -698,13 +578,13 @@ impl Channel {
     }
 
     // Param is passed by value, moved
-    pub fn set_total_received(&mut self, v: Satoshi) {
+    pub fn set_total_received(&mut self, v: super::common::Satoshi) {
         self.total_received = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_total_received(&mut self) -> &mut Satoshi {
+    pub fn mut_total_received(&mut self) -> &mut super::common::Satoshi {
         if self.total_received.is_none() {
             self.total_received.set_default();
         }
@@ -712,12 +592,12 @@ impl Channel {
     }
 
     // Take field
-    pub fn take_total_received(&mut self) -> Satoshi {
-        self.total_received.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_total_received(&mut self) -> super::common::Satoshi {
+        self.total_received.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_total_received(&self) -> &Satoshi {
-        self.total_received.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_total_received(&self) -> &super::common::Satoshi {
+        self.total_received.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // uint64 num_updates = 14;
@@ -1133,22 +1013,22 @@ impl ::protobuf::Message for Channel {
                     |m: &Channel| { &m.chan_id },
                     |m: &mut Channel| { &mut m.chan_id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "capacity",
                     |m: &Channel| { &m.capacity },
                     |m: &mut Channel| { &mut m.capacity },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "local_balance",
                     |m: &Channel| { &m.local_balance },
                     |m: &mut Channel| { &mut m.local_balance },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "remote_balance",
                     |m: &Channel| { &m.remote_balance },
                     |m: &mut Channel| { &mut m.remote_balance },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "commit_fee",
                     |m: &Channel| { &m.commit_fee },
                     |m: &mut Channel| { &mut m.commit_fee },
@@ -1158,22 +1038,22 @@ impl ::protobuf::Message for Channel {
                     |m: &Channel| { &m.commit_weight },
                     |m: &mut Channel| { &mut m.commit_weight },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "fee_per_kw",
                     |m: &Channel| { &m.fee_per_kw },
                     |m: &mut Channel| { &mut m.fee_per_kw },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "unsettled_balance",
                     |m: &Channel| { &m.unsettled_balance },
                     |m: &mut Channel| { &mut m.unsettled_balance },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "total_sent",
                     |m: &Channel| { &m.total_sent },
                     |m: &mut Channel| { &mut m.total_sent },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "total_received",
                     |m: &Channel| { &m.total_received },
                     |m: &mut Channel| { &mut m.total_received },
@@ -1257,7 +1137,7 @@ impl ::protobuf::reflect::ProtobufValue for Channel {
 pub struct HTLC {
     // message fields
     pub incoming: bool,
-    pub amount: ::protobuf::SingularPtrField<MilliSatoshi>,
+    pub amount: ::protobuf::SingularPtrField<super::common::MilliSatoshi>,
     pub hash_lock: ::std::vec::Vec<u8>,
     pub expiration_height: u32,
     // special fields
@@ -1296,13 +1176,13 @@ impl HTLC {
     }
 
     // Param is passed by value, moved
-    pub fn set_amount(&mut self, v: MilliSatoshi) {
+    pub fn set_amount(&mut self, v: super::common::MilliSatoshi) {
         self.amount = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_amount(&mut self) -> &mut MilliSatoshi {
+    pub fn mut_amount(&mut self) -> &mut super::common::MilliSatoshi {
         if self.amount.is_none() {
             self.amount.set_default();
         }
@@ -1310,12 +1190,12 @@ impl HTLC {
     }
 
     // Take field
-    pub fn take_amount(&mut self) -> MilliSatoshi {
-        self.amount.take().unwrap_or_else(|| MilliSatoshi::new())
+    pub fn take_amount(&mut self) -> super::common::MilliSatoshi {
+        self.amount.take().unwrap_or_else(|| super::common::MilliSatoshi::new())
     }
 
-    pub fn get_amount(&self) -> &MilliSatoshi {
-        self.amount.as_ref().unwrap_or_else(|| MilliSatoshi::default_instance())
+    pub fn get_amount(&self) -> &super::common::MilliSatoshi {
+        self.amount.as_ref().unwrap_or_else(|| super::common::MilliSatoshi::default_instance())
     }
 
     // bytes hash_lock = 3;
@@ -1486,7 +1366,7 @@ impl ::protobuf::Message for HTLC {
                     |m: &HTLC| { &m.incoming },
                     |m: &mut HTLC| { &mut m.incoming },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<MilliSatoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::MilliSatoshi>>(
                     "amount",
                     |m: &HTLC| { &m.amount },
                     |m: &mut HTLC| { &mut m.amount },
@@ -1538,318 +1418,6 @@ impl ::std::fmt::Debug for HTLC {
 }
 
 impl ::protobuf::reflect::ProtobufValue for HTLC {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct Satoshi {
-    // message fields
-    pub value: u64,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl Satoshi {
-    pub fn new() -> Satoshi {
-        ::std::default::Default::default()
-    }
-
-    // uint64 value = 1;
-
-    pub fn clear_value(&mut self) {
-        self.value = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_value(&mut self, v: u64) {
-        self.value = v;
-    }
-
-    pub fn get_value(&self) -> u64 {
-        self.value
-    }
-}
-
-impl ::protobuf::Message for Satoshi {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_uint64()?;
-                    self.value = tmp;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if self.value != 0 {
-            my_size += ::protobuf::rt::value_size(1, self.value, ::protobuf::wire_format::WireTypeVarint);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if self.value != 0 {
-            os.write_uint64(1, self.value)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &::std::any::Any {
-        self as &::std::any::Any
-    }
-    fn as_any_mut(&mut self) -> &mut ::std::any::Any {
-        self as &mut ::std::any::Any
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<::std::any::Any> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> Satoshi {
-        Satoshi::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
-                    "value",
-                    |m: &Satoshi| { &m.value },
-                    |m: &mut Satoshi| { &mut m.value },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<Satoshi>(
-                    "Satoshi",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static Satoshi {
-        static mut instance: ::protobuf::lazy::Lazy<Satoshi> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const Satoshi,
-        };
-        unsafe {
-            instance.get(Satoshi::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for Satoshi {
-    fn clear(&mut self) {
-        self.clear_value();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for Satoshi {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for Satoshi {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
-pub struct MilliSatoshi {
-    // message fields
-    pub value: u64,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl MilliSatoshi {
-    pub fn new() -> MilliSatoshi {
-        ::std::default::Default::default()
-    }
-
-    // uint64 value = 1;
-
-    pub fn clear_value(&mut self) {
-        self.value = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_value(&mut self, v: u64) {
-        self.value = v;
-    }
-
-    pub fn get_value(&self) -> u64 {
-        self.value
-    }
-}
-
-impl ::protobuf::Message for MilliSatoshi {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_uint64()?;
-                    self.value = tmp;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if self.value != 0 {
-            my_size += ::protobuf::rt::value_size(1, self.value, ::protobuf::wire_format::WireTypeVarint);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if self.value != 0 {
-            os.write_uint64(1, self.value)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &::std::any::Any {
-        self as &::std::any::Any
-    }
-    fn as_any_mut(&mut self) -> &mut ::std::any::Any {
-        self as &mut ::std::any::Any
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<::std::any::Any> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> MilliSatoshi {
-        MilliSatoshi::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
-                    "value",
-                    |m: &MilliSatoshi| { &m.value },
-                    |m: &mut MilliSatoshi| { &mut m.value },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<MilliSatoshi>(
-                    "MilliSatoshi",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static MilliSatoshi {
-        static mut instance: ::protobuf::lazy::Lazy<MilliSatoshi> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const MilliSatoshi,
-        };
-        unsafe {
-            instance.get(MilliSatoshi::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for MilliSatoshi {
-    fn clear(&mut self) {
-        self.clear_value();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for MilliSatoshi {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for MilliSatoshi {
     fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
         ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
@@ -2347,12 +1915,12 @@ pub struct OpenChannelRequest {
     // message fields
     pub node_pubkey: ::std::vec::Vec<u8>,
     pub node_pubkey_string: ::std::string::String,
-    pub local_funding_amount: ::protobuf::SingularPtrField<Satoshi>,
-    pub push: ::protobuf::SingularPtrField<Satoshi>,
+    pub local_funding_amount: ::protobuf::SingularPtrField<super::common::Satoshi>,
+    pub push: ::protobuf::SingularPtrField<super::common::Satoshi>,
     pub target_conf: i32,
-    pub sat_per_byte: ::protobuf::SingularPtrField<Satoshi>,
+    pub sat_per_byte: ::protobuf::SingularPtrField<super::common::Satoshi>,
     pub private: bool,
-    pub min_htlc: ::protobuf::SingularPtrField<MilliSatoshi>,
+    pub min_htlc: ::protobuf::SingularPtrField<super::common::MilliSatoshi>,
     pub remote_csv_delay: u32,
     pub min_configs: i32,
     pub spend_unconfirmed: bool,
@@ -2429,13 +1997,13 @@ impl OpenChannelRequest {
     }
 
     // Param is passed by value, moved
-    pub fn set_local_funding_amount(&mut self, v: Satoshi) {
+    pub fn set_local_funding_amount(&mut self, v: super::common::Satoshi) {
         self.local_funding_amount = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_local_funding_amount(&mut self) -> &mut Satoshi {
+    pub fn mut_local_funding_amount(&mut self) -> &mut super::common::Satoshi {
         if self.local_funding_amount.is_none() {
             self.local_funding_amount.set_default();
         }
@@ -2443,12 +2011,12 @@ impl OpenChannelRequest {
     }
 
     // Take field
-    pub fn take_local_funding_amount(&mut self) -> Satoshi {
-        self.local_funding_amount.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_local_funding_amount(&mut self) -> super::common::Satoshi {
+        self.local_funding_amount.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_local_funding_amount(&self) -> &Satoshi {
-        self.local_funding_amount.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_local_funding_amount(&self) -> &super::common::Satoshi {
+        self.local_funding_amount.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // .Satoshi push = 5;
@@ -2462,13 +2030,13 @@ impl OpenChannelRequest {
     }
 
     // Param is passed by value, moved
-    pub fn set_push(&mut self, v: Satoshi) {
+    pub fn set_push(&mut self, v: super::common::Satoshi) {
         self.push = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_push(&mut self) -> &mut Satoshi {
+    pub fn mut_push(&mut self) -> &mut super::common::Satoshi {
         if self.push.is_none() {
             self.push.set_default();
         }
@@ -2476,12 +2044,12 @@ impl OpenChannelRequest {
     }
 
     // Take field
-    pub fn take_push(&mut self) -> Satoshi {
-        self.push.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_push(&mut self) -> super::common::Satoshi {
+        self.push.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_push(&self) -> &Satoshi {
-        self.push.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_push(&self) -> &super::common::Satoshi {
+        self.push.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // int32 target_conf = 6;
@@ -2510,13 +2078,13 @@ impl OpenChannelRequest {
     }
 
     // Param is passed by value, moved
-    pub fn set_sat_per_byte(&mut self, v: Satoshi) {
+    pub fn set_sat_per_byte(&mut self, v: super::common::Satoshi) {
         self.sat_per_byte = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_sat_per_byte(&mut self) -> &mut Satoshi {
+    pub fn mut_sat_per_byte(&mut self) -> &mut super::common::Satoshi {
         if self.sat_per_byte.is_none() {
             self.sat_per_byte.set_default();
         }
@@ -2524,12 +2092,12 @@ impl OpenChannelRequest {
     }
 
     // Take field
-    pub fn take_sat_per_byte(&mut self) -> Satoshi {
-        self.sat_per_byte.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_sat_per_byte(&mut self) -> super::common::Satoshi {
+        self.sat_per_byte.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_sat_per_byte(&self) -> &Satoshi {
-        self.sat_per_byte.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_sat_per_byte(&self) -> &super::common::Satoshi {
+        self.sat_per_byte.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 
     // bool private = 8;
@@ -2558,13 +2126,13 @@ impl OpenChannelRequest {
     }
 
     // Param is passed by value, moved
-    pub fn set_min_htlc(&mut self, v: MilliSatoshi) {
+    pub fn set_min_htlc(&mut self, v: super::common::MilliSatoshi) {
         self.min_htlc = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_min_htlc(&mut self) -> &mut MilliSatoshi {
+    pub fn mut_min_htlc(&mut self) -> &mut super::common::MilliSatoshi {
         if self.min_htlc.is_none() {
             self.min_htlc.set_default();
         }
@@ -2572,12 +2140,12 @@ impl OpenChannelRequest {
     }
 
     // Take field
-    pub fn take_min_htlc(&mut self) -> MilliSatoshi {
-        self.min_htlc.take().unwrap_or_else(|| MilliSatoshi::new())
+    pub fn take_min_htlc(&mut self) -> super::common::MilliSatoshi {
+        self.min_htlc.take().unwrap_or_else(|| super::common::MilliSatoshi::new())
     }
 
-    pub fn get_min_htlc(&self) -> &MilliSatoshi {
-        self.min_htlc.as_ref().unwrap_or_else(|| MilliSatoshi::default_instance())
+    pub fn get_min_htlc(&self) -> &super::common::MilliSatoshi {
+        self.min_htlc.as_ref().unwrap_or_else(|| super::common::MilliSatoshi::default_instance())
     }
 
     // uint32 remote_csv_delay = 10;
@@ -2856,12 +2424,12 @@ impl ::protobuf::Message for OpenChannelRequest {
                     |m: &OpenChannelRequest| { &m.node_pubkey_string },
                     |m: &mut OpenChannelRequest| { &mut m.node_pubkey_string },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "local_funding_amount",
                     |m: &OpenChannelRequest| { &m.local_funding_amount },
                     |m: &mut OpenChannelRequest| { &mut m.local_funding_amount },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "push",
                     |m: &OpenChannelRequest| { &m.push },
                     |m: &mut OpenChannelRequest| { &mut m.push },
@@ -2871,7 +2439,7 @@ impl ::protobuf::Message for OpenChannelRequest {
                     |m: &OpenChannelRequest| { &m.target_conf },
                     |m: &mut OpenChannelRequest| { &mut m.target_conf },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "sat_per_byte",
                     |m: &OpenChannelRequest| { &m.sat_per_byte },
                     |m: &mut OpenChannelRequest| { &mut m.sat_per_byte },
@@ -2881,7 +2449,7 @@ impl ::protobuf::Message for OpenChannelRequest {
                     |m: &OpenChannelRequest| { &m.private },
                     |m: &mut OpenChannelRequest| { &mut m.private },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<MilliSatoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::MilliSatoshi>>(
                     "min_htlc",
                     |m: &OpenChannelRequest| { &m.min_htlc },
                     |m: &mut OpenChannelRequest| { &mut m.min_htlc },
@@ -2956,7 +2524,7 @@ pub struct CloseChannelRequest {
     pub channel_point: ::protobuf::SingularPtrField<ChannelPoint>,
     pub force: bool,
     pub target_conf: i32,
-    pub sat_per_byte: ::protobuf::SingularPtrField<Satoshi>,
+    pub sat_per_byte: ::protobuf::SingularPtrField<super::common::Satoshi>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -3041,13 +2609,13 @@ impl CloseChannelRequest {
     }
 
     // Param is passed by value, moved
-    pub fn set_sat_per_byte(&mut self, v: Satoshi) {
+    pub fn set_sat_per_byte(&mut self, v: super::common::Satoshi) {
         self.sat_per_byte = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_sat_per_byte(&mut self) -> &mut Satoshi {
+    pub fn mut_sat_per_byte(&mut self) -> &mut super::common::Satoshi {
         if self.sat_per_byte.is_none() {
             self.sat_per_byte.set_default();
         }
@@ -3055,12 +2623,12 @@ impl CloseChannelRequest {
     }
 
     // Take field
-    pub fn take_sat_per_byte(&mut self) -> Satoshi {
-        self.sat_per_byte.take().unwrap_or_else(|| Satoshi::new())
+    pub fn take_sat_per_byte(&mut self) -> super::common::Satoshi {
+        self.sat_per_byte.take().unwrap_or_else(|| super::common::Satoshi::new())
     }
 
-    pub fn get_sat_per_byte(&self) -> &Satoshi {
-        self.sat_per_byte.as_ref().unwrap_or_else(|| Satoshi::default_instance())
+    pub fn get_sat_per_byte(&self) -> &super::common::Satoshi {
+        self.sat_per_byte.as_ref().unwrap_or_else(|| super::common::Satoshi::default_instance())
     }
 }
 
@@ -3208,7 +2776,7 @@ impl ::protobuf::Message for CloseChannelRequest {
                     |m: &CloseChannelRequest| { &m.target_conf },
                     |m: &mut CloseChannelRequest| { &mut m.target_conf },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Satoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::Satoshi>>(
                     "sat_per_byte",
                     |m: &CloseChannelRequest| { &m.sat_per_byte },
                     |m: &mut CloseChannelRequest| { &mut m.sat_per_byte },
@@ -5096,7 +4664,7 @@ impl ::protobuf::reflect::ProtobufValue for ChannelCloseUpdate {
 pub struct PendingHTLC {
     // message fields
     pub incoming: bool,
-    pub amount: ::protobuf::SingularPtrField<MilliSatoshi>,
+    pub amount: ::protobuf::SingularPtrField<super::common::MilliSatoshi>,
     pub outpoint: ::std::string::String,
     pub maturity_height: u32,
     pub blocks_til_maturity: i32,
@@ -5137,13 +4705,13 @@ impl PendingHTLC {
     }
 
     // Param is passed by value, moved
-    pub fn set_amount(&mut self, v: MilliSatoshi) {
+    pub fn set_amount(&mut self, v: super::common::MilliSatoshi) {
         self.amount = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
-    pub fn mut_amount(&mut self) -> &mut MilliSatoshi {
+    pub fn mut_amount(&mut self) -> &mut super::common::MilliSatoshi {
         if self.amount.is_none() {
             self.amount.set_default();
         }
@@ -5151,12 +4719,12 @@ impl PendingHTLC {
     }
 
     // Take field
-    pub fn take_amount(&mut self) -> MilliSatoshi {
-        self.amount.take().unwrap_or_else(|| MilliSatoshi::new())
+    pub fn take_amount(&mut self) -> super::common::MilliSatoshi {
+        self.amount.take().unwrap_or_else(|| super::common::MilliSatoshi::new())
     }
 
-    pub fn get_amount(&self) -> &MilliSatoshi {
-        self.amount.as_ref().unwrap_or_else(|| MilliSatoshi::default_instance())
+    pub fn get_amount(&self) -> &super::common::MilliSatoshi {
+        self.amount.as_ref().unwrap_or_else(|| super::common::MilliSatoshi::default_instance())
     }
 
     // string outpoint = 3;
@@ -5383,7 +4951,7 @@ impl ::protobuf::Message for PendingHTLC {
                     |m: &PendingHTLC| { &m.incoming },
                     |m: &mut PendingHTLC| { &mut m.incoming },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<MilliSatoshi>>(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::MilliSatoshi>>(
                     "amount",
                     |m: &PendingHTLC| { &m.amount },
                     |m: &mut PendingHTLC| { &mut m.amount },
@@ -7275,10 +6843,10 @@ impl ::protobuf::reflect::ProtobufValue for PendingChannelsResponse_ForceClosedC
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x11src/channel.proto\"\x06\n\x04Void\"3\n\x0bChannelList\x12$\n\x08ch\
-    annels\x18\x01\x20\x03(\x0b2\x08.ChannelR\x08channels\"\xa1\x05\n\x07Cha\
-    nnel\x12\x16\n\x06active\x18\x01\x20\x01(\x08R\x06active\x12#\n\rremote_\
-    pubkey\x18\x02\x20\x01(\tR\x0cremotePubkey\x12#\n\rchannel_point\x18\x03\
+    \n\rchannel.proto\x1a\x0ccommon.proto\"3\n\x0bChannelList\x12$\n\x08chan\
+    nels\x18\x01\x20\x03(\x0b2\x08.ChannelR\x08channels\"\xa1\x05\n\x07Chann\
+    el\x12\x16\n\x06active\x18\x01\x20\x01(\x08R\x06active\x12#\n\rremote_pu\
+    bkey\x18\x02\x20\x01(\tR\x0cremotePubkey\x12#\n\rchannel_point\x18\x03\
     \x20\x01(\tR\x0cchannelPoint\x12#\n\x07chan_id\x18\x04\x20\x01(\x0b2\n.C\
     hannelIdR\x06chanId\x12$\n\x08capacity\x18\x05\x20\x01(\x0b2\x08.Satoshi\
     R\x08capacity\x12-\n\rlocal_balance\x18\x06\x20\x01(\x0b2\x08.SatoshiR\
@@ -7296,9 +6864,7 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x20\x01(\x08R\x08incoming\x12%\n\x06amount\x18\x02\x20\x01(\x0b2\r.Mill\
     iSatoshiR\x06amount\x12\x1c\n\thash_lock\x18\x03\x20\x01(\x0cR\thash_loc\
     k\x12,\n\x11expiration_height\x18\x04\x20\x01(\rR\x11expiration_height\"\
-    \x1f\n\x07Satoshi\x12\x14\n\x05value\x18\x01\x20\x01(\x04R\x05value\"$\n\
-    \x0cMilliSatoshi\x12\x14\n\x05value\x18\x01\x20\x01(\x04R\x05value\"g\n\
-    \tChannelId\x12!\n\x0cblock_height\x18\x01\x20\x01(\rR\x0bblockHeight\
+    g\n\tChannelId\x12!\n\x0cblock_height\x18\x01\x20\x01(\rR\x0bblockHeight\
     \x12\x14\n\x05index\x18\x02\x20\x01(\rR\x05index\x12!\n\x0coutput_index\
     \x18\x03\x20\x01(\rR\x0boutputIndex\"\x99\x01\n\rChannelFilter\x12\x1f\n\
     \x0bactive_only\x18\x01\x20\x01(\x08R\nactiveOnly\x12#\n\rinactive_only\

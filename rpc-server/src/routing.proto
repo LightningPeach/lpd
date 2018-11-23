@@ -1,0 +1,144 @@
+syntax = "proto3";
+
+import "common.proto";
+
+service RoutingService {
+    /**
+    SignMessage signs a message with this node's private key. The returned
+    signature string is `zbase32` encoded and pubkey recoverable, meaning that
+    only the message digest and signature are needed for verification.
+    */
+    rpc SignMessage (SignMessageRequest) returns (SignMessageResponse) {}
+
+    rpc ConnectPeer (ConnectPeerRequest) returns (Void) {}
+
+    rpc ListPeers (Void) returns (PeerList) {}
+
+    rpc GetInfo (Void) returns (Info) {}
+
+    rpc QueryRoutes(QueryRoutesRequest) returns (RouteList) {}
+}
+
+message LightningAddress {
+    string pubkey = 1 [json_name = "pubkey"];
+
+    /// The network location of the lightning node, e.g. `69.69.69.69:1337`
+    /// localhost alias is not supported yet, use 127.0.0.1
+    string host = 2 [json_name = "host"];
+}
+
+message Peer {
+    /// The identity pubkey of the peer
+    string pub_key = 1 [json_name = "pub_key"];
+
+    /// Network address of the peer; eg `127.0.0.1:10011`
+    string address = 3 [json_name = "address"];
+
+    /// Bytes of data transmitted to this peer
+    uint64 bytes_sent = 4 [json_name = "bytes_sent"];
+
+    /// Bytes of data transmitted from this peer
+    uint64 bytes_recv = 5 [json_name = "bytes_recv"];
+
+    /// Satoshis sent to this peer
+    Satoshi sat_sent = 6 [json_name = "sat_sent"];
+
+    /// Satoshis received from this peer
+    Satoshi sat_recv = 7 [json_name = "sat_recv"];
+
+    /// A channel is inbound if the counterparty initiated the channel
+    bool inbound = 8 [json_name = "inbound"];
+
+    /// Ping time to this peer
+    int64 ping_time = 9 [json_name = "ping_time"];
+}
+
+message SignMessageRequest {
+    bytes message = 1 [ json_name = "msg" ];
+}
+message SignMessageResponse {
+    string signature = 1 [ json_name = "signature" ];
+}
+
+message ConnectPeerRequest {
+    /// Lightning address of the peer, in the format `<pubkey>@host`
+    LightningAddress address = 1;
+
+    /** If set, the daemon will attempt to persistently connect to the target
+     * peer.  Otherwise, the call will be synchronous. */
+    bool perm = 2;
+}
+
+message PeerList {
+    repeated Peer peers = 1 [json_name = "peers"];
+}
+
+message Info {
+
+    /// The identity pubkey of the current node.
+    string identity_pubkey = 1 [json_name = "identity_pubkey"];
+
+    /// If applicable, the alias of the current node, e.g. "bob"
+    string alias = 2 [json_name = "alias"];
+
+    /// Number of pending channels
+    uint32 num_pending_channels = 3 [json_name = "num_pending_channels"];
+
+    /// Number of active channels
+    uint32 num_active_channels = 4 [json_name = "num_active_channels"];
+
+    /// Number of peers
+    uint32 num_peers = 5 [json_name = "num_peers"];
+
+    /// The node's current view of the height of the best block
+    uint32 block_height = 6 [json_name = "block_height"];
+
+    /// The node's current view of the hash of the best block
+    string block_hash = 8 [json_name = "block_hash"];
+
+    /// Whether the wallet's view is synced to the main chain
+    bool synced_to_chain = 9 [json_name = "synced_to_chain"];
+
+    /// Whether the current node is connected to testnet
+    bool testnet = 10 [json_name = "testnet"];
+
+    /// A list of active chains the node is connected to
+    repeated string chains = 11 [json_name = "chains"];
+
+    /// The URIs of the current node.
+    repeated string uris = 12 [json_name = "uris"];
+
+    /// Timestamp of the block best known to the wallet
+    int64 best_header_timestamp = 13 [ json_name = "best_header_timestamp" ];
+
+    /// The version of the LND software that the node is running.
+    string version = 14 [ json_name = "version" ];
+
+    /// Number of inactive channels
+    uint32 num_inactive_channels = 15 [json_name = "num_inactive_channels"];
+}
+
+message QueryRoutesRequest {
+    /// The 33-byte hex-encoded public key for the payment destination
+    string pub_key = 1;
+
+    /// The amount to send expressed in satoshis
+    int64 amt = 2;
+
+    /// The max number of routes to return.
+    int32 num_routes = 3;
+
+    /// An optional CLTV delta from the current height that should be used for the timelock of the final hop
+    int32 final_cltv_delta = 4;
+
+    /**
+    The maximum number of satoshis that will be paid as a fee of the payment.
+    This value can be represented either as a percentage of the amount being
+    sent, or as a fixed amount of the maximum fee the user is willing the pay to
+    send the payment.
+    */
+    FeeLimit fee_limit = 5;
+}
+message RouteList {
+    repeated Route routes = 1 [json_name = "routes"];
+}

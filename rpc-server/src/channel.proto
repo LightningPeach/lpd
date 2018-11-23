@@ -1,13 +1,13 @@
 syntax = "proto3";
 
+import "common.proto";
+
 service ChannelService {
     rpc List (ChannelFilter) returns (ChannelList) {}
     rpc Pending (Void) returns (PendingChannelsResponse) {}
     rpc Open (OpenChannelRequest) returns (stream OpenStatusUpdate) {}
     rpc Close (CloseChannelRequest) returns (stream CloseStatusUpdate) {}
 }
-
-message Void {}
 
 message ChannelList {
     repeated Channel channels = 1;
@@ -38,14 +38,6 @@ message HTLC {
     MilliSatoshi amount = 2 [json_name = "amount"];
     bytes hash_lock = 3 [json_name = "hash_lock"];
     uint32 expiration_height = 4 [json_name = "expiration_height"];
-}
-
-message Satoshi {
-    uint64 value = 1;
-}
-
-message MilliSatoshi {
-    uint64 value = 1;
 }
 
 message ChannelId {
