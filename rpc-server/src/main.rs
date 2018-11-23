@@ -5,6 +5,8 @@ extern crate tls_api_native_tls;
 extern crate tls_api;
 extern crate httpbis;
 
+extern crate wire;
+
 mod channel;
 mod channel_grpc;
 mod channel_impl;
