@@ -18,6 +18,11 @@ impl PaymentService for PaymentImpl {
         unimplemented!()
     }
 
+    fn send_payment_sync(&self, o: RequestOptions, p: SendRequest) -> SingleResponse<SendResponse> {
+        let _ = (o, p);
+        unimplemented!()
+    }
+
     fn add_invoice(&self, o: RequestOptions, p: Invoice) -> SingleResponse<AddInvoiceResponse> {
         let _ = (o, p);
         unimplemented!()

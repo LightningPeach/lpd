@@ -2046,6 +2046,1701 @@ impl ::protobuf::reflect::ProtobufValue for Info {
 }
 
 #[derive(PartialEq,Clone,Default)]
+pub struct ChannelGraphRequest {
+    // message fields
+    pub include_unannounced: bool,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl ChannelGraphRequest {
+    pub fn new() -> ChannelGraphRequest {
+        ::std::default::Default::default()
+    }
+
+    // bool include_unannounced = 1;
+
+    pub fn clear_include_unannounced(&mut self) {
+        self.include_unannounced = false;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_include_unannounced(&mut self, v: bool) {
+        self.include_unannounced = v;
+    }
+
+    pub fn get_include_unannounced(&self) -> bool {
+        self.include_unannounced
+    }
+}
+
+impl ::protobuf::Message for ChannelGraphRequest {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_bool()?;
+                    self.include_unannounced = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.include_unannounced != false {
+            my_size += 2;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if self.include_unannounced != false {
+            os.write_bool(1, self.include_unannounced)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &::std::any::Any {
+        self as &::std::any::Any
+    }
+    fn as_any_mut(&mut self) -> &mut ::std::any::Any {
+        self as &mut ::std::any::Any
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<::std::any::Any> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> ChannelGraphRequest {
+        ChannelGraphRequest::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBool>(
+                    "include_unannounced",
+                    |m: &ChannelGraphRequest| { &m.include_unannounced },
+                    |m: &mut ChannelGraphRequest| { &mut m.include_unannounced },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<ChannelGraphRequest>(
+                    "ChannelGraphRequest",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static ChannelGraphRequest {
+        static mut instance: ::protobuf::lazy::Lazy<ChannelGraphRequest> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ChannelGraphRequest,
+        };
+        unsafe {
+            instance.get(ChannelGraphRequest::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for ChannelGraphRequest {
+    fn clear(&mut self) {
+        self.clear_include_unannounced();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for ChannelGraphRequest {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for ChannelGraphRequest {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct ChannelGraph {
+    // message fields
+    pub nodes: ::protobuf::RepeatedField<LightningNode>,
+    pub edges: ::protobuf::RepeatedField<ChannelEdge>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl ChannelGraph {
+    pub fn new() -> ChannelGraph {
+        ::std::default::Default::default()
+    }
+
+    // repeated .LightningNode nodes = 1;
+
+    pub fn clear_nodes(&mut self) {
+        self.nodes.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_nodes(&mut self, v: ::protobuf::RepeatedField<LightningNode>) {
+        self.nodes = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_nodes(&mut self) -> &mut ::protobuf::RepeatedField<LightningNode> {
+        &mut self.nodes
+    }
+
+    // Take field
+    pub fn take_nodes(&mut self) -> ::protobuf::RepeatedField<LightningNode> {
+        ::std::mem::replace(&mut self.nodes, ::protobuf::RepeatedField::new())
+    }
+
+    pub fn get_nodes(&self) -> &[LightningNode] {
+        &self.nodes
+    }
+
+    // repeated .ChannelEdge edges = 2;
+
+    pub fn clear_edges(&mut self) {
+        self.edges.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_edges(&mut self, v: ::protobuf::RepeatedField<ChannelEdge>) {
+        self.edges = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_edges(&mut self) -> &mut ::protobuf::RepeatedField<ChannelEdge> {
+        &mut self.edges
+    }
+
+    // Take field
+    pub fn take_edges(&mut self) -> ::protobuf::RepeatedField<ChannelEdge> {
+        ::std::mem::replace(&mut self.edges, ::protobuf::RepeatedField::new())
+    }
+
+    pub fn get_edges(&self) -> &[ChannelEdge] {
+        &self.edges
+    }
+}
+
+impl ::protobuf::Message for ChannelGraph {
+    fn is_initialized(&self) -> bool {
+        for v in &self.nodes {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.edges {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.nodes)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.edges)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        for value in &self.nodes {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        };
+        for value in &self.edges {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        };
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        for v in &self.nodes {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        };
+        for v in &self.edges {
+            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        };
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &::std::any::Any {
+        self as &::std::any::Any
+    }
+    fn as_any_mut(&mut self) -> &mut ::std::any::Any {
+        self as &mut ::std::any::Any
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<::std::any::Any> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> ChannelGraph {
+        ChannelGraph::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<LightningNode>>(
+                    "nodes",
+                    |m: &ChannelGraph| { &m.nodes },
+                    |m: &mut ChannelGraph| { &mut m.nodes },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<ChannelEdge>>(
+                    "edges",
+                    |m: &ChannelGraph| { &m.edges },
+                    |m: &mut ChannelGraph| { &mut m.edges },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<ChannelGraph>(
+                    "ChannelGraph",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static ChannelGraph {
+        static mut instance: ::protobuf::lazy::Lazy<ChannelGraph> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ChannelGraph,
+        };
+        unsafe {
+            instance.get(ChannelGraph::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for ChannelGraph {
+    fn clear(&mut self) {
+        self.clear_nodes();
+        self.clear_edges();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for ChannelGraph {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for ChannelGraph {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct LightningNode {
+    // message fields
+    pub last_update: u32,
+    pub pub_key: ::std::string::String,
+    pub alias: ::std::string::String,
+    pub addresses: ::protobuf::RepeatedField<NodeAddress>,
+    pub color: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl LightningNode {
+    pub fn new() -> LightningNode {
+        ::std::default::Default::default()
+    }
+
+    // uint32 last_update = 1;
+
+    pub fn clear_last_update(&mut self) {
+        self.last_update = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_last_update(&mut self, v: u32) {
+        self.last_update = v;
+    }
+
+    pub fn get_last_update(&self) -> u32 {
+        self.last_update
+    }
+
+    // string pub_key = 2;
+
+    pub fn clear_pub_key(&mut self) {
+        self.pub_key.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_pub_key(&mut self, v: ::std::string::String) {
+        self.pub_key = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_pub_key(&mut self) -> &mut ::std::string::String {
+        &mut self.pub_key
+    }
+
+    // Take field
+    pub fn take_pub_key(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.pub_key, ::std::string::String::new())
+    }
+
+    pub fn get_pub_key(&self) -> &str {
+        &self.pub_key
+    }
+
+    // string alias = 3;
+
+    pub fn clear_alias(&mut self) {
+        self.alias.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_alias(&mut self, v: ::std::string::String) {
+        self.alias = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_alias(&mut self) -> &mut ::std::string::String {
+        &mut self.alias
+    }
+
+    // Take field
+    pub fn take_alias(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.alias, ::std::string::String::new())
+    }
+
+    pub fn get_alias(&self) -> &str {
+        &self.alias
+    }
+
+    // repeated .NodeAddress addresses = 4;
+
+    pub fn clear_addresses(&mut self) {
+        self.addresses.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_addresses(&mut self, v: ::protobuf::RepeatedField<NodeAddress>) {
+        self.addresses = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_addresses(&mut self) -> &mut ::protobuf::RepeatedField<NodeAddress> {
+        &mut self.addresses
+    }
+
+    // Take field
+    pub fn take_addresses(&mut self) -> ::protobuf::RepeatedField<NodeAddress> {
+        ::std::mem::replace(&mut self.addresses, ::protobuf::RepeatedField::new())
+    }
+
+    pub fn get_addresses(&self) -> &[NodeAddress] {
+        &self.addresses
+    }
+
+    // string color = 5;
+
+    pub fn clear_color(&mut self) {
+        self.color.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_color(&mut self, v: ::std::string::String) {
+        self.color = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_color(&mut self) -> &mut ::std::string::String {
+        &mut self.color
+    }
+
+    // Take field
+    pub fn take_color(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.color, ::std::string::String::new())
+    }
+
+    pub fn get_color(&self) -> &str {
+        &self.color
+    }
+}
+
+impl ::protobuf::Message for LightningNode {
+    fn is_initialized(&self) -> bool {
+        for v in &self.addresses {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint32()?;
+                    self.last_update = tmp;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.pub_key)?;
+                },
+                3 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.alias)?;
+                },
+                4 => {
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.addresses)?;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.color)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.last_update != 0 {
+            my_size += ::protobuf::rt::value_size(1, self.last_update, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.pub_key.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.pub_key);
+        }
+        if !self.alias.is_empty() {
+            my_size += ::protobuf::rt::string_size(3, &self.alias);
+        }
+        for value in &self.addresses {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        };
+        if !self.color.is_empty() {
+            my_size += ::protobuf::rt::string_size(5, &self.color);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if self.last_update != 0 {
+            os.write_uint32(1, self.last_update)?;
+        }
+        if !self.pub_key.is_empty() {
+            os.write_string(2, &self.pub_key)?;
+        }
+        if !self.alias.is_empty() {
+            os.write_string(3, &self.alias)?;
+        }
+        for v in &self.addresses {
+            os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        };
+        if !self.color.is_empty() {
+            os.write_string(5, &self.color)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &::std::any::Any {
+        self as &::std::any::Any
+    }
+    fn as_any_mut(&mut self) -> &mut ::std::any::Any {
+        self as &mut ::std::any::Any
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<::std::any::Any> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> LightningNode {
+        LightningNode::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
+                    "last_update",
+                    |m: &LightningNode| { &m.last_update },
+                    |m: &mut LightningNode| { &mut m.last_update },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "pub_key",
+                    |m: &LightningNode| { &m.pub_key },
+                    |m: &mut LightningNode| { &mut m.pub_key },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "alias",
+                    |m: &LightningNode| { &m.alias },
+                    |m: &mut LightningNode| { &mut m.alias },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<NodeAddress>>(
+                    "addresses",
+                    |m: &LightningNode| { &m.addresses },
+                    |m: &mut LightningNode| { &mut m.addresses },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "color",
+                    |m: &LightningNode| { &m.color },
+                    |m: &mut LightningNode| { &mut m.color },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<LightningNode>(
+                    "LightningNode",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static LightningNode {
+        static mut instance: ::protobuf::lazy::Lazy<LightningNode> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const LightningNode,
+        };
+        unsafe {
+            instance.get(LightningNode::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for LightningNode {
+    fn clear(&mut self) {
+        self.clear_last_update();
+        self.clear_pub_key();
+        self.clear_alias();
+        self.clear_addresses();
+        self.clear_color();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for LightningNode {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for LightningNode {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct NodeAddress {
+    // message fields
+    pub network: ::std::string::String,
+    pub addr: ::std::string::String,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl NodeAddress {
+    pub fn new() -> NodeAddress {
+        ::std::default::Default::default()
+    }
+
+    // string network = 1;
+
+    pub fn clear_network(&mut self) {
+        self.network.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_network(&mut self, v: ::std::string::String) {
+        self.network = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_network(&mut self) -> &mut ::std::string::String {
+        &mut self.network
+    }
+
+    // Take field
+    pub fn take_network(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.network, ::std::string::String::new())
+    }
+
+    pub fn get_network(&self) -> &str {
+        &self.network
+    }
+
+    // string addr = 2;
+
+    pub fn clear_addr(&mut self) {
+        self.addr.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_addr(&mut self, v: ::std::string::String) {
+        self.addr = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_addr(&mut self) -> &mut ::std::string::String {
+        &mut self.addr
+    }
+
+    // Take field
+    pub fn take_addr(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.addr, ::std::string::String::new())
+    }
+
+    pub fn get_addr(&self) -> &str {
+        &self.addr
+    }
+}
+
+impl ::protobuf::Message for NodeAddress {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.network)?;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.addr)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.network.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.network);
+        }
+        if !self.addr.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.addr);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if !self.network.is_empty() {
+            os.write_string(1, &self.network)?;
+        }
+        if !self.addr.is_empty() {
+            os.write_string(2, &self.addr)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &::std::any::Any {
+        self as &::std::any::Any
+    }
+    fn as_any_mut(&mut self) -> &mut ::std::any::Any {
+        self as &mut ::std::any::Any
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<::std::any::Any> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> NodeAddress {
+        NodeAddress::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "network",
+                    |m: &NodeAddress| { &m.network },
+                    |m: &mut NodeAddress| { &mut m.network },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "addr",
+                    |m: &NodeAddress| { &m.addr },
+                    |m: &mut NodeAddress| { &mut m.addr },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<NodeAddress>(
+                    "NodeAddress",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static NodeAddress {
+        static mut instance: ::protobuf::lazy::Lazy<NodeAddress> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const NodeAddress,
+        };
+        unsafe {
+            instance.get(NodeAddress::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for NodeAddress {
+    fn clear(&mut self) {
+        self.clear_network();
+        self.clear_addr();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for NodeAddress {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for NodeAddress {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct ChannelEdge {
+    // message fields
+    pub channel_id: u64,
+    pub chan_point: ::std::string::String,
+    pub last_update: u32,
+    pub node1_pub: ::std::string::String,
+    pub node2_pub: ::std::string::String,
+    pub capacity: i64,
+    pub node1_policy: ::protobuf::SingularPtrField<RoutingPolicy>,
+    pub node2_policy: ::protobuf::SingularPtrField<RoutingPolicy>,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl ChannelEdge {
+    pub fn new() -> ChannelEdge {
+        ::std::default::Default::default()
+    }
+
+    // uint64 channel_id = 1;
+
+    pub fn clear_channel_id(&mut self) {
+        self.channel_id = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_channel_id(&mut self, v: u64) {
+        self.channel_id = v;
+    }
+
+    pub fn get_channel_id(&self) -> u64 {
+        self.channel_id
+    }
+
+    // string chan_point = 2;
+
+    pub fn clear_chan_point(&mut self) {
+        self.chan_point.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_chan_point(&mut self, v: ::std::string::String) {
+        self.chan_point = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_chan_point(&mut self) -> &mut ::std::string::String {
+        &mut self.chan_point
+    }
+
+    // Take field
+    pub fn take_chan_point(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.chan_point, ::std::string::String::new())
+    }
+
+    pub fn get_chan_point(&self) -> &str {
+        &self.chan_point
+    }
+
+    // uint32 last_update = 3;
+
+    pub fn clear_last_update(&mut self) {
+        self.last_update = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_last_update(&mut self, v: u32) {
+        self.last_update = v;
+    }
+
+    pub fn get_last_update(&self) -> u32 {
+        self.last_update
+    }
+
+    // string node1_pub = 4;
+
+    pub fn clear_node1_pub(&mut self) {
+        self.node1_pub.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_node1_pub(&mut self, v: ::std::string::String) {
+        self.node1_pub = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_node1_pub(&mut self) -> &mut ::std::string::String {
+        &mut self.node1_pub
+    }
+
+    // Take field
+    pub fn take_node1_pub(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.node1_pub, ::std::string::String::new())
+    }
+
+    pub fn get_node1_pub(&self) -> &str {
+        &self.node1_pub
+    }
+
+    // string node2_pub = 5;
+
+    pub fn clear_node2_pub(&mut self) {
+        self.node2_pub.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_node2_pub(&mut self, v: ::std::string::String) {
+        self.node2_pub = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_node2_pub(&mut self) -> &mut ::std::string::String {
+        &mut self.node2_pub
+    }
+
+    // Take field
+    pub fn take_node2_pub(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.node2_pub, ::std::string::String::new())
+    }
+
+    pub fn get_node2_pub(&self) -> &str {
+        &self.node2_pub
+    }
+
+    // int64 capacity = 6;
+
+    pub fn clear_capacity(&mut self) {
+        self.capacity = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_capacity(&mut self, v: i64) {
+        self.capacity = v;
+    }
+
+    pub fn get_capacity(&self) -> i64 {
+        self.capacity
+    }
+
+    // .RoutingPolicy node1_policy = 7;
+
+    pub fn clear_node1_policy(&mut self) {
+        self.node1_policy.clear();
+    }
+
+    pub fn has_node1_policy(&self) -> bool {
+        self.node1_policy.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_node1_policy(&mut self, v: RoutingPolicy) {
+        self.node1_policy = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_node1_policy(&mut self) -> &mut RoutingPolicy {
+        if self.node1_policy.is_none() {
+            self.node1_policy.set_default();
+        }
+        self.node1_policy.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_node1_policy(&mut self) -> RoutingPolicy {
+        self.node1_policy.take().unwrap_or_else(|| RoutingPolicy::new())
+    }
+
+    pub fn get_node1_policy(&self) -> &RoutingPolicy {
+        self.node1_policy.as_ref().unwrap_or_else(|| RoutingPolicy::default_instance())
+    }
+
+    // .RoutingPolicy node2_policy = 8;
+
+    pub fn clear_node2_policy(&mut self) {
+        self.node2_policy.clear();
+    }
+
+    pub fn has_node2_policy(&self) -> bool {
+        self.node2_policy.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_node2_policy(&mut self, v: RoutingPolicy) {
+        self.node2_policy = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_node2_policy(&mut self) -> &mut RoutingPolicy {
+        if self.node2_policy.is_none() {
+            self.node2_policy.set_default();
+        }
+        self.node2_policy.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_node2_policy(&mut self) -> RoutingPolicy {
+        self.node2_policy.take().unwrap_or_else(|| RoutingPolicy::new())
+    }
+
+    pub fn get_node2_policy(&self) -> &RoutingPolicy {
+        self.node2_policy.as_ref().unwrap_or_else(|| RoutingPolicy::default_instance())
+    }
+}
+
+impl ::protobuf::Message for ChannelEdge {
+    fn is_initialized(&self) -> bool {
+        for v in &self.node1_policy {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.node2_policy {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint64()?;
+                    self.channel_id = tmp;
+                },
+                2 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.chan_point)?;
+                },
+                3 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint32()?;
+                    self.last_update = tmp;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.node1_pub)?;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.node2_pub)?;
+                },
+                6 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_int64()?;
+                    self.capacity = tmp;
+                },
+                7 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.node1_policy)?;
+                },
+                8 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.node2_policy)?;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.channel_id != 0 {
+            my_size += ::protobuf::rt::value_size(1, self.channel_id, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.chan_point.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.chan_point);
+        }
+        if self.last_update != 0 {
+            my_size += ::protobuf::rt::value_size(3, self.last_update, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.node1_pub.is_empty() {
+            my_size += ::protobuf::rt::string_size(4, &self.node1_pub);
+        }
+        if !self.node2_pub.is_empty() {
+            my_size += ::protobuf::rt::string_size(5, &self.node2_pub);
+        }
+        if self.capacity != 0 {
+            my_size += ::protobuf::rt::value_size(6, self.capacity, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if let Some(ref v) = self.node1_policy.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if let Some(ref v) = self.node2_policy.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if self.channel_id != 0 {
+            os.write_uint64(1, self.channel_id)?;
+        }
+        if !self.chan_point.is_empty() {
+            os.write_string(2, &self.chan_point)?;
+        }
+        if self.last_update != 0 {
+            os.write_uint32(3, self.last_update)?;
+        }
+        if !self.node1_pub.is_empty() {
+            os.write_string(4, &self.node1_pub)?;
+        }
+        if !self.node2_pub.is_empty() {
+            os.write_string(5, &self.node2_pub)?;
+        }
+        if self.capacity != 0 {
+            os.write_int64(6, self.capacity)?;
+        }
+        if let Some(ref v) = self.node1_policy.as_ref() {
+            os.write_tag(7, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if let Some(ref v) = self.node2_policy.as_ref() {
+            os.write_tag(8, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &::std::any::Any {
+        self as &::std::any::Any
+    }
+    fn as_any_mut(&mut self) -> &mut ::std::any::Any {
+        self as &mut ::std::any::Any
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<::std::any::Any> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> ChannelEdge {
+        ChannelEdge::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
+                    "channel_id",
+                    |m: &ChannelEdge| { &m.channel_id },
+                    |m: &mut ChannelEdge| { &mut m.channel_id },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "chan_point",
+                    |m: &ChannelEdge| { &m.chan_point },
+                    |m: &mut ChannelEdge| { &mut m.chan_point },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
+                    "last_update",
+                    |m: &ChannelEdge| { &m.last_update },
+                    |m: &mut ChannelEdge| { &mut m.last_update },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "node1_pub",
+                    |m: &ChannelEdge| { &m.node1_pub },
+                    |m: &mut ChannelEdge| { &mut m.node1_pub },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                    "node2_pub",
+                    |m: &ChannelEdge| { &m.node2_pub },
+                    |m: &mut ChannelEdge| { &mut m.node2_pub },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+                    "capacity",
+                    |m: &ChannelEdge| { &m.capacity },
+                    |m: &mut ChannelEdge| { &mut m.capacity },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<RoutingPolicy>>(
+                    "node1_policy",
+                    |m: &ChannelEdge| { &m.node1_policy },
+                    |m: &mut ChannelEdge| { &mut m.node1_policy },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<RoutingPolicy>>(
+                    "node2_policy",
+                    |m: &ChannelEdge| { &m.node2_policy },
+                    |m: &mut ChannelEdge| { &mut m.node2_policy },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<ChannelEdge>(
+                    "ChannelEdge",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static ChannelEdge {
+        static mut instance: ::protobuf::lazy::Lazy<ChannelEdge> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ChannelEdge,
+        };
+        unsafe {
+            instance.get(ChannelEdge::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for ChannelEdge {
+    fn clear(&mut self) {
+        self.clear_channel_id();
+        self.clear_chan_point();
+        self.clear_last_update();
+        self.clear_node1_pub();
+        self.clear_node2_pub();
+        self.clear_capacity();
+        self.clear_node1_policy();
+        self.clear_node2_policy();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for ChannelEdge {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for ChannelEdge {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct RoutingPolicy {
+    // message fields
+    pub time_lock_delta: u32,
+    pub min_htlc: i64,
+    pub fee_base_msat: i64,
+    pub fee_rate_milli: ::protobuf::SingularPtrField<super::common::MilliSatoshi>,
+    pub disabled: bool,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl RoutingPolicy {
+    pub fn new() -> RoutingPolicy {
+        ::std::default::Default::default()
+    }
+
+    // uint32 time_lock_delta = 1;
+
+    pub fn clear_time_lock_delta(&mut self) {
+        self.time_lock_delta = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_time_lock_delta(&mut self, v: u32) {
+        self.time_lock_delta = v;
+    }
+
+    pub fn get_time_lock_delta(&self) -> u32 {
+        self.time_lock_delta
+    }
+
+    // int64 min_htlc = 2;
+
+    pub fn clear_min_htlc(&mut self) {
+        self.min_htlc = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_min_htlc(&mut self, v: i64) {
+        self.min_htlc = v;
+    }
+
+    pub fn get_min_htlc(&self) -> i64 {
+        self.min_htlc
+    }
+
+    // int64 fee_base_msat = 3;
+
+    pub fn clear_fee_base_msat(&mut self) {
+        self.fee_base_msat = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_fee_base_msat(&mut self, v: i64) {
+        self.fee_base_msat = v;
+    }
+
+    pub fn get_fee_base_msat(&self) -> i64 {
+        self.fee_base_msat
+    }
+
+    // .MilliSatoshi fee_rate_milli = 4;
+
+    pub fn clear_fee_rate_milli(&mut self) {
+        self.fee_rate_milli.clear();
+    }
+
+    pub fn has_fee_rate_milli(&self) -> bool {
+        self.fee_rate_milli.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_fee_rate_milli(&mut self, v: super::common::MilliSatoshi) {
+        self.fee_rate_milli = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_fee_rate_milli(&mut self) -> &mut super::common::MilliSatoshi {
+        if self.fee_rate_milli.is_none() {
+            self.fee_rate_milli.set_default();
+        }
+        self.fee_rate_milli.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_fee_rate_milli(&mut self) -> super::common::MilliSatoshi {
+        self.fee_rate_milli.take().unwrap_or_else(|| super::common::MilliSatoshi::new())
+    }
+
+    pub fn get_fee_rate_milli(&self) -> &super::common::MilliSatoshi {
+        self.fee_rate_milli.as_ref().unwrap_or_else(|| super::common::MilliSatoshi::default_instance())
+    }
+
+    // bool disabled = 5;
+
+    pub fn clear_disabled(&mut self) {
+        self.disabled = false;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_disabled(&mut self, v: bool) {
+        self.disabled = v;
+    }
+
+    pub fn get_disabled(&self) -> bool {
+        self.disabled
+    }
+}
+
+impl ::protobuf::Message for RoutingPolicy {
+    fn is_initialized(&self) -> bool {
+        for v in &self.fee_rate_milli {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint32()?;
+                    self.time_lock_delta = tmp;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_int64()?;
+                    self.min_htlc = tmp;
+                },
+                3 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_int64()?;
+                    self.fee_base_msat = tmp;
+                },
+                4 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.fee_rate_milli)?;
+                },
+                5 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_bool()?;
+                    self.disabled = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if self.time_lock_delta != 0 {
+            my_size += ::protobuf::rt::value_size(1, self.time_lock_delta, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.min_htlc != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.min_htlc, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.fee_base_msat != 0 {
+            my_size += ::protobuf::rt::value_size(3, self.fee_base_msat, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if let Some(ref v) = self.fee_rate_milli.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if self.disabled != false {
+            my_size += 2;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if self.time_lock_delta != 0 {
+            os.write_uint32(1, self.time_lock_delta)?;
+        }
+        if self.min_htlc != 0 {
+            os.write_int64(2, self.min_htlc)?;
+        }
+        if self.fee_base_msat != 0 {
+            os.write_int64(3, self.fee_base_msat)?;
+        }
+        if let Some(ref v) = self.fee_rate_milli.as_ref() {
+            os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if self.disabled != false {
+            os.write_bool(5, self.disabled)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &::std::any::Any {
+        self as &::std::any::Any
+    }
+    fn as_any_mut(&mut self) -> &mut ::std::any::Any {
+        self as &mut ::std::any::Any
+    }
+    fn into_any(self: Box<Self>) -> ::std::boxed::Box<::std::any::Any> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> RoutingPolicy {
+        RoutingPolicy::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+        };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
+                    "time_lock_delta",
+                    |m: &RoutingPolicy| { &m.time_lock_delta },
+                    |m: &mut RoutingPolicy| { &mut m.time_lock_delta },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+                    "min_htlc",
+                    |m: &RoutingPolicy| { &m.min_htlc },
+                    |m: &mut RoutingPolicy| { &mut m.min_htlc },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt64>(
+                    "fee_base_msat",
+                    |m: &RoutingPolicy| { &m.fee_base_msat },
+                    |m: &mut RoutingPolicy| { &mut m.fee_base_msat },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::common::MilliSatoshi>>(
+                    "fee_rate_milli",
+                    |m: &RoutingPolicy| { &m.fee_rate_milli },
+                    |m: &mut RoutingPolicy| { &mut m.fee_rate_milli },
+                ));
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBool>(
+                    "disabled",
+                    |m: &RoutingPolicy| { &m.disabled },
+                    |m: &mut RoutingPolicy| { &mut m.disabled },
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<RoutingPolicy>(
+                    "RoutingPolicy",
+                    fields,
+                    file_descriptor_proto()
+                )
+            })
+        }
+    }
+
+    fn default_instance() -> &'static RoutingPolicy {
+        static mut instance: ::protobuf::lazy::Lazy<RoutingPolicy> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const RoutingPolicy,
+        };
+        unsafe {
+            instance.get(RoutingPolicy::new)
+        }
+    }
+}
+
+impl ::protobuf::Clear for RoutingPolicy {
+    fn clear(&mut self) {
+        self.clear_time_lock_delta();
+        self.clear_min_htlc();
+        self.clear_fee_base_msat();
+        self.clear_fee_rate_milli();
+        self.clear_disabled();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for RoutingPolicy {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for RoutingPolicy {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct QueryRoutesRequest {
     // message fields
     pub pub_key: ::std::string::String,
@@ -2567,18 +4262,40 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x12\n\x04uris\x18\x0c\x20\x03(\tR\x04uris\x124\n\x15best_header_timesta\
     mp\x18\r\x20\x01(\x03R\x15best_header_timestamp\x12\x18\n\x07version\x18\
     \x0e\x20\x01(\tR\x07version\x124\n\x15num_inactive_channels\x18\x0f\x20\
-    \x01(\rR\x15num_inactive_channels\"\xb0\x01\n\x12QueryRoutesRequest\x12\
-    \x17\n\x07pub_key\x18\x01\x20\x01(\tR\x06pubKey\x12\x10\n\x03amt\x18\x02\
-    \x20\x01(\x03R\x03amt\x12\x1d\n\nnum_routes\x18\x03\x20\x01(\x05R\tnumRo\
-    utes\x12(\n\x10final_cltv_delta\x18\x04\x20\x01(\x05R\x0efinalCltvDelta\
-    \x12&\n\tfee_limit\x18\x05\x20\x01(\x0b2\t.FeeLimitR\x08feeLimit\"+\n\tR\
-    outeList\x12\x1e\n\x06routes\x18\x01\x20\x03(\x0b2\x06.RouteR\x06routes2\
-    \xe7\x01\n\x0eRoutingService\x12:\n\x0bSignMessage\x12\x13.SignMessageRe\
-    quest\x1a\x14.SignMessageResponse\"\0\x12+\n\x0bConnectPeer\x12\x13.Conn\
-    ectPeerRequest\x1a\x05.Void\"\0\x12\x1f\n\tListPeers\x12\x05.Void\x1a\t.\
-    PeerList\"\0\x12\x19\n\x07GetInfo\x12\x05.Void\x1a\x05.Info\"\0\x120\n\
-    \x0bQueryRoutes\x12\x13.QueryRoutesRequest\x1a\n.RouteList\"\0b\x06proto\
-    3\
+    \x01(\rR\x15num_inactive_channels\"G\n\x13ChannelGraphRequest\x120\n\x13\
+    include_unannounced\x18\x01\x20\x01(\x08R\x13include_unannounced\"X\n\
+    \x0cChannelGraph\x12$\n\x05nodes\x18\x01\x20\x03(\x0b2\x0e.LightningNode\
+    R\x05nodes\x12\"\n\x05edges\x18\x02\x20\x03(\x0b2\x0c.ChannelEdgeR\x05ed\
+    ges\"\xa3\x01\n\rLightningNode\x12\x20\n\x0blast_update\x18\x01\x20\x01(\
+    \rR\x0blast_update\x12\x18\n\x07pub_key\x18\x02\x20\x01(\tR\x07pub_key\
+    \x12\x14\n\x05alias\x18\x03\x20\x01(\tR\x05alias\x12*\n\taddresses\x18\
+    \x04\x20\x03(\x0b2\x0c.NodeAddressR\taddresses\x12\x14\n\x05color\x18\
+    \x05\x20\x01(\tR\x05color\";\n\x0bNodeAddress\x12\x18\n\x07network\x18\
+    \x01\x20\x01(\tR\x07network\x12\x12\n\x04addr\x18\x02\x20\x01(\tR\x04add\
+    r\"\xaf\x02\n\x0bChannelEdge\x12\x1e\n\nchannel_id\x18\x01\x20\x01(\x04R\
+    \nchannel_id\x12\x1e\n\nchan_point\x18\x02\x20\x01(\tR\nchan_point\x12\
+    \x20\n\x0blast_update\x18\x03\x20\x01(\rR\x0blast_update\x12\x1c\n\tnode\
+    1_pub\x18\x04\x20\x01(\tR\tnode1_pub\x12\x1c\n\tnode2_pub\x18\x05\x20\
+    \x01(\tR\tnode2_pub\x12\x1a\n\x08capacity\x18\x06\x20\x01(\x03R\x08capac\
+    ity\x122\n\x0cnode1_policy\x18\x07\x20\x01(\x0b2\x0e.RoutingPolicyR\x0cn\
+    ode1_policy\x122\n\x0cnode2_policy\x18\x08\x20\x01(\x0b2\x0e.RoutingPoli\
+    cyR\x0cnode2_policy\"\xd3\x01\n\rRoutingPolicy\x12(\n\x0ftime_lock_delta\
+    \x18\x01\x20\x01(\rR\x0ftime_lock_delta\x12\x1a\n\x08min_htlc\x18\x02\
+    \x20\x01(\x03R\x08min_htlc\x12$\n\rfee_base_msat\x18\x03\x20\x01(\x03R\r\
+    fee_base_msat\x12:\n\x0efee_rate_milli\x18\x04\x20\x01(\x0b2\r.MilliSato\
+    shiR\x13fee_rate_milli_msat\x12\x1a\n\x08disabled\x18\x05\x20\x01(\x08R\
+    \x08disabled\"\xb0\x01\n\x12QueryRoutesRequest\x12\x17\n\x07pub_key\x18\
+    \x01\x20\x01(\tR\x06pubKey\x12\x10\n\x03amt\x18\x02\x20\x01(\x03R\x03amt\
+    \x12\x1d\n\nnum_routes\x18\x03\x20\x01(\x05R\tnumRoutes\x12(\n\x10final_\
+    cltv_delta\x18\x04\x20\x01(\x05R\x0efinalCltvDelta\x12&\n\tfee_limit\x18\
+    \x05\x20\x01(\x0b2\t.FeeLimitR\x08feeLimit\"+\n\tRouteList\x12\x1e\n\x06\
+    routes\x18\x01\x20\x03(\x0b2\x06.RouteR\x06routes2\x9f\x02\n\x0eRoutingS\
+    ervice\x12:\n\x0bSignMessage\x12\x13.SignMessageRequest\x1a\x14.SignMess\
+    ageResponse\"\0\x12+\n\x0bConnectPeer\x12\x13.ConnectPeerRequest\x1a\x05\
+    .Void\"\0\x12\x1f\n\tListPeers\x12\x05.Void\x1a\t.PeerList\"\0\x12\x19\n\
+    \x07GetInfo\x12\x05.Void\x1a\x05.Info\"\0\x126\n\rDescribeGraph\x12\x14.\
+    ChannelGraphRequest\x1a\r.ChannelGraph\"\0\x120\n\x0bQueryRoutes\x12\x13\
+    .QueryRoutesRequest\x1a\n.RouteList\"\0b\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

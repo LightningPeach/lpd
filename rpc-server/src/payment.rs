@@ -4308,13 +4308,14 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x0b2\r.MilliSatoshiR\rfee_base_msat\x12@\n\x1bfee_proportional_milliont\
     hs\x18\x04\x20\x01(\rR\x1bfee_proportional_millionths\x12,\n\x11cltv_exp\
     iry_delta\x18\x05\x20\x01(\rR\x11cltv_expiry_delta\"3\n\tRouteHint\x12&\
-    \n\thop_hints\x18\x01\x20\x03(\x0b2\x08.HopHintR\thop_hints2\xff\x01\n\
+    \n\thop_hints\x18\x01\x20\x03(\x0b2\x08.HopHintR\thop_hints2\xb1\x02\n\
     \x0ePaymentService\x120\n\x0bSendPayment\x12\x0c.SendRequest\x1a\r.SendR\
-    esponse\"\0(\x010\x01\x12-\n\nAddInvoice\x12\x08.Invoice\x1a\x13.AddInvo\
-    iceResponse\"\0\x12;\n\x0cListInvoices\x12\x13.ListInvoiceRequest\x1a\
-    \x14.ListInvoiceResponse\"\0\x12(\n\x0cDecodePayReq\x12\r.PayReqString\
-    \x1a\x07.PayReq\"\0\x12%\n\x0cListPayments\x12\x05.Void\x1a\x0c.PaymentL\
-    ist\"\0b\x06proto3\
+    esponse\"\0(\x010\x01\x120\n\x0fSendPaymentSync\x12\x0c.SendRequest\x1a\
+    \r.SendResponse\"\0\x12-\n\nAddInvoice\x12\x08.Invoice\x1a\x13.AddInvoic\
+    eResponse\"\0\x12;\n\x0cListInvoices\x12\x13.ListInvoiceRequest\x1a\x14.\
+    ListInvoiceResponse\"\0\x12(\n\x0cDecodePayReq\x12\r.PayReqString\x1a\
+    \x07.PayReq\"\0\x12%\n\x0cListPayments\x12\x05.Void\x1a\x0c.PaymentList\
+    \"\0b\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

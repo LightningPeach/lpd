@@ -4,6 +4,7 @@ import "common.proto";
 
 service PaymentService {
     rpc SendPayment (stream SendRequest) returns (stream SendResponse) {}
+    rpc SendPaymentSync (SendRequest) returns (SendResponse) {}
 
     /**
     AddInvoice attempts to add a new invoice to the invoice database. Any

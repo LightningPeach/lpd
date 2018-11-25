@@ -3,6 +3,7 @@ use super::routing_grpc::{RoutingServiceServer, RoutingService};
 use super::routing::{
     SignMessageRequest, SignMessageResponse,
     ConnectPeerRequest, PeerList, Info,
+    ChannelGraphRequest, ChannelGraph,
     QueryRoutesRequest, RouteList,
 };
 use super::common::Void;
@@ -24,17 +25,22 @@ impl RoutingService for RoutingImpl {
         unimplemented!()
     }
 
-    fn list_peers(&self, o: RequestOptions, p: Void) -> ::grpc::SingleResponse<PeerList> {
+    fn list_peers(&self, o: RequestOptions, p: Void) -> SingleResponse<PeerList> {
         let _ = (o, p);
         unimplemented!()
     }
 
-    fn get_info(&self, o: RequestOptions, p: Void) -> ::grpc::SingleResponse<Info> {
+    fn get_info(&self, o: RequestOptions, p: Void) -> SingleResponse<Info> {
         let _ = (o, p);
         unimplemented!()
     }
 
-    fn query_routes(&self, o: RequestOptions, p: QueryRoutesRequest) -> ::grpc::SingleResponse<RouteList> {
+    fn describe_graph(&self, o: RequestOptions, p: ChannelGraphRequest) -> SingleResponse<ChannelGraph> {
+        let _ = (o, p);
+        unimplemented!()
+    }
+
+    fn query_routes(&self, o: RequestOptions, p: QueryRoutesRequest) -> SingleResponse<RouteList> {
         let _ = (o, p);
         unimplemented!()
     }

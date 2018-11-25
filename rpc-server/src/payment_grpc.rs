@@ -24,6 +24,8 @@
 pub trait PaymentService {
     fn send_payment(&self, o: ::grpc::RequestOptions, p: ::grpc::StreamingRequest<super::payment::SendRequest>) -> ::grpc::StreamingResponse<super::payment::SendResponse>;
 
+    fn send_payment_sync(&self, o: ::grpc::RequestOptions, p: super::payment::SendRequest) -> ::grpc::SingleResponse<super::payment::SendResponse>;
+
     fn add_invoice(&self, o: ::grpc::RequestOptions, p: super::payment::Invoice) -> ::grpc::SingleResponse<super::payment::AddInvoiceResponse>;
 
     fn list_invoices(&self, o: ::grpc::RequestOptions, p: super::payment::ListInvoiceRequest) -> ::grpc::SingleResponse<super::payment::ListInvoiceResponse>;
@@ -38,6 +40,7 @@ pub trait PaymentService {
 pub struct PaymentServiceClient {
     grpc_client: ::std::sync::Arc<::grpc::Client>,
     method_SendPayment: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::payment::SendRequest, super::payment::SendResponse>>,
+    method_SendPaymentSync: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::payment::SendRequest, super::payment::SendResponse>>,
     method_AddInvoice: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::payment::Invoice, super::payment::AddInvoiceResponse>>,
     method_ListInvoices: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::payment::ListInvoiceRequest, super::payment::ListInvoiceResponse>>,
     method_DecodePayReq: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::payment::PayReqString, super::payment::PayReq>>,
@@ -51,6 +54,12 @@ impl ::grpc::ClientStub for PaymentServiceClient {
             method_SendPayment: ::std::sync::Arc::new(::grpc::rt::MethodDescriptor {
                 name: "/PaymentService/SendPayment".to_string(),
                 streaming: ::grpc::rt::GrpcStreaming::Bidi,
+                req_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
+                resp_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
+            }),
+            method_SendPaymentSync: ::std::sync::Arc::new(::grpc::rt::MethodDescriptor {
+                name: "/PaymentService/SendPaymentSync".to_string(),
+                streaming: ::grpc::rt::GrpcStreaming::Unary,
                 req_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
                 resp_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
             }),
@@ -85,6 +94,10 @@ impl ::grpc::ClientStub for PaymentServiceClient {
 impl PaymentService for PaymentServiceClient {
     fn send_payment(&self, o: ::grpc::RequestOptions, p: ::grpc::StreamingRequest<super::payment::SendRequest>) -> ::grpc::StreamingResponse<super::payment::SendResponse> {
         self.grpc_client.call_bidi(o, p, self.method_SendPayment.clone())
+    }
+
+    fn send_payment_sync(&self, o: ::grpc::RequestOptions, p: super::payment::SendRequest) -> ::grpc::SingleResponse<super::payment::SendResponse> {
+        self.grpc_client.call_unary(o, p, self.method_SendPaymentSync.clone())
     }
 
     fn add_invoice(&self, o: ::grpc::RequestOptions, p: super::payment::Invoice) -> ::grpc::SingleResponse<super::payment::AddInvoiceResponse> {
@@ -124,6 +137,18 @@ impl PaymentServiceServer {
                     {
                         let handler_copy = handler_arc.clone();
                         ::grpc::rt::MethodHandlerBidi::new(move |o, p| handler_copy.send_payment(o, p))
+                    },
+                ),
+                ::grpc::rt::ServerMethod::new(
+                    ::std::sync::Arc::new(::grpc::rt::MethodDescriptor {
+                        name: "/PaymentService/SendPaymentSync".to_string(),
+                        streaming: ::grpc::rt::GrpcStreaming::Unary,
+                        req_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
+                        resp_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
+                    }),
+                    {
+                        let handler_copy = handler_arc.clone();
+                        ::grpc::rt::MethodHandlerUnary::new(move |o, p| handler_copy.send_payment_sync(o, p))
                     },
                 ),
                 ::grpc::rt::ServerMethod::new(

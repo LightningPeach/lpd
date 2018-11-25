@@ -16,6 +16,7 @@ service RoutingService {
 
     rpc GetInfo (Void) returns (Info) {}
 
+    rpc DescribeGraph (ChannelGraphRequest) returns (ChannelGraph) {}
     rpc QueryRoutes(QueryRoutesRequest) returns (RouteList) {}
 }
 
@@ -116,6 +117,63 @@ message Info {
 
     /// Number of inactive channels
     uint32 num_inactive_channels = 15 [json_name = "num_inactive_channels"];
+}
+
+message ChannelGraphRequest {
+    /**
+    Whether unannounced channels are included in the response or not. If set,
+    unannounced channels are included. Unannounced channels are both private
+    channels, and public channels that are not yet announced to the network.
+    */
+    bool include_unannounced = 1 [json_name = "include_unannounced"];
+}
+/// Returns a new instance of the directed channel graph.
+message ChannelGraph {
+    /// The list of `LightningNode`s in this channel graph
+    repeated LightningNode nodes = 1 [json_name = "nodes"];
+
+    /// The list of `ChannelEdge`s in this channel graph
+    repeated ChannelEdge edges = 2 [json_name = "edges"];
+}
+message LightningNode {
+    uint32 last_update = 1 [ json_name = "last_update" ];
+    string pub_key = 2 [ json_name = "pub_key" ];
+    string alias = 3 [ json_name = "alias" ];
+    repeated NodeAddress addresses = 4 [ json_name = "addresses" ];
+    string color = 5 [ json_name = "color" ];
+}
+
+message NodeAddress {
+    string network = 1 [ json_name = "network" ];
+    string addr = 2 [ json_name = "addr" ];
+}
+
+message ChannelEdge {
+    /**
+    The unique channel ID for the channel. The first 3 bytes are the block
+    height, the next 3 the index within the block, and the last 2 bytes are the
+    output index for the channel.
+    */
+    uint64 channel_id = 1 [json_name = "channel_id"];
+    string chan_point = 2 [json_name = "chan_point"];
+
+    uint32 last_update = 3 [json_name = "last_update"];
+
+    string node1_pub = 4 [json_name = "node1_pub"];
+    string node2_pub = 5 [json_name = "node2_pub"];
+
+    int64 capacity = 6 [json_name = "capacity"];
+
+    RoutingPolicy node1_policy = 7 [json_name = "node1_policy"];
+    RoutingPolicy node2_policy = 8 [json_name = "node2_policy"];
+}
+
+message RoutingPolicy {
+    uint32 time_lock_delta = 1 [json_name = "time_lock_delta"];
+    int64 min_htlc = 2 [json_name = "min_htlc"];
+    int64 fee_base_msat = 3 [json_name = "fee_base_msat"];
+    MilliSatoshi fee_rate_milli = 4 [json_name = "fee_rate_milli_msat"];
+    bool disabled = 5 [json_name = "disabled"];
 }
 
 message QueryRoutesRequest {
