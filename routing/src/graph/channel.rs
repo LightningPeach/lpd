@@ -285,3 +285,53 @@ impl<'a> System<'a> for LogChannelsSystem {
         }
     }
 }
+
+pub struct ChannelInfo<'a>(pub &'a ChannelId, pub &'a ChannelParties, pub Option<&'a ChannelPolicy>);
+
+#[cfg(feature = "rpc")]
+mod rpc {
+    use interface::{routing::{ChannelEdge, RoutingPolicy}, common::MilliSatoshi};
+    use wire::BinarySD;
+    use super::{ChannelId, ChannelParties, ChannelPolicy, ChannelInfo};
+
+    impl From<ChannelPolicy> for RoutingPolicy {
+        fn from(v: ChannelPolicy) -> Self {
+            let mut r = RoutingPolicy::new();
+            r.set_time_lock_delta(v.time_lock_delta as _);
+            r.set_min_htlc(u64::from(v.htlc_minimum) as _);
+            r.set_fee_base_msat(v.base_fee as _);
+            let mut fee = MilliSatoshi::new();
+            fee.set_value(v.fee_rate as _);
+            r.set_fee_rate_milli(fee);
+            r.set_disabled(false);
+            r
+        }
+    }
+
+    impl<'a> From<ChannelInfo<'a>> for ChannelEdge {
+        fn from(v: ChannelInfo) -> Self {
+            use std::mem;
+
+            let ChannelInfo(id, parties, policy) = v;
+            let mut r = ChannelEdge::new();
+
+            let mut buffer = [0u8; mem::size_of::<u64>()];
+            BinarySD::serialize(&mut buffer[..], &id.short_channel_id).unwrap();
+            r.set_channel_id(buffer.iter().fold(0, |v, &b| (v | (b as u64)) << 8));
+            r.set_chan_point(id.hash.to_string());
+
+            //r.set_capacity(??);
+
+            if let Some(policy) = policy {
+                r.set_last_update(policy.timestamp as _);
+                let policy: RoutingPolicy = policy.clone().into();
+                r.set_node1_pub(parties.lightning.0.to_string());
+                r.set_node2_pub(parties.lightning.1.to_string());
+                r.set_node1_policy(policy.clone());
+                r.set_node2_policy(policy);
+            }
+
+            r
+        }
+    }
+}

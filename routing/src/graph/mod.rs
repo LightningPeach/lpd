@@ -7,6 +7,9 @@ mod channel;
 mod node;
 mod tools;
 
+#[cfg(feature = "rpc")]
+use interface::routing::{ChannelEdge, LightningNode};
+
 pub struct Graph {
     world: World,
 }
@@ -49,5 +52,33 @@ impl Graph {
 
         LogNodesSystem.run_now(&mut self.world.res);
         LogChannelsSystem.run_now(&mut self.world.res);
+    }
+
+    #[cfg(feature = "rpc")]
+    pub fn describe(&self, include_unannounced: bool) -> (Vec<ChannelEdge>, Vec<LightningNode>) {
+        use specs::Join;
+        use self::channel::{ChannelId, ChannelParties, ChannelPolicy, ChannelHistory, ChannelInfo};
+        use self::node::Node;
+
+        let _ = include_unannounced; // TODO: use it
+        let (mut e, mut n) = (Vec::new(), Vec::new());
+        let channel_data = (
+            &self.world.read_storage::<ChannelId>(),
+            &self.world.read_storage::<ChannelParties>(),
+            &self.world.read_storage::<ChannelHistory>()
+        );
+
+        for (id, parties, history) in channel_data.join() {
+            let space = "    ";
+            let info = ChannelInfo(id, parties, history.current());
+            e.push(info.into());
+        }
+
+        let node_data = &self.world.read_storage::<Node>();
+        for node in node_data.join() {
+            n.push(node.clone().into())
+        }
+
+        (e, n)
     }
 }

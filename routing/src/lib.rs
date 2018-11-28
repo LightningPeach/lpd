@@ -29,6 +29,9 @@ extern crate hex;
 
 extern crate tokio;
 
+#[cfg(feature = "rpc")]
+extern crate interface;
+
 pub mod tcp_connection;
 mod graph;
 

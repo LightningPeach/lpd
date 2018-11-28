@@ -14,7 +14,7 @@ use specs::LazyUpdate;
 
 use super::tools::UseOnce;
 
-#[derive(Component, Eq, PartialEq, Debug)]
+#[derive(Component, Eq, PartialEq, Debug, Clone)]
 pub struct Node {
     timestamp: u32,
     node_id: PublicKey,
@@ -77,6 +77,31 @@ impl<'a> System<'a> for LogNodesSystem {
         for node in (&data.0).join() {
             let space = "    ";
             println!("{} {:?}", space, node);
+        }
+    }
+}
+
+#[cfg(feature = "rpc")]
+mod rpc {
+    use interface::routing::{LightningNode, NodeAddress};
+    use wire::BinarySD;
+    use super::{Node, NodeAlias};
+
+    impl From<Node> for LightningNode {
+        fn from(v: Node) -> Self {
+            let mut r = LightningNode::new();
+            r.set_last_update(v.timestamp);
+            r.set_pub_key(v.node_id.to_string());
+            r.set_color(v.color.to_string());
+            r.set_alias(v.alias.string());
+            r.set_addresses(v.address.into_iter().map(|address|
+                address.into_socket_address().map(|socket_address| {
+                    let mut n = NodeAddress::new();
+                    n.set_addr(socket_address.to_string());
+                    n
+                }).unwrap_or(NodeAddress::new())
+            ).collect::<Vec<_>>().into());
+            r
         }
     }
 }
