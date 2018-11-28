@@ -1,10 +1,10 @@
 use grpc::{rt::ServerServiceDefinition, RequestOptions, SingleResponse, StreamingRequest, StreamingResponse};
-use super::payment_grpc::{PaymentServiceServer, PaymentService};
-use super::payment::{
+use interface::payment_grpc::{PaymentServiceServer, PaymentService};
+use interface::payment::{
     SendRequest, SendResponse, Invoice, AddInvoiceResponse,
     ListInvoiceRequest, ListInvoiceResponse, PayReqString, PayReq, PaymentList
 };
-use super::common::Void;
+use interface::common::Void;
 
 pub fn service() -> ServerServiceDefinition {
     PaymentServiceServer::new_service_def(PaymentImpl)

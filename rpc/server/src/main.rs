@@ -1,25 +1,9 @@
 extern crate grpc;
-extern crate protobuf;
-extern crate futures;
 extern crate tls_api_native_tls;
 extern crate tls_api;
 extern crate httpbis;
 
-extern crate wire;
-
-mod common;
-
-mod channel;
-mod channel_grpc;
-mod channel_impl;
-
-mod routing;
-mod routing_grpc;
-mod routing_impl;
-
-mod payment;
-mod payment_grpc;
-mod payment_impl;
+extern crate implementation;
 
 mod config;
 use self::config::{Argument, Error as CommandLineReadError};
@@ -37,6 +21,7 @@ enum Error {
 fn main() -> Result<(), Error> {
     use std::thread;
     use grpc::ServerBuilder;
+    use implementation::{channel_service, routing_service, payment_service};
     use self::Error::*;
 
     let argument = Argument::from_env().map_err(CommandLineRead)?;
@@ -47,9 +32,9 @@ fn main() -> Result<(), Error> {
         server.http.set_tls(acceptor);
     }
     server.http.set_cpu_pool_threads(4);
-    server.add_service(channel_impl::service());
-    server.add_service(routing_impl::service());
-    server.add_service(payment_impl::service());
+    server.add_service(channel_service());
+    server.add_service(routing_service());
+    server.add_service(payment_service());
     let _ = server.build().map_err(Grpc)?;
     loop {
         thread::park();

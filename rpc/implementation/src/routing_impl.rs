@@ -1,12 +1,12 @@
 use grpc::{rt::ServerServiceDefinition, RequestOptions, SingleResponse};
-use super::routing_grpc::{RoutingServiceServer, RoutingService};
-use super::routing::{
+use interface::routing_grpc::{RoutingServiceServer, RoutingService};
+use interface::routing::{
     SignMessageRequest, SignMessageResponse,
     ConnectPeerRequest, PeerList, Info,
     ChannelGraphRequest, ChannelGraph,
     QueryRoutesRequest, RouteList,
 };
-use super::common::Void;
+use interface::common::Void;
 
 pub fn service() -> ServerServiceDefinition {
     RoutingServiceServer::new_service_def(RoutingImpl)

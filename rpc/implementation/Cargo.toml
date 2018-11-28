@@ -1,0 +1,11 @@
+[package]
+name = "implementation"
+version = "0.0.0"
+authors = ["LightningPeach <contact@lightningpeach.com>"]
+
+[dependencies]
+grpc = "0.6.*"
+
+interface = { path = "../interface" }
+routing = { path = "../../routing" }
+wire = { path = "../../wire" }

@@ -715,6 +715,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "implementation"
+version = "0.0.0"
+dependencies = [
+ "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "interface 0.0.0",
+ "routing 0.0.0",
+ "wire 0.0.0",
+]
+
+[[package]]
+name = "interface"
+version = "0.0.0"
+dependencies = [
+ "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protobuf 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "protoc-rust-grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "iovec"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1381,21 +1400,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpc-server"
-version = "0.0.0"
-dependencies = [
- "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "httpbis 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "protobuf 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "protoc-rust-grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "routing 0.0.0",
- "tls-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "tls-api-native-tls 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "wire 0.0.0",
-]
-
-[[package]]
 name = "rust-crypto"
 version = "0.2.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1552,6 +1556,17 @@ dependencies = [
  "itoa 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "server"
+version = "0.1.0"
+dependencies = [
+ "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "httpbis 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "implementation 0.0.0",
+ "tls-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tls-api-native-tls 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
