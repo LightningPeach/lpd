@@ -213,7 +213,7 @@ mod debug {
     use super::PublicKey;
     use super::SecretKey;
 
-    use std::fmt::Debug;
+    use std::fmt::{Debug, Display};
     use std::fmt::Formatter;
     use std::fmt::Result;
 
@@ -234,6 +234,12 @@ mod debug {
     impl Debug for SecretKey {
         fn fmt(&self, f: &mut Formatter) -> Result {
             write!(f, "{:?}", self.raw)
+        }
+    }
+
+    impl Display for PublicKey {
+        fn fmt(&self, f: &mut Formatter) -> Result {
+            write!(f, "{}", encode(&self.raw.serialize()[..]))
         }
     }
 }

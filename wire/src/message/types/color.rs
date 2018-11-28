@@ -26,6 +26,19 @@ impl ColorBasis for Color {
     }
 }
 
+mod debug {
+    use super::Color;
+    use hex::encode;
+    use std::fmt;
+
+    impl fmt::Display for Color {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{}", encode(self.data))
+        }
+
+    }
+}
+
 mod module {
     use super::Color;
     use super::Module;

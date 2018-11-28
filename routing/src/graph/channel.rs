@@ -44,7 +44,13 @@ pub struct ChannelHistory {
     records: Vec<ChannelPolicy>,
 }
 
-#[derive(Debug)]
+impl ChannelHistory {
+    pub fn current(&self) -> Option<&ChannelPolicy> {
+        self.records.last()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ChannelPolicy {
     timestamp: u32,
     flags: ChannelUpdateFlags,

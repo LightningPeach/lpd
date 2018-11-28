@@ -23,12 +23,18 @@ impl Hash256 {
 mod debug {
     use super::Hash256;
 
-    use hex::encode;
     use std::fmt;
 
     impl fmt::Debug for Hash256 {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "Hash256 [ {} ]", encode(&self.data[0..]))
+            write!(f, "Hash256 [ {} ]", hex::encode(&self.data[0..]))
+        }
+    }
+
+    // just hex, it is important
+    impl fmt::Display for Hash256 {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{}", hex::encode(&self.data[0..]))
         }
     }
 }
