@@ -36,12 +36,11 @@ impl RoutingService for RoutingImpl {
     }
 
     fn describe_graph(&self, o: RequestOptions, p: ChannelGraphRequest) -> SingleResponse<ChannelGraph> {
-        use routing::Graph;
+        use super::STATE as state;
 
         let _ = o;
 
-        let graph = Graph::new(); // TODO: persistent
-        let (e, n) = graph.describe(p.get_include_unannounced());
+        let (e, n) = state.describe(p.get_include_unannounced());
 
         let mut r = ChannelGraph::new();
         r.set_edges(e.into());

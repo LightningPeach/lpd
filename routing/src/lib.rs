@@ -6,7 +6,6 @@
 
 extern crate secp256k1;
 extern crate chrono;
-#[macro_use]
 extern crate wire;
 extern crate brontide;
 extern crate bitcoin_types;
@@ -16,8 +15,6 @@ extern crate specs;
 #[macro_use]
 extern crate specs_derive;
 extern crate shred;
-#[macro_use]
-extern crate shred_derive;
 extern crate rayon;
 
 #[cfg(test)]
@@ -29,50 +26,19 @@ extern crate hex;
 
 extern crate tokio;
 
+extern crate rocksdb;
+
+extern crate serde;
+extern crate serde_derive;
+
 #[cfg(feature = "rpc")]
 extern crate interface;
 
-pub mod tcp_connection;
-mod graph;
+mod state;
+mod node;
+mod channel;
+mod db;
+mod tools;
 
-use wire::{
-    Message, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel,
-    MessageFiltered, MessageConsumer, WireError
-};
-
-use tokio::prelude::{Future, Sink};
-
-pub use self::graph::Graph;
-
-pub enum TopologyMessage {
-    Init(Init),
-    AnnouncementNode(AnnouncementNode),
-    AnnouncementChannel(AnnouncementChannel),
-    UpdateChannel(UpdateChannel),
-}
-
-impl MessageFiltered for TopologyMessage {
-    fn filter(v: Message) -> Result<Self, Message> {
-        match v {
-            Message::Init(v) => Ok(TopologyMessage::Init(v)),
-            Message::AnnouncementNode(v) => Ok(TopologyMessage::AnnouncementNode(v)),
-            Message::AnnouncementChannel(v) => Ok(TopologyMessage::AnnouncementChannel(v)),
-            Message::UpdateChannel(v) => Ok(TopologyMessage::UpdateChannel(v)),
-            v @ _ => Err(v),
-        }
-    }
-}
-
-impl MessageConsumer for Graph {
-    type Message = TopologyMessage;
-
-    fn consume<S>(mut self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError>>
-    where
-        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
-    {
-        use tokio::prelude::IntoFuture;
-
-        self.message(message);
-        Box::new(Ok((self, sink)).into_future())
-    }
-}
+pub use self::state::{State, TopologyMessage};
+pub use rocksdb::Error as DBError;

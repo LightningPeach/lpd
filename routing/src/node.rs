@@ -5,16 +5,14 @@ use wire::Address;
 use wire::NodeAlias;
 use wire::SignError;
 
-use specs::DenseVecStorage;
-use specs::System;
-use specs::Entities;
-use specs::Read;
-use specs::ReadStorage;
-use specs::LazyUpdate;
+use specs::prelude::*;
 
-use super::tools::UseOnce;
+use serde_derive::{Serialize, Deserialize};
 
-#[derive(Component, Eq, PartialEq, Debug, Clone)]
+use super::db::{DB, DBValue};
+use super::tools::GenericSystem;
+
+#[derive(Component, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
     timestamp: u32,
     node_id: PublicKey,
@@ -24,7 +22,7 @@ pub struct Node {
 }
 
 // TODO: add rebroadcasting subsystem
-impl<'a> System<'a> for UseOnce<AnnouncementNode> {
+impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
     type SystemData = (
         Entities<'a>,
         Read<'a, LazyUpdate>,
@@ -35,7 +33,7 @@ impl<'a> System<'a> for UseOnce<AnnouncementNode> {
         use specs::Join;
         use std::iter::Iterator;
 
-        self.consume().map(|announcement_node| {
+        self.run_func(|announcement_node| {
             let (entities, update, node_storage) = (&*data.0, &*data.1, data.2);
 
             // TODO: check features
@@ -63,9 +61,10 @@ impl<'a> System<'a> for UseOnce<AnnouncementNode> {
     }
 }
 
-pub struct LogNodesSystem;
+#[derive(Debug)]
+pub struct LogNodes;
 
-impl<'a> System<'a> for LogNodesSystem {
+impl<'a> System<'a> for GenericSystem<LogNodes, ()> {
     type SystemData = (
         ReadStorage<'a, Node>,
     );
@@ -73,19 +72,75 @@ impl<'a> System<'a> for LogNodesSystem {
     fn run(&mut self, data: Self::SystemData) {
         use specs::Join;
 
-        println!("nodes: ");
-        for node in (&data.0).join() {
-            let space = "    ";
-            println!("{} {:?}", space, node);
-        }
+        self.run_func(|_| {
+            println!("nodes: ");
+            for node in (&data.0).join() {
+                let space = "    ";
+                println!("{} {:?}", space, node);
+            }
+        })
+    }
+}
+
+impl DBValue for Node {
+    fn cf_name() -> &'static str {
+        "node"
+    }
+}
+
+
+#[derive(Debug)]
+pub struct LoadNodes;
+
+impl<'a> System<'a> for GenericSystem<LoadNodes, ()> {
+    type SystemData = (
+        Read<'a, DB>,
+        Entities<'a>,
+        Read<'a, LazyUpdate>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (
+            db,
+            entities,
+            update,
+        ) = (&*data.0, &*data.1, &*data.2);
+
+        self.run_func(|_| {
+            for (_, node) in db.get_all::<usize, Node>().unwrap().into_iter() {
+                let node_ref = entities.create();
+                update.insert(node_ref, node);
+            }
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct StoreNodes;
+
+impl<'a> System<'a> for GenericSystem<StoreNodes, ()> {
+    type SystemData = (
+        Write<'a, DB>,
+        ReadStorage<'a, Node>,
+    );
+
+    fn run(&mut self, mut data: Self::SystemData) {
+
+        self.run_func(|_| {
+            let db = &mut *data.0;
+            let mut i = 0usize;
+            for node in (&data.1).join() {
+                db.put(&i, node.clone()).unwrap();
+                i = i + 1;
+            }
+        })
     }
 }
 
 #[cfg(feature = "rpc")]
 mod rpc {
     use interface::routing::{LightningNode, NodeAddress};
-    use wire::BinarySD;
-    use super::{Node, NodeAlias};
+    use super::Node;
 
     impl From<Node> for LightningNode {
         fn from(v: Node) -> Self {
