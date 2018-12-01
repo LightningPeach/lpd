@@ -30,7 +30,7 @@ fn main() -> Result<(), Error> {
 
     let argument = Argument::from_env().map_err(CommandLineRead)?;
 
-    let state = Arc::new(RwLock::new(State::new("target/db").map_err(Database)?));
+    let state = Arc::new(RwLock::new(State::new(argument.db_path.as_str()).map_err(Database)?));
     state.write().unwrap().load().map_err(Database)?;
 
     let mut server = ServerBuilder::new();
@@ -44,8 +44,9 @@ fn main() -> Result<(), Error> {
     server.add_service(payment_service());
     let server = server.build().map_err(Grpc)?;
 
-    let greeting = "the lightning peach rpc server is running, enter any to shutdown... ";
-    stdout().write(greeting.as_bytes()).map_err(Io)?;
+    write!(stdout(), "\
+        the lightning peach node is running at: {}, database at: {}\n\
+        enter any to shutdown... ", argument.address, argument.db_path);
     stdout().flush().map_err(Io)?;
     stdin().read(&mut [0]).map_err(Io)?;
 

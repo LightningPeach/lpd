@@ -13,6 +13,7 @@ enum CommandLineKey {
     RpcAddress,
     Pkcs12,
     Pkcs12Password,
+    DbPath,
 }
 
 impl CommandLineKey {
@@ -23,6 +24,7 @@ impl CommandLineKey {
             RpcAddress => "--rpclisten=",
             Pkcs12 => "--pkcs12=",
             Pkcs12Password => "--pkcs12-password=",
+            DbPath => "--db-path=",
         }
     }
 
@@ -37,6 +39,7 @@ impl CommandLineKey {
 
 pub struct Argument {
     pub address: SocketAddr,
+    pub db_path: String,
     pub tls_acceptor: Option<TlsAcceptor>,
 }
 
@@ -56,6 +59,12 @@ impl Argument {
             .map(|arg| RpcAddress.value(arg).parse::<SocketAddr>())
             .unwrap_or(Ok(default_address))
             .map_err(AddressParse)?;
+
+        let default_db_path = "target/db";
+        let db_path = env::args()
+            .find(|arg| DbPath.predicate(arg))
+            .map(|arg| DbPath.value(arg))
+            .unwrap_or(default_db_path.to_owned());
 
         let acceptor = {
             let pkcs12 = env::args().find(|arg| Pkcs12.predicate(arg)).map(|arg| {
@@ -84,6 +93,7 @@ impl Argument {
 
         Ok(Argument {
             address: address,
+            db_path: db_path,
             tls_acceptor: acceptor,
         })
     }
