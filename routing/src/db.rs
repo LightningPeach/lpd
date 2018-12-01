@@ -58,7 +58,12 @@ impl DBBuilder {
     where
         P: AsRef<Path>,
     {
-        Ok(DB(Some(RocksDB::open_cf_descriptors(&Default::default(), path, self.cfs)?)))
+        use rocksdb::Options;
+
+        let mut options = Options::default();
+        options.create_if_missing(true);
+        options.create_missing_column_families(true);
+        Ok(DB(Some(RocksDB::open_cf_descriptors(&options, path, self.cfs)?)))
     }
 }
 
