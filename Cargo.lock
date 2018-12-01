@@ -311,6 +311,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "client"
+version = "0.0.0"
+dependencies = [
+ "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "httpbis 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "interface 0.0.0",
+ "tls-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tls-api-native-tls 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tls-api-stub 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "cloudabi"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1784,7 +1797,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "httpbis 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",

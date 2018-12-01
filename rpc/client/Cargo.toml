@@ -1,0 +1,17 @@
+[package]
+name = "client"
+version = "0.0.0"
+authors = ["LightningPeach <contact@lightningpeach.com>"]
+
+[[bin]]
+name = "client"
+
+[dependencies]
+grpc = "0.6.*"
+tls-api = "0.1.*"
+tls-api-native-tls = "0.1.*"
+tls-api-stub = "0.1.*"
+httpbis = "0.7.*"
+futures = "0.1.*"
+
+interface = { path = "../interface" }
