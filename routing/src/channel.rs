@@ -5,6 +5,7 @@ use wire::{
 
 use specs::prelude::*;
 
+use rocksdb::Error as DBError;
 use super::db::{DB, DBValue};
 use super::tools::GenericSystem;
 
@@ -242,7 +243,7 @@ impl DBValue for ChannelInfo {
 #[derive(Debug)]
 pub struct LoadChannels;
 
-impl<'a> System<'a> for GenericSystem<LoadChannels, ()> {
+impl<'a> System<'a> for GenericSystem<LoadChannels, Result<(), DBError>> {
     type SystemData = (
         Read<'a, DB>,
         Entities<'a>,
@@ -257,12 +258,13 @@ impl<'a> System<'a> for GenericSystem<LoadChannels, ()> {
         ) = (&*data.0, &*data.1, &*data.2);
 
         self.run_func(|_| {
-            for (_, ChannelInfo(id, parties, history)) in db.get_all::<usize, ChannelInfo>().unwrap().into_iter() {
+            for (_, ChannelInfo(id, parties, history)) in db.get_all::<usize, ChannelInfo>()?.into_iter() {
                 let channel_ref = entities.create();
                 update.insert(channel_ref, id);
                 update.insert(channel_ref, parties);
                 update.insert(channel_ref, history);
             }
+            Ok(())
         })
     }
 }
@@ -270,7 +272,7 @@ impl<'a> System<'a> for GenericSystem<LoadChannels, ()> {
 #[derive(Debug)]
 pub struct StoreChannels;
 
-impl<'a> System<'a> for GenericSystem<StoreChannels, ()> {
+impl<'a> System<'a> for GenericSystem<StoreChannels, Result<(), DBError>> {
     type SystemData = (
         Write<'a, DB>,
         ReadStorage<'a, ChannelId>,
@@ -284,9 +286,10 @@ impl<'a> System<'a> for GenericSystem<StoreChannels, ()> {
             let db = &mut *data.0;
             let mut i = 0usize;
             for (id, parties, history) in (&data.1, &data.2, &data.3).join() {
-                db.put(&i, ChannelInfo(id.clone(), parties.clone(), history.clone())).unwrap();
+                db.put(&i, ChannelInfo(id.clone(), parties.clone(), history.clone()))?;
                 i = i + 1;
             }
+            Ok(())
         })
     }
 }

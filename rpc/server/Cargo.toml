@@ -1,7 +1,7 @@
 [package]
 name = "server"
-version = "0.1.0"
-authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
+version = "0.0.0"
+authors = ["LightningPeach <contact@lightningpeach.com>"]
 
 [[bin]]
 name = "server"

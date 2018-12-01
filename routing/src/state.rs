@@ -2,7 +2,7 @@ use specs::prelude::*;
 use super::db::DB;
 use rocksdb::Error as DBError;
 use super::channel::{LoadChannels, StoreChannels, LogChannels, ChannelInfo};
-use super::node::{LoadNodes, StoreNodes, LogNodes};
+use super::node::{LoadNodes, StoreNodes, LogNodes, Node};
 use super::tools::GenericSystem;
 
 use wire::{
@@ -28,17 +28,18 @@ impl State {
         P: AsRef<Path>,
     {
         let mut db = DB::new(path)?;
+        db.register::<ChannelInfo>()?;
+        db.register::<Node>()?;
         let mut world = World::new();
         world.setup::<<GenericSystem<AnnouncementChannel, ()> as System>::SystemData>();
         world.setup::<<GenericSystem<UpdateChannel, ()> as System>::SystemData>();
         world.setup::<<GenericSystem<AnnouncementNode, ()> as System>::SystemData>();
-        world.setup::<<GenericSystem<LoadNodes, ()> as System>::SystemData>();
-        world.setup::<<GenericSystem<StoreNodes, ()> as System>::SystemData>();
+        world.setup::<<GenericSystem<LoadNodes, Result<(), DBError>> as System>::SystemData>();
+        world.setup::<<GenericSystem<StoreNodes, Result<(), DBError>> as System>::SystemData>();
         world.setup::<<GenericSystem<LogNodes, ()> as System>::SystemData>();
-        world.setup::<<GenericSystem<LoadChannels, ()> as System>::SystemData>();
-        world.setup::<<GenericSystem<StoreChannels, ()> as System>::SystemData>();
+        world.setup::<<GenericSystem<LoadChannels, Result<(), DBError>> as System>::SystemData>();
+        world.setup::<<GenericSystem<StoreChannels, Result<(), DBError>> as System>::SystemData>();
         world.setup::<<GenericSystem<LogChannels, ()> as System>::SystemData>();
-        db.register::<ChannelInfo>().unwrap();
         world.add_resource(db);
         Ok(State {
             world: world,
@@ -56,14 +57,14 @@ impl State {
         system.output()
     }
 
-    pub fn load(&mut self) {
-        self.run(LoadChannels);
-        self.run(LoadNodes);
+    pub fn load(&mut self) -> Result<(), DBError> {
+        self.run(LoadChannels)?;
+        self.run(LoadNodes)
     }
 
-    pub fn store(&mut self) {
-        self.run(StoreChannels);
-        self.run(StoreNodes);
+    pub fn store(&mut self) -> Result<(), DBError> {
+        self.run(StoreChannels)?;
+        self.run(StoreNodes)
     }
 
     #[cfg(feature = "rpc")]

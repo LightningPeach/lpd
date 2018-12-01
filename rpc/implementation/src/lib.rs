@@ -15,12 +15,13 @@ pub use self::channel_impl::service as channel_service;
 pub use self::routing_impl::service as routing_service;
 pub use self::payment_impl::service as payment_service;
 
-use routing::State;
+use routing::{State, DBError};
+use std::sync::Mutex;
 
 lazy_static! {
-    static ref STATE: State = {
-        let mut state = State::new("db").unwrap();
-        state.load();
-        state
+    static ref STATE: Result<Mutex<State>, DBError> = {
+        let mut state = State::new("db")?;
+        state.load()?;
+        Ok(Mutex::new(state))
     };
 }

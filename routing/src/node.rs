@@ -9,6 +9,7 @@ use specs::prelude::*;
 
 use serde_derive::{Serialize, Deserialize};
 
+use rocksdb::Error as DBError;
 use super::db::{DB, DBValue};
 use super::tools::GenericSystem;
 
@@ -92,7 +93,7 @@ impl DBValue for Node {
 #[derive(Debug)]
 pub struct LoadNodes;
 
-impl<'a> System<'a> for GenericSystem<LoadNodes, ()> {
+impl<'a> System<'a> for GenericSystem<LoadNodes, Result<(), DBError>> {
     type SystemData = (
         Read<'a, DB>,
         Entities<'a>,
@@ -107,10 +108,11 @@ impl<'a> System<'a> for GenericSystem<LoadNodes, ()> {
         ) = (&*data.0, &*data.1, &*data.2);
 
         self.run_func(|_| {
-            for (_, node) in db.get_all::<usize, Node>().unwrap().into_iter() {
+            for (_, node) in db.get_all::<usize, Node>()?.into_iter() {
                 let node_ref = entities.create();
                 update.insert(node_ref, node);
             }
+            Ok(())
         })
     }
 }
@@ -118,7 +120,7 @@ impl<'a> System<'a> for GenericSystem<LoadNodes, ()> {
 #[derive(Debug)]
 pub struct StoreNodes;
 
-impl<'a> System<'a> for GenericSystem<StoreNodes, ()> {
+impl<'a> System<'a> for GenericSystem<StoreNodes, Result<(), DBError>> {
     type SystemData = (
         Write<'a, DB>,
         ReadStorage<'a, Node>,
@@ -130,9 +132,10 @@ impl<'a> System<'a> for GenericSystem<StoreNodes, ()> {
             let db = &mut *data.0;
             let mut i = 0usize;
             for node in (&data.1).join() {
-                db.put(&i, node.clone()).unwrap();
+                db.put(&i, node.clone())?;
                 i = i + 1;
             }
+            Ok(())
         })
     }
 }

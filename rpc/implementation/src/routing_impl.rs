@@ -36,8 +36,9 @@ impl RoutingService for RoutingImpl {
     }
 
     fn describe_graph(&self, o: RequestOptions, p: ChannelGraphRequest) -> SingleResponse<ChannelGraph> {
-        use super::STATE as state;
+        use super::STATE;
 
+        let state = STATE.as_ref().unwrap().lock().unwrap();
         let _ = o;
 
         let (e, n) = state.describe(p.get_include_unannounced());

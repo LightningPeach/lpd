@@ -27,15 +27,15 @@ fn main() -> Result<(), Error> {
     let argument = Argument::from_env().map_err(CommandLineRead)?;
 
     let mut server = ServerBuilder::new();
-    server.http.set_addr(argument.address).map_err(Httpbis)?;
     if let Some(acceptor) = argument.tls_acceptor {
         server.http.set_tls(acceptor);
     }
+    server.http.set_addr(argument.address).map_err(Httpbis)?;
     server.http.set_cpu_pool_threads(4);
     server.add_service(channel_service());
     server.add_service(routing_service());
     server.add_service(payment_service());
-    let _ = server.build().map_err(Grpc)?;
+    let _server = server.build().map_err(Grpc)?;
     loop {
         thread::park();
     }
