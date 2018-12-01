@@ -5,7 +5,6 @@ authors = ["LightningPeach <contact@lightningpeach.com>"]
 
 [dependencies]
 grpc = "0.6.*"
-lazy_static = "1.2.*"
 
 interface = { path = "../interface" }
 routing = { path = "../../routing", features = ["rpc"] }

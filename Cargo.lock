@@ -838,7 +838,6 @@ version = "0.0.0"
 dependencies = [
  "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "interface 0.0.0",
- "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "routing 0.0.0",
  "wire 0.0.0",
 ]

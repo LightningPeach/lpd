@@ -10,21 +10,28 @@ use self::config::{Argument, Error as CommandLineReadError};
 
 use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;
+use implementation::DBError;
+use std::io::Error as IoError;
 
 #[derive(Debug)]
 enum Error {
     Grpc(GrpcError),
     Httpbis(HttpbisError),
     CommandLineRead(CommandLineReadError),
+    Database(DBError),
+    Io(IoError),
 }
 
 fn main() -> Result<(), Error> {
-    use std::thread;
+    use std::{sync::{RwLock, Arc}, io::{Read, stdin, stdout, Write}};
     use grpc::ServerBuilder;
-    use implementation::{channel_service, routing_service, payment_service};
+    use implementation::{channel_service, routing_service, payment_service, State};
     use self::Error::*;
 
     let argument = Argument::from_env().map_err(CommandLineRead)?;
+
+    let state = Arc::new(RwLock::new(State::new("target/db").map_err(Database)?));
+    state.write().unwrap().load().map_err(Database)?;
 
     let mut server = ServerBuilder::new();
     if let Some(acceptor) = argument.tls_acceptor {
@@ -33,10 +40,15 @@ fn main() -> Result<(), Error> {
     server.http.set_addr(argument.address).map_err(Httpbis)?;
     server.http.set_cpu_pool_threads(4);
     server.add_service(channel_service());
-    server.add_service(routing_service());
+    server.add_service(routing_service(state));
     server.add_service(payment_service());
-    let _server = server.build().map_err(Grpc)?;
-    loop {
-        thread::park();
-    }
+    let server = server.build().map_err(Grpc)?;
+
+    let greeting = "the lightning peach rpc server is running, enter any to shutdown... ";
+    stdout().write(greeting.as_bytes()).map_err(Io)?;
+    stdout().flush().map_err(Io)?;
+    stdin().read(&mut [0]).map_err(Io)?;
+
+    let _ = server;
+    Ok(())
 }

@@ -1,5 +1,5 @@
 use specs::prelude::*;
-use super::db::DB;
+use super::db::DBBuilder;
 use rocksdb::Error as DBError;
 use super::channel::{LoadChannels, StoreChannels, LogChannels, ChannelInfo};
 use super::node::{LoadNodes, StoreNodes, LogNodes, Node};
@@ -27,9 +27,6 @@ impl State {
     where
         P: AsRef<Path>,
     {
-        let mut db = DB::new(path)?;
-        db.register::<ChannelInfo>()?;
-        db.register::<Node>()?;
         let mut world = World::new();
         world.setup::<<GenericSystem<AnnouncementChannel, ()> as System>::SystemData>();
         world.setup::<<GenericSystem<UpdateChannel, ()> as System>::SystemData>();
@@ -40,7 +37,13 @@ impl State {
         world.setup::<<GenericSystem<LoadChannels, Result<(), DBError>> as System>::SystemData>();
         world.setup::<<GenericSystem<StoreChannels, Result<(), DBError>> as System>::SystemData>();
         world.setup::<<GenericSystem<LogChannels, ()> as System>::SystemData>();
+
+        let db = DBBuilder::new()
+            .register::<ChannelInfo>()
+            .register::<Node>()
+            .build(path)?;
         world.add_resource(db);
+
         Ok(State {
             world: world,
         })

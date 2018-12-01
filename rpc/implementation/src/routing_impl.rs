@@ -7,12 +7,18 @@ use interface::routing::{
     QueryRoutesRequest, RouteList,
 };
 use interface::common::Void;
+use routing::State;
+use std::sync::{RwLock, Arc};
 
-pub fn service() -> ServerServiceDefinition {
-    RoutingServiceServer::new_service_def(RoutingImpl)
+pub fn service(state: Arc<RwLock<State>>) -> ServerServiceDefinition {
+    RoutingServiceServer::new_service_def(RoutingImpl {
+        state: state,
+    })
 }
 
-struct RoutingImpl;
+struct RoutingImpl {
+    state: Arc<RwLock<State>>,
+}
 
 impl RoutingService for RoutingImpl {
     fn sign_message(&self, o: RequestOptions, p: SignMessageRequest) -> SingleResponse<SignMessageResponse> {
@@ -36,9 +42,7 @@ impl RoutingService for RoutingImpl {
     }
 
     fn describe_graph(&self, o: RequestOptions, p: ChannelGraphRequest) -> SingleResponse<ChannelGraph> {
-        use super::STATE;
-
-        let state = STATE.as_ref().unwrap().lock().unwrap();
+        let state = self.state.read().unwrap();
         let _ = o;
 
         let (e, n) = state.describe(p.get_include_unannounced());

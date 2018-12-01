@@ -1,5 +1,5 @@
 use std::path::Path;
-use rocksdb::{DB as RocksDB, Error as DBError};
+use rocksdb::{DB as RocksDB, Error as DBError, ColumnFamilyDescriptor};
 use serde::{Serialize, de::DeserializeOwned};
 use wire::BinarySD;
 
@@ -34,23 +34,35 @@ impl DerefMut for DB {
     }
 }
 
-impl DB {
-    pub fn new<P>(path: P) -> Result<Self, DBError>
-    where
-        P: AsRef<Path>,
-    {
-        Ok(DB(Some(RocksDB::open_default(path)?)))
+pub struct DBBuilder {
+    cfs: Vec<ColumnFamilyDescriptor>,
+}
+
+impl DBBuilder {
+    pub fn new() -> Self {
+        DBBuilder {
+            cfs: Vec::new(),
+        }
     }
 
-    pub fn register<V>(&mut self) -> Result<(), DBError>
+    pub fn register<V>(self) -> Self
     where
         V: DBValue,
     {
-        use rocksdb::Options;
-
-        self.create_cf(V::cf_name(), &Options::default()).map(|_| ())
+        let mut s = self;
+        s.cfs.push(ColumnFamilyDescriptor::new(V::cf_name(), Default::default()));
+        s
     }
 
+    pub fn build<P>(self, path: P) -> Result<DB, DBError>
+    where
+        P: AsRef<Path>,
+    {
+        Ok(DB(Some(RocksDB::open_cf_descriptors(&Default::default(), path, self.cfs)?)))
+    }
+}
+
+impl DB {
     pub fn get_all<K, V>(&self) -> Result<Vec<(K, V)>, DBError>
     where
         V: DBValue,
@@ -67,7 +79,7 @@ impl DB {
         }).collect::<Vec<(K, V)>>())
     }
 
-    pub fn get<K, V>(&self, key: &K) -> Result<Option<V>, DBError>
+    pub fn _get<K, V>(&self, key: &K) -> Result<Option<V>, DBError>
     where
         V: DBValue,
         K: DBKey,
