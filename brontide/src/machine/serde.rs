@@ -4,7 +4,7 @@ use tokio::codec::{Encoder, Decoder};
 use bytes::BytesMut;
 use wire::{Message, WireError};
 
-impl Encoder for Box<Machine> {
+impl Encoder for Machine {
     type Item = Message;
     type Error = WireError;
 
@@ -13,7 +13,7 @@ impl Encoder for Box<Machine> {
     }
 }
 
-impl Decoder for Box<Machine> {
+impl Decoder for Machine {
     type Item = Message;
     type Error = WireError;
 

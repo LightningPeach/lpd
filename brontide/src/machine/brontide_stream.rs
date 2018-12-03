@@ -11,10 +11,7 @@ pub struct BrontideStream<T>
 where
     T: io::AsyncRead + io::AsyncWrite,
 {
-    // the Machine holds a lot of byte arrays,
-    // combined with tokio runtime it overflows stack,
-    // let us put it in the box
-    noise: Box<Machine>,
+    noise: Machine,
     stream: T,
 }
 
@@ -56,7 +53,7 @@ where
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
                     .map(move |(stream, _)| BrontideStream {
-                        noise: Box::new(noise),
+                        noise: noise,
                         stream: stream,
                     })
             })
@@ -88,7 +85,7 @@ where
                     .map_err(HandshakeError::IoTimeout)
                     .and_then(move |(stream, a)| {
                         Ok(BrontideStream {
-                            noise: Box::new(noise.recv_act_three(a)?),
+                            noise: noise.recv_act_three(a)?,
                             stream: stream,
                         })
                     })
@@ -99,7 +96,7 @@ where
         &self.noise.remote_static()
     }
 
-    pub fn framed(self) -> Framed<T, Box<Machine>> {
+    pub fn framed(self) -> Framed<T, Machine> {
         self.noise.framed(self.stream)
     }
 }

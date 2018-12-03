@@ -1,4 +1,4 @@
-use std::{io, fmt, error, cell};
+use std::{io, fmt, error, sync::{RwLock, Arc}};
 use tokio::timer::timeout;
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
 use super::cipher_state::CipherState;
@@ -504,7 +504,7 @@ impl Handshake {
             remote_static: self.base.remote_static,
             #[cfg(test)]
             chaining_key: chaining_key,
-            message_buffer: cell::RefCell::new([0; std::u16::MAX as usize]),
+            message_buffer: Arc::new(RwLock::new([0; std::u16::MAX as usize])),
         }
     }
 }
@@ -519,7 +519,7 @@ pub struct Machine {
     remote_static: PublicKey,
     #[cfg(test)]
     chaining_key: [u8; 32],
-    message_buffer: cell::RefCell<[u8; std::u16::MAX as usize]>,
+    message_buffer: Arc<RwLock<[u8; std::u16::MAX as usize]>>,
 }
 
 impl fmt::Debug for Machine {
@@ -557,7 +557,7 @@ impl Machine {
         use bytes::BufMut;
 
         let length = {
-            let mut buffer = self.message_buffer.borrow_mut();
+            let mut buffer = self.message_buffer.write().unwrap();
             let mut cursor = io::Cursor::new(buffer.as_mut());
             BinarySD::serialize(&mut cursor, &item)?;
             cursor.position() as usize
@@ -580,7 +580,7 @@ impl Machine {
         let tag = self.send_cipher.encrypt(
             &[],
             &mut dst.writer(),
-            &self.message_buffer.borrow()[..length],
+            &self.message_buffer.read().unwrap()[..length],
         )?;
         dst.put_slice(&tag[..]);
 
@@ -629,7 +629,7 @@ impl Machine {
                 self.recv_cipher
                     .decrypt(
                         &[],
-                        &mut self.message_buffer.borrow_mut().as_mut(),
+                        &mut self.message_buffer.write().unwrap().as_mut(),
                         cipher.as_ref(),
                         tag,
                     ).map_err(|e| match e {
@@ -637,7 +637,7 @@ impl Machine {
                         DecryptError::TagMismatch => WireError::custom("tag"),
                     })?;
 
-                BinarySD::deserialize(self.message_buffer.borrow().as_ref()).map(Some)
+                BinarySD::deserialize(self.message_buffer.read().unwrap().as_ref()).map(Some)
             }
         }
     }
