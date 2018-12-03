@@ -1,9 +1,6 @@
 #![forbid(unsafe_code)]
 #![allow(non_shorthand_field_patterns)]
 
-// The crate is bunch of public modules and tests module.
-// Its structure will change.
-
 extern crate secp256k1;
 extern crate chrono;
 extern crate wire;
@@ -39,6 +36,8 @@ mod node;
 mod channel;
 mod db;
 mod tools;
+mod connection;
 
 pub use self::state::{State, TopologyMessage};
+pub use self::connection::{AbstractNode, Node, TcpConnection, TcpConnectionStream};
 pub use rocksdb::Error as DBError;
