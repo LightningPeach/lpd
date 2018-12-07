@@ -7,6 +7,16 @@ pub struct Node {
     secret: SecretKey,
 }
 
+impl Node {
+    // TODO: remove me
+    pub fn new() -> Self {
+        use wire::SecretKey as WireSecretKey;
+        Node {
+            secret: rand::random::<WireSecretKey>().as_ref().clone(),
+        }
+    }
+}
+
 pub trait AbstractNode<A> {
     type Stream: AsyncRead + AsyncWrite;
     type Outgoing: Future<Item=BrontideStream<Self::Stream>, Error=HandshakeError>;

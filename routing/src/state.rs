@@ -14,9 +14,9 @@ use std::fmt::Debug;
 use std::path::Path;
 
 #[cfg(feature = "rpc")]
-use interface::routing::{ChannelEdge, LightningNode};
+use interface::routing::{ChannelEdge, LightningNode, ConnectPeerRequest};
 
-use tokio::prelude::{Future, Sink};
+use tokio::prelude::*;
 
 pub struct State {
     world: World,
@@ -95,6 +95,43 @@ impl State {
         }
 
         (e, n)
+    }
+
+    #[cfg(feature = "rpc")]
+    pub fn connect_peer(&mut self, request: ConnectPeerRequest) -> impl Future<Item=(), Error=()> {
+        use std::{net::SocketAddr, str::FromStr};
+        use secp256k1::{Secp256k1, PublicKey};
+        use super::connection::*;
+        use tokio::prelude::{Sink, Stream};
+
+        let address = request.address.unwrap();
+
+        // TODO: use it
+        let _ = request.perm;
+
+        let socket = SocketAddr::from_str(address.host.as_str()).unwrap();
+        let context = Secp256k1::new();
+        let public_key_data = hex::decode(address.pubkey).unwrap();
+        let public_key = PublicKey::from_slice(&context, public_key_data.as_ref())
+            .unwrap();
+
+        let fake_self = Node::new();
+        let outgoing = fake_self.connect(&socket, public_key);
+        outgoing
+            .map(|stream| {
+                let (sink, stream) = stream.framed().split();
+                let init = {
+                    use wire::RawFeatureVector;
+
+                    let global_features = RawFeatureVector::new();
+                    let local_features = RawFeatureVector::new();
+                    let init = Init::new(global_features, local_features);
+                    Message::Init(init)
+                };
+                (Sink::send(sink, init), stream)
+            })
+            .map(|_a| ())
+            .map_err(|_| ())
     }
 }
 

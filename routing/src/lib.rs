@@ -18,7 +18,7 @@ extern crate rayon;
 #[macro_use]
 extern crate hex_literal;
 
-#[cfg(test)]
+#[cfg(any(feature = "rpc", test))]
 extern crate hex;
 
 extern crate tokio;

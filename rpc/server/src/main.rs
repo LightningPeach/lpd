@@ -39,8 +39,8 @@ fn main() -> Result<(), Error> {
     }
     server.http.set_addr(argument.address).map_err(Httpbis)?;
     server.http.set_cpu_pool_threads(4);
-    server.add_service(channel_service());
     server.add_service(routing_service(state));
+    server.add_service(channel_service());
     server.add_service(payment_service());
     let server = server.build().map_err(Grpc)?;
 
