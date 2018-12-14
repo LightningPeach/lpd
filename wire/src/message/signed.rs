@@ -1,5 +1,5 @@
 use serde::Serialize;
-use ::WireError;
+use binformat::WireError;
 
 use secp256k1::Error as Secp256k1Error;
 use secp256k1::Message as Secp256k1Message;
@@ -27,7 +27,7 @@ pub trait DataToSign: Serialize {
         use sha2::Sha256;
         use digest::FixedOutput;
         use digest::Input;
-        use ::BinarySD;
+        use binformat::BinarySD;
 
         let mut v = Vec::new();
         let data = self.as_ref_data();

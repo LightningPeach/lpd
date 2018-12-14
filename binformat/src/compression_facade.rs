@@ -8,7 +8,7 @@ use serde::Deserializer;
 use serde::ser;
 use serde::de;
 
-use ::BinarySD;
+use super::BinarySD;
 use std::io::Read;
 
 use std::mem;

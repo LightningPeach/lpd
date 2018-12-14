@@ -1,7 +1,7 @@
 use super::ShortChannelId;
 use super::Hash256;
-use ::UncompressedData;
-use ::SerdeVec;
+use binformat::UncompressedData;
+use binformat::SerdeVec;
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum ShortChannelIdEncoding {
@@ -22,11 +22,11 @@ pub struct ReplyShortChannelIdsEnd {
 }
 
 mod serde {
-    use ::BinarySD;
+    use binformat::BinarySD;
     use super::ShortChannelIdEncoding;
     use super::ShortChannelId;
-    use ::SerdeVec;
-    use ::PackSized;
+    use binformat::SerdeVec;
+    use binformat::PackSized;
 
     use serde::Serialize;
     use serde::Serializer;

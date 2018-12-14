@@ -1,4 +1,4 @@
-use ::PackSized;
+use binformat::PackSized;
 
 use secp256k1::PublicKey as Secp256k1PublicKey;
 use secp256k1::SecretKey as Secp256k1SecretKey;

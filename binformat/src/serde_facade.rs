@@ -4,15 +4,13 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 
-use std::result::Result;
 use std::io;
 
 use bincode::Error;
 use bincode::LengthSDOptions;
 use bincode::config;
 
-use super::message::MessageSize;
-
+type MessageSize = u16;
 pub type WireError = Error;
 
 /// LengthSDOptions is the delegate that overrides
