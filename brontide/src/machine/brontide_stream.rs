@@ -69,7 +69,7 @@ where
             .timeout(Self::read_timeout())
             .map_err(HandshakeError::IoTimeout)
             .and_then(move |(stream, a)| {
-                HandshakeNew::new(false, local_secret, PublicKey::new())
+                HandshakeNew::new(false, local_secret, PublicKey::from_slice(&[0; 32][..]).unwrap())
                     .map_err(HandshakeError::Crypto)
                     .and_then(move |noise| {
                         let noise = noise.recv_act_one(a)?;

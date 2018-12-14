@@ -15,9 +15,13 @@ extern crate tokio;
 extern crate bytes;
 
 extern crate wire;
+extern crate binformat;
 
 mod machine;
 pub use self::machine::{Machine, HandshakeError, BrontideStream};
+
+// brontide reexport the type in order to reduce dependencies
+pub use binformat::WireError;
 
 //#[cfg(test)]
 //mod test_tcp_communication;

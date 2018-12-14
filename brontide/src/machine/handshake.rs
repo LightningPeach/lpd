@@ -9,9 +9,14 @@ use super::symmetric_state::{SymmetricState, MAC_SIZE};
 fn ecdh(pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], EcdsaError> {
     use secp256k1::Secp256k1;
     use sha2::{Sha256, Digest};
+    use binformat::BinarySD;
 
     let mut pk_cloned = pk.clone();
-    pk_cloned.mul_assign(&Secp256k1::new(), sk)?;
+    let mut buffer = Vec::new();
+    BinarySD::serialize(&mut buffer, sk).unwrap();
+    // two bytes is size
+    // WARNING: the format might change in new secp256k1
+    pk_cloned.mul_assign(&Secp256k1::new(), &buffer[2..])?;
 
     let mut hasher = Sha256::default();
     hasher.input(&pk_cloned.serialize());
@@ -115,9 +120,7 @@ impl ActOne {
     }
 
     fn key(&self) -> Result<PublicKey, EcdsaError> {
-        use secp256k1::Secp256k1;
-
-        PublicKey::from_slice(&Secp256k1::new(), &self.bytes[1..34])
+        PublicKey::from_slice(&self.bytes[1..34])
     }
 
     fn tag(&self) -> [u8; MAC_SIZE] {
@@ -219,7 +222,7 @@ pub struct HandshakeNew {
     symmetric_state: SymmetricState,
     local_static: SecretKey,
     remote_static: PublicKey,
-    pub ephemeral_gen: fn() -> Result<SecretKey, EcdsaError>,
+    pub ephemeral_gen: fn() -> SecretKey,
 }
 
 impl HandshakeNew {
@@ -228,14 +231,14 @@ impl HandshakeNew {
         local_secret: SecretKey,
         remote_public: PublicKey,
     ) -> Result<Self, EcdsaError> {
-        use secp256k1::{Secp256k1, constants::SECRET_KEY_SIZE};
+        use secp256k1::Secp256k1;
 
         let mut symmetric_state = SymmetricState::new(PROTOCOL_NAME);
         symmetric_state.mix_hash("lightning".as_bytes());
         if initiator {
             symmetric_state.mix_hash(&remote_public.serialize());
         } else {
-            let local_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_secret)?;
+            let local_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_secret);
             symmetric_state.mix_hash(&local_pub.serialize());
         }
 
@@ -244,8 +247,7 @@ impl HandshakeNew {
             local_static: local_secret,
             remote_static: remote_public,
             ephemeral_gen: || {
-                let sk: [u8; SECRET_KEY_SIZE] = rand::random();
-                SecretKey::from_slice(&Secp256k1::new(), &sk)
+                SecretKey::new(&mut rand::thread_rng())
             },
         })
     }
@@ -261,10 +263,9 @@ impl HandshakeNew {
         use secp256k1::Secp256k1;
 
         // e
-        let local_ephemeral = (self.ephemeral_gen)().map_err(HandshakeError::Crypto)?;
+        let local_ephemeral = (self.ephemeral_gen)();
 
-        let local_ephemeral_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_ephemeral)
-            .map_err(HandshakeError::Crypto)?;
+        let local_ephemeral_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_ephemeral);
         let ephemeral = local_ephemeral_pub.serialize();
         self.symmetric_state.mix_hash(&ephemeral);
 
@@ -339,10 +340,9 @@ impl HandshakeActOne {
         use secp256k1::Secp256k1;
 
         // e
-        let local_ephemeral = (self.base.ephemeral_gen)().map_err(HandshakeError::Crypto)?;
+        let local_ephemeral = (self.base.ephemeral_gen)();
 
-        let local_ephemeral_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_ephemeral)
-            .map_err(HandshakeError::Crypto)?;
+        let local_ephemeral_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_ephemeral);
         let ephemeral = local_ephemeral_pub.serialize();
         self.base.symmetric_state.mix_hash(&ephemeral);
 
@@ -424,8 +424,7 @@ impl Handshake {
         use secp256k1::{Secp256k1, constants::PUBLIC_KEY_SIZE};
 
         let local_static_pub =
-            PublicKey::from_secret_key(&Secp256k1::new(), &self.base.local_static)
-                .map_err(HandshakeError::Crypto)?;
+            PublicKey::from_secret_key(&Secp256k1::new(), &self.base.local_static);
         let our_pubkey = local_static_pub.serialize();
         let mut cipher_text = Vec::with_capacity(PUBLIC_KEY_SIZE);
         let tag = self
@@ -456,8 +455,6 @@ impl Handshake {
     // initiator's static public key. Decryption of the static key serves to
     // authenticate the initiator to the responder.
     pub fn recv_act_three(mut self, act_three: ActThree) -> Result<Machine, HandshakeError> {
-        use secp256k1::Secp256k1;
-
         // If the handshake version is unknown, then the handshake fails
         // immediately.
         if let Err(()) = act_three.version() {
@@ -474,7 +471,7 @@ impl Handshake {
             .symmetric_state
             .decrypt_and_hash(act_three.key(), act_three.tag_first())
             .map_err(HandshakeError::Io)?;
-        self.base.remote_static = PublicKey::from_slice(&Secp256k1::new(), &remote_pub)
+        self.base.remote_static = PublicKey::from_slice(&remote_pub)
             .map_err(HandshakeError::Crypto)?;
 
         // se
@@ -510,7 +507,7 @@ impl Handshake {
 }
 
 use bytes::BytesMut;
-use wire::{BinarySD, WireError};
+use binformat::{BinarySD, WireError};
 use serde::{Serialize, de::DeserializeOwned};
 
 pub struct Machine {

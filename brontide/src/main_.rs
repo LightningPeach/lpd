@@ -14,10 +14,10 @@ fn main() {
 
     let secret = {
         let local_priv_bytes: [u8; SECRET_KEY_SIZE] = rand::random();
-        SecretKey::from_slice(&Secp256k1::new(), &local_priv_bytes).unwrap()
+        SecretKey::from_slice(&local_priv_bytes).unwrap()
     };
 
-    let public = PublicKey::from_secret_key(&Secp256k1::new(), &secret).unwrap();
+    let public = PublicKey::from_secret_key(&Secp256k1::new(), &secret);
     let address_str = "127.0.0.1:10020";
     println!("{}@{}", hex::encode(&public.serialize()[..]), address_str);
 
@@ -39,7 +39,7 @@ fn main() {
         .and_then(move |stream| {
             use secp256k1::PublicKey;
             use secp256k1::Secp256k1;
-            let public = PublicKey::from_slice(&Secp256k1::new(), &hex::decode("02bb358785cba705f6339f1eca6a8209e33afc80c9207d99a90a6fbb538c668929").unwrap()).unwrap().into();
+            let public = PublicKey::from_slice(&hex::decode("02bb358785cba705f6339f1eca6a8209e33afc80c9207d99a90a6fbb538c668929").unwrap()).unwrap().into();
             let connection = brontide::BrontideStream::outgoing(stream, outgoing_secret, public)
                 .map(|stream| println!("outgoing connection: {}", stream.as_ref().peer_addr().unwrap()))
                 .map_err(|e| println!("handshake error: {:?}", e));

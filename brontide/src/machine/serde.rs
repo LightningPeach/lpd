@@ -2,7 +2,8 @@ use super::handshake::Machine;
 
 use tokio::codec::{Encoder, Decoder};
 use bytes::BytesMut;
-use wire::{Message, WireError};
+use binformat::WireError;
+use wire::Message;
 
 impl Encoder for Machine {
     type Item = Message;
