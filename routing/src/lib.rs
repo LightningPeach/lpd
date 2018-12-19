@@ -4,6 +4,7 @@
 extern crate secp256k1;
 extern crate chrono;
 extern crate wire;
+extern crate binformat;
 extern crate brontide;
 extern crate bitcoin_types;
 extern crate common_types;
@@ -36,8 +37,6 @@ mod node;
 mod channel;
 mod db;
 mod tools;
-mod connection;
 
 pub use self::state::{State, TopologyMessage};
-pub use self::connection::{AbstractNode, Node, TcpConnection, TcpConnectionStream};
 pub use rocksdb::Error as DBError;

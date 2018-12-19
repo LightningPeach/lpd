@@ -7,17 +7,17 @@ use interface::routing::{
     QueryRoutesRequest, RouteList,
 };
 use interface::common::Void;
-use routing::State;
+use connection::Node;
 use std::sync::{RwLock, Arc};
 
-pub fn service(state: Arc<RwLock<State>>) -> ServerServiceDefinition {
+pub fn service(state: Arc<RwLock<Node>>) -> ServerServiceDefinition {
     RoutingServiceServer::new_service_def(RoutingImpl {
         state: state,
     })
 }
 
 struct RoutingImpl {
-    state: Arc<RwLock<State>>,
+    state: Arc<RwLock<Node>>,
 }
 
 impl RoutingService for RoutingImpl {
@@ -42,7 +42,7 @@ impl RoutingService for RoutingImpl {
     }
 
     fn describe_graph(&self, o: RequestOptions, p: ChannelGraphRequest) -> SingleResponse<ChannelGraph> {
-        let state = self.state.read().unwrap();
+        /*let state = self.state.read().unwrap();
         let _ = o;
 
         let (e, n) = state.describe(p.get_include_unannounced());
@@ -50,7 +50,9 @@ impl RoutingService for RoutingImpl {
         let mut r = ChannelGraph::new();
         r.set_edges(e.into());
         r.set_nodes(n.into());
-        SingleResponse::completed(r)
+        SingleResponse::completed(r)*/
+        let _ = (o, p);
+        unimplemented!()
     }
 
     fn query_routes(&self, o: RequestOptions, p: QueryRoutesRequest) -> SingleResponse<RouteList> {

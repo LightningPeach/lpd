@@ -1,50 +1,29 @@
 use std::path::Path;
-use rocksdb::{DB as RocksDB, Error as DBError, ColumnFamilyDescriptor};
+use rocksdb::{DB as RocksDB, ColumnFamilyDescriptor};
 use serde::{Serialize, de::DeserializeOwned};
-use binformat::BinarySD;
 
 use std::ops::{DerefMut, Deref};
+
+pub use rocksdb::Error as DBError;
 
 pub trait DBKey: Serialize + DeserializeOwned {
 }
 
+// It is easy to derive such trait, just add `_extension: Option<E>` where `E` is also DBValue
 pub trait DBValue: Serialize + DeserializeOwned {
+    // Extension is also further DBValue
+    type Extension: DBValue;
+
+    fn extend(self, e: Self::Extension) -> Self;
     fn cf_name() -> &'static str;
 }
 
-pub struct DB(Option<RocksDB>);
-
-impl Default for DB {
-    fn default() -> Self {
-        DB(None)
-    }
-}
-
-impl Deref for DB {
-    type Target = RocksDB;
-
-    fn deref(&self) -> &Self::Target {
-        self.0.as_ref().expect("missing database")
-    }
-}
-
-impl DerefMut for DB {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.as_mut().expect("missing database")
-    }
-}
-
+#[derive(Default)]
 pub struct DBBuilder {
     cfs: Vec<ColumnFamilyDescriptor>,
 }
 
 impl DBBuilder {
-    pub fn new() -> Self {
-        DBBuilder {
-            cfs: Vec::new(),
-        }
-    }
-
     pub fn register<V>(self) -> Self
     where
         V: DBValue,
@@ -63,7 +42,23 @@ impl DBBuilder {
         let mut options = Options::default();
         options.create_if_missing(true);
         options.create_missing_column_families(true);
-        Ok(DB(Some(RocksDB::open_cf_descriptors(&options, path, self.cfs)?)))
+        Ok(DB(RocksDB::open_cf_descriptors(&options, path, self.cfs)?))
+    }
+}
+
+pub struct DB(RocksDB);
+
+impl Deref for DB {
+    type Target = RocksDB;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for DB {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -74,6 +69,7 @@ impl DB {
         K: DBKey,
     {
         use rocksdb::IteratorMode::Start;
+        use binformat::BinarySD;
 
         let cf = self.cf_handle(V::cf_name()).expect("call `register` first");
         Ok(self.iterator_cf(cf, Start)?.map(|(key, value)| {
@@ -84,11 +80,13 @@ impl DB {
         }).collect::<Vec<(K, V)>>())
     }
 
-    pub fn _get<K, V>(&self, key: &K) -> Result<Option<V>, DBError>
+    pub fn get<K, V>(&self, key: &K) -> Result<Option<V>, DBError>
     where
         V: DBValue,
         K: DBKey,
     {
+        use binformat::BinarySD;
+
         let cf = self.cf_handle(V::cf_name()).expect("call `register` first");
         let mut key_bytes = Vec::new();
         BinarySD::serialize(&mut key_bytes, key).unwrap();
@@ -102,6 +100,8 @@ impl DB {
         V: DBValue,
         K: DBKey,
     {
+        use binformat::BinarySD;
+
         let cf = self.cf_handle(V::cf_name()).expect("call `register` first");
         let mut key_bytes = Vec::new();
         BinarySD::serialize(&mut key_bytes, key).unwrap();
@@ -109,6 +109,22 @@ impl DB {
         BinarySD::serialize(&mut value_bytes, &value).unwrap();
         self.put_cf(cf, key_bytes.as_ref(), value_bytes.as_ref())
     }
+
+}
+
+// The basis of the extension chain
+impl DBValue for () {
+    type Extension = ();
+
+    fn extend(self, e: Self::Extension) -> Self {
+        e
+    }
+
+    fn cf_name() -> &'static str {
+        "()"
+    }
 }
 
 impl DBKey for usize {}
+
+impl DBKey for String {}

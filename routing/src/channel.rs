@@ -297,7 +297,7 @@ impl<'a> System<'a> for GenericSystem<StoreChannels, Result<(), DBError>> {
 #[cfg(feature = "rpc")]
 mod rpc {
     use interface::{routing::{ChannelEdge, RoutingPolicy}, common::MilliSatoshi};
-    use wire::BinarySD;
+    use binformat::BinarySD;
     use super::{ChannelPolicy, ChannelInfo};
 
     impl From<ChannelPolicy> for RoutingPolicy {

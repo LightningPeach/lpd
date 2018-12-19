@@ -1,51 +1,41 @@
-use secp256k1::{SecretKey, PublicKey};
 use std::net::SocketAddr;
-use tokio::{io::{AsyncRead, AsyncWrite}, prelude::{Future, Stream, Poll}, net::{TcpStream, TcpListener}, net::tcp::{ConnectFuture, Incoming}};
+use secp256k1::{SecretKey, PublicKey};
+use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    prelude::{Future, Stream, Poll},
+    net::{TcpStream, TcpListener, tcp::{ConnectFuture, Incoming}},
+};
 use brontide::{BrontideStream, HandshakeError};
 
-pub struct Node {
-    secret: SecretKey,
+pub trait AbstractAddress {
+    type Stream: AsyncRead + AsyncWrite + Send + 'static;
+    type Outgoing: Future<Item=BrontideStream<Self::Stream>, Error=HandshakeError> + Send + 'static;
+    type Incoming: Stream<Item=BrontideStream<Self::Stream>, Error=HandshakeError> + Send + 'static;
+
+    fn connect(&self, local_secret: SecretKey, remote_public: PublicKey) -> Self::Outgoing;
+    fn listen(&self, local_secret: SecretKey) -> Self::Incoming;
 }
 
-impl Node {
-    // TODO: remove me
-    pub fn new() -> Self {
-        use wire::SecretKey as WireSecretKey;
-        Node {
-            secret: rand::random::<WireSecretKey>().as_ref().clone(),
-        }
-    }
-}
-
-pub trait AbstractNode<A> {
-    type Stream: AsyncRead + AsyncWrite;
-    type Outgoing: Future<Item=BrontideStream<Self::Stream>, Error=HandshakeError>;
-    type Incoming: Stream<Item=BrontideStream<Self::Stream>, Error=HandshakeError>;
-
-    fn connect(&self, remote_address: &A, remote_public: PublicKey) -> Self::Outgoing;
-    fn listen(&self, local_address: &A) -> Self::Incoming;
-}
-
-impl AbstractNode<SocketAddr> for Node {
+impl AbstractAddress for SocketAddr {
     type Stream = TcpStream;
     type Outgoing = TcpConnection;
     type Incoming = TcpConnectionStream;
 
-    fn connect(&self, remote_address: &SocketAddr, remote_public: PublicKey) -> Self::Outgoing {
+    fn connect(&self, local_secret: SecretKey, remote_public: PublicKey) -> Self::Outgoing {
         TcpConnection {
-            inner: TcpStream::connect(remote_address),
-            local_secret: self.secret.clone(),
+            inner: TcpStream::connect(self),
+            local_secret: local_secret,
             remote_public: remote_public,
         }
     }
 
-    fn listen(&self, local_address: &SocketAddr) -> Self::Incoming {
+    fn listen(&self, local_secret: SecretKey) -> Self::Incoming {
         TcpConnectionStream {
-            inner: TcpListener::bind(local_address)
+            inner: TcpListener::bind(self)
                 .map_err(HandshakeError::Io)
                 .map_err(Some)
                 .map(TcpListener::incoming),
-            local_secret: self.secret.clone(),
+            local_secret: local_secret,
         }
     }
 }
