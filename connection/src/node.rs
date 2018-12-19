@@ -1,11 +1,9 @@
-use std::net::SocketAddr;
 use std::sync::{Arc, RwLock, Weak};
 
 use secp256k1::{SecretKey, PublicKey};
 use tokio::prelude::{Future, Sink};
 use specs::{World, System, DenseVecStorage};
 use wire::Message;
-use brontide::WireError;
 
 use specs_derive::Component;
 
