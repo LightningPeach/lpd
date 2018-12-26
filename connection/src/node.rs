@@ -1,17 +1,18 @@
-use std::sync::{Arc, RwLock, Weak};
+use std::sync::{Arc, RwLock};
 
 use secp256k1::{SecretKey, PublicKey};
-use tokio::prelude::{Future, Sink};
-use specs::{World, System, DenseVecStorage};
+use tokio::prelude::{Future, AsyncRead, AsyncWrite};
+use tokio::executor::Spawn;
+use futures::sync::mpsc::Receiver;
+use specs::{World, System};
 use wire::Message;
 
-use specs_derive::Component;
-
-use super::address::AbstractAddress;
+use super::address::{AbstractAddress, ConnectionStream, Command};
 
 use state::{DB, DBError};
+use brontide::BrontideStream;
+
 use std::path::Path;
-use std::sync::mpsc::Receiver;
 
 pub fn database<P: AsRef<Path>>(path: P) -> Result<DB, DBError> {
     use state::DBBuilder;
@@ -24,14 +25,13 @@ pub fn database<P: AsRef<Path>>(path: P) -> Result<DB, DBError> {
 
 pub struct Node {
     world: World,
-    secret: SecretKey,
+    // TODO: store as entity in the world
     peers: Vec<PublicKey>,
+    secret: SecretKey,
 }
 
-#[derive(Component)]
 pub struct Remote {
-    shared: Weak<RwLock<Node>>,
-    world: World,
+    local: World,
     public: PublicKey,
 }
 
@@ -55,8 +55,8 @@ impl Node {
                 // world.register();
                 world
             },
-            secret: SecretKey::from_slice(&secret[..]).unwrap(),
             peers: Vec::new(),
+            secret: SecretKey::from_slice(&secret[..]).unwrap(),
         }
     }
 
@@ -69,93 +69,61 @@ impl Node {
         }
     }
 
-    pub fn listen<A>(shared: Arc<RwLock<Self>>, address: &A, rx: Receiver<()>)
+    fn process_connection<S>(p_self: Arc<RwLock<Self>>, stream: BrontideStream<S>) -> Spawn
     where
-        A: AbstractAddress,
+        S: AsyncRead + AsyncWrite + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
         use specs::RunNow;
 
-        // TODO: poll rx to gracefully stop
-        let secret = shared.read().unwrap().secret.clone();
-        let server = address.listen(secret)
-            .map_err(|e| println!("{:?}", e))
-            .for_each(move |stream| {
-                let shared = shared.clone();
-                let remote_public = stream.remote_key().clone();
-                let (sink, stream) = stream.framed().split();
+        let remote_public = stream.remote_key().clone();
+        let (sink, stream) = stream.framed().split();
 
-                let mut this = shared.write().unwrap();
-                match this.add(remote_public) {
-                    Some(k) => {
-                        use futures::future::ok;
-                        println!("WARNING: {} is connected, ignoring", k);
-                        tokio::spawn(ok(()))
+        // nll will fix it,
+        // p_self is borrowed, but it is not used in match's `None` arm
+        // however, the compiler still complains, so let's clone the pointer here
+        let _shared = p_self.clone();
+        match p_self.write().unwrap().add(remote_public) {
+            Some(k) => {
+                use futures::future::ok;
+                println!("WARNING: {} is connected, ignoring", k);
+                tokio::spawn(ok(()))
+            },
+            None => {
+                let peer = Remote {
+                    local: {
+                        let mut world = World::new();
+                        // world.register();
+                        world
                     },
-                    None => {
-                        let peer = Remote {
-                            shared: Arc::downgrade(&shared),
-                            world: World::new(),
-                            public: remote_public,
-                        };
+                    public: remote_public,
+                };
 
-                        let connection = stream
-                            .map_err(|e| println!("{:?}", e))
-                            .fold(peer, |mut peer, message| {
-                                println!("{:?}", message);
-                                Msg(Some(message)).run_now(&mut peer.world.res);
-                                Ok(peer)
-                            })
-                            .map(|_| ());
+                let connection = stream
+                    .map_err(|e| println!("{:?}", e))
+                    .fold(peer, move |mut peer, message| {
+                        println!("{:?}", message);
+                        Msg(Some(message)).run_now(&mut peer.local.res);
+                        Ok(peer)
+                    })
+                    .map(|_| ());
 
-                        tokio::spawn(connection)
-                    }
-                }
-            });
-        tokio::run(server);
+                tokio::spawn(connection)
+            }
+        }
     }
 
-    // TODO: get rid of duplicated code
-    pub fn connect<A>(shared: Arc<RwLock<Self>>, address: &A, remote_public: PublicKey)
+    pub fn listen<A>(p_self: Arc<RwLock<Self>>, address: &A, control: Receiver<Command<A>>) -> Result<(), A::Error>
     where
-        A: AbstractAddress,
+        A: AbstractAddress + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
 
-        let secret = shared.read().unwrap().secret.clone();
-        let server = address.connect(secret, remote_public)
+        let secret = p_self.read().unwrap().secret.clone();
+        let server = ConnectionStream::new(address, control, secret)?
             .map_err(|e| println!("{:?}", e))
-            .and_then(move |stream| {
-                let shared = shared.clone();
-                let remote_public = stream.remote_key().clone();
-                let (sink, stream) = stream.framed().split();
-
-                let mut this = shared.write().unwrap();
-                match this.add(remote_public) {
-                    Some(k) => {
-                        use futures::future::ok;
-                        println!("WARNING: {} is connected, ignoring", k);
-                        tokio::spawn(ok(()))
-                    },
-                    None => {
-                        let peer = Remote {
-                            shared: Arc::downgrade(&shared),
-                            world: World::new(),
-                            public: remote_public,
-                        };
-
-                        let connection = stream
-                            .map_err(|e| println!("{:?}", e))
-                            .fold(peer, |mut peer, message| {
-                                println!("{:?}", message);
-                                Ok(peer)
-                            })
-                            .map(|_| ());
-
-                        tokio::spawn(connection)
-                    }
-                }
-            });
+            .for_each(move |stream| Self::process_connection(p_self.clone(), stream));
         tokio::run(server);
+        Ok(())
     }
 }

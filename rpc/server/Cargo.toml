@@ -12,4 +12,6 @@ tls-api = "0.1.*"
 tls-api-native-tls = "0.1.*"
 httpbis = "0.7.*"
 
+futures = "0.1"
+
 implementation = { path = "../implementation" }

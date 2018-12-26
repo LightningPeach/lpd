@@ -3,6 +3,8 @@ extern crate tls_api_native_tls;
 extern crate tls_api;
 extern crate httpbis;
 
+extern crate futures;
+
 extern crate implementation;
 
 mod config;
@@ -11,7 +13,7 @@ use self::config::{Argument, Error as CommandLineReadError};
 use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;
 use std::io::Error as IoError;
-use std::sync::mpsc::SendError;
+use futures::sync::mpsc::SendError;
 use std::any::Any;
 
 #[derive(Debug)]
@@ -25,31 +27,36 @@ enum Error {
 }
 
 fn main() -> Result<(), Error> {
-    use std::{sync::{RwLock, Arc, mpsc}, io::{Read, stdin, stdout, Write}, thread, net::SocketAddr};
+    use std::{sync::{RwLock, Arc}, io::{Read, stdin, stdout, Write}, thread, net::SocketAddr};
     use grpc::ServerBuilder;
     use implementation::{Node, routing_service, channel_service, payment_service};
+    use futures::sync::mpsc;
+    use futures::Future;
+    use futures::Sink;
     use self::Error::*;
 
     let argument = Argument::from_env().map_err(CommandLineRead)?;
 
-    // tui
-    let (handle, rx) = {
-        write!(stdout(), "\
-        the lightning peach node is running at: {}, database at: {}\n\
-        enter any to shutdown... ", argument.address, argument.db_path).map_err(Io)?;
-        stdout().flush().map_err(Io)?;
+    let (handle, node, rx) = {
+        // tui
+        let (handle, rx) = {
+            write!(stdout(), "\
+                the lightning peach node is running at: {}, database at: {}\n\
+                enter any to shutdown... ", argument.address, argument.db_path).map_err(Io)?;
+            stdout().flush().map_err(Io)?;
 
-        let (tx, rx) = mpsc::channel();
-        (
-            thread::spawn(move || {
-                let _ = stdin().read(&mut [0]).map_err(Io)?;
-                tx.send(()).map_err(SendError)
-            }),
-            rx
-        )
-    };
+            let (tx, rx) = mpsc::channel(1);
+            (
+                thread::spawn(move || {
+                    let _ = stdin().read(&mut [0]).map_err(Io)?;
+                    //tx.send(()).wait().map_err(SendError)
+                    let _ = tx;
+                    Ok(())
+                }),
+                rx
+            )
+        };
 
-    let node = {
         let secret = [
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
@@ -57,7 +64,7 @@ fn main() -> Result<(), Error> {
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
         ];
 
-        Arc::new(RwLock::new(Node::new(secret)))
+        (handle, Arc::new(RwLock::new(Node::new(secret))), rx)
     };
 
     let server = {
@@ -74,7 +81,7 @@ fn main() -> Result<(), Error> {
     };
 
     let address: SocketAddr = "127.0.0.1:10000".parse().unwrap();
-    Node::listen(node, &address, rx);
+    Node::listen(node, &address, rx).map_err(Io)?;
 
     handle.join().map_err(ThreadError)??;
 

@@ -10,14 +10,12 @@ use interface::common::Void;
 use connection::Node;
 use std::sync::{RwLock, Arc};
 
-pub fn service(state: Arc<RwLock<Node>>) -> ServerServiceDefinition {
-    RoutingServiceServer::new_service_def(RoutingImpl {
-        state: state,
-    })
+pub fn service(node: Arc<RwLock<Node>>) -> ServerServiceDefinition {
+    RoutingServiceServer::new_service_def(RoutingImpl { node: node })
 }
 
 struct RoutingImpl {
-    state: Arc<RwLock<Node>>,
+    node: Arc<RwLock<Node>>,
 }
 
 impl RoutingService for RoutingImpl {
