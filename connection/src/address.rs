@@ -76,17 +76,6 @@ impl Future for TcpConnection {
                 },
             }
         }
-        //match self.inner.poll() {
-        //    Ok(Ready(stream)) => {
-        //        BrontideStream::outgoing(
-        //            stream,
-        //            self.local_secret.clone(),
-        //            self.remote_public.clone()
-        //        ).poll()
-        //    },
-        //    Ok(NotReady) => Ok(NotReady),
-        //    Err(error) => Err(HandshakeError::Io(error)),
-        //}
     }
 }
 
@@ -182,7 +171,7 @@ where
                 } => {
                     let secret = self.local_secret.clone();
                     self.outgoing.push(address.connect(secret, remote_public));
-                    Ok(NotReady)
+                    self.poll()
                 },
                 Command::Terminate => Ok(Ready(None)),
             },
@@ -191,9 +180,13 @@ where
                 if let Ready(t) = incoming {
                     Ok(Ready(t))
                 } else {
-                    for r in self.outgoing.iter_mut() {
-                        if let Ready(t) = r.poll()? {
-                            return Ok(Ready(Some(t)))
+                    for (index, r) in self.outgoing.iter_mut().enumerate() {
+                        match r.poll() {
+                            Ok(NotReady) => (),
+                            t @ _ => {
+                                self.outgoing.remove(index);
+                                return t.map(|a| a.map(Some))
+                            }
                         }
                     }
                     Ok(NotReady)
