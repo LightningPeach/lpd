@@ -221,28 +221,79 @@ static PROTOCOL_NAME: &'static str = "Noise_XK_secp256k1_ChaChaPoly_SHA256";
 pub struct HandshakeNew {
     symmetric_state: SymmetricState,
     local_static: SecretKey,
-    remote_static: PublicKey,
     pub ephemeral_gen: fn() -> SecretKey,
 }
 
 impl HandshakeNew {
-    pub fn new(
-        initiator: bool,
-        local_secret: SecretKey,
-        remote_public: PublicKey,
-    ) -> Result<Self, EcdsaError> {
+    pub fn new(local_secret: SecretKey) -> Result<Self, EcdsaError> {
         use secp256k1::Secp256k1;
 
         let mut symmetric_state = SymmetricState::new(PROTOCOL_NAME);
         symmetric_state.mix_hash("lightning".as_bytes());
-        if initiator {
-            symmetric_state.mix_hash(&remote_public.serialize());
-        } else {
-            let local_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_secret);
-            symmetric_state.mix_hash(&local_pub.serialize());
-        }
+        let local_pub = PublicKey::from_secret_key(&Secp256k1::new(), &local_secret);
+        symmetric_state.mix_hash(&local_pub.serialize());
 
         Ok(HandshakeNew {
+            symmetric_state: symmetric_state,
+            local_static: local_secret,
+            ephemeral_gen: || {
+                SecretKey::new(&mut rand::thread_rng())
+            },
+        })
+    }
+
+    // recv_act_one processes the act one packet sent by the initiator. The responder
+    // executes the mirrored actions to that of the initiator extending the
+    // handshake digest and deriving a new shared secret based on an ECDH with the
+    // initiator's ephemeral key and responder's static key.
+    pub fn recv_act_one(mut self, act_one: ActOne) -> Result<HandshakeActOne, HandshakeError> {
+        // If the handshake version is unknown, then the handshake fails
+        // immediately.
+        if let Err(()) = act_one.version() {
+            let msg = format!("Act One: invalid handshake version: {}", act_one.bytes[0]);
+            return Err(HandshakeError::UnknownHandshakeVersion(msg));
+        }
+
+        // e
+        let remote_ephemeral = act_one.key().map_err(HandshakeError::Crypto)?;
+        self.symmetric_state.mix_hash(&remote_ephemeral.serialize());
+
+        // es
+        let s = ecdh(&remote_ephemeral, &self.local_static).map_err(HandshakeError::Crypto)?;
+        self.symmetric_state.mix_key(&s);
+
+        // If the initiator doesn't know our static key, then this operation
+        // will fail.
+        self.symmetric_state
+            .decrypt_and_hash(&[], act_one.tag())
+            .map_err(HandshakeError::Io)?;
+
+        Ok(HandshakeActOne {
+            base: self,
+            remote_ephemeral: remote_ephemeral,
+        })
+    }
+
+    #[cfg(test)]
+    pub fn handshake_digest(&self) -> [u8; 32] {
+        self.symmetric_state.handshake_digest()
+    }
+}
+
+pub struct HandshakeInitiator {
+    symmetric_state: SymmetricState,
+    local_static: SecretKey,
+    remote_static: PublicKey,
+    pub ephemeral_gen: fn() -> SecretKey,
+}
+
+impl HandshakeInitiator {
+    pub fn new(local_secret: SecretKey, remote_public: PublicKey, ) -> Result<Self, EcdsaError> {
+        let mut symmetric_state = SymmetricState::new(PROTOCOL_NAME);
+        symmetric_state.mix_hash("lightning".as_bytes());
+        symmetric_state.mix_hash(&remote_public.serialize());
+
+        Ok(HandshakeInitiator {
             symmetric_state: symmetric_state,
             local_static: local_secret,
             remote_static: remote_public,
@@ -286,38 +337,6 @@ impl HandshakeNew {
         Ok((act_one, handshake_act_one))
     }
 
-    // recv_act_one processes the act one packet sent by the initiator. The responder
-    // executes the mirrored actions to that of the initiator extending the
-    // handshake digest and deriving a new shared secret based on an ECDH with the
-    // initiator's ephemeral key and responder's static key.
-    pub fn recv_act_one(mut self, act_one: ActOne) -> Result<HandshakeActOne, HandshakeError> {
-        // If the handshake version is unknown, then the handshake fails
-        // immediately.
-        if let Err(()) = act_one.version() {
-            let msg = format!("Act One: invalid handshake version: {}", act_one.bytes[0]);
-            return Err(HandshakeError::UnknownHandshakeVersion(msg));
-        }
-
-        // e
-        let remote_ephemeral = act_one.key().map_err(HandshakeError::Crypto)?;
-        self.symmetric_state.mix_hash(&remote_ephemeral.serialize());
-
-        // es
-        let s = ecdh(&remote_ephemeral, &self.local_static).map_err(HandshakeError::Crypto)?;
-        self.symmetric_state.mix_key(&s);
-
-        // If the initiator doesn't know our static key, then this operation
-        // will fail.
-        self.symmetric_state
-            .decrypt_and_hash(&[], act_one.tag())
-            .map_err(HandshakeError::Io)?;
-
-        Ok(HandshakeActOne {
-            base: self,
-            remote_ephemeral: remote_ephemeral,
-        })
-    }
-
     #[cfg(test)]
     pub fn handshake_digest(&self) -> [u8; 32] {
         self.symmetric_state.handshake_digest()
@@ -359,6 +378,7 @@ impl HandshakeActOne {
         let act_two = ActTwo::new(HandshakeVersion::_0, ephemeral, auth_payload);
         let handshake = Handshake {
             base: self.base,
+            remote_static: None,
             local_ephemeral: local_ephemeral,
             remote_ephemeral: self.remote_ephemeral,
         };
@@ -367,7 +387,7 @@ impl HandshakeActOne {
 }
 
 pub struct HandshakeInitiatorActOne {
-    base: HandshakeNew,
+    base: HandshakeInitiator,
     local_ephemeral: SecretKey,
 }
 
@@ -399,7 +419,12 @@ impl HandshakeInitiatorActOne {
             .map_err(HandshakeError::Io)?;
 
         Ok(Handshake {
-            base: self.base,
+            base: HandshakeNew {
+                symmetric_state: self.base.symmetric_state,
+                local_static: self.base.local_static,
+                ephemeral_gen: self.base.ephemeral_gen,
+            },
+            remote_static: Some(self.base.remote_static),
             local_ephemeral: self.local_ephemeral,
             remote_ephemeral: remote_ephemeral,
         })
@@ -408,6 +433,8 @@ impl HandshakeInitiatorActOne {
 
 pub struct Handshake {
     base: HandshakeNew,
+    // TODO: fixme
+    remote_static: Option<PublicKey>,
     local_ephemeral: SecretKey,
     remote_ephemeral: PublicKey,
 }
@@ -471,11 +498,12 @@ impl Handshake {
             .symmetric_state
             .decrypt_and_hash(act_three.key(), act_three.tag_first())
             .map_err(HandshakeError::Io)?;
-        self.base.remote_static = PublicKey::from_slice(&remote_pub)
+        let remote_static = PublicKey::from_slice(&remote_pub)
             .map_err(HandshakeError::Crypto)?;
+        self.remote_static = Some(remote_static);
 
         // se
-        let se = ecdh(&self.base.remote_static, &self.local_ephemeral)
+        let se = ecdh(&remote_static, &self.local_ephemeral)
             .map_err(HandshakeError::Crypto)?;
         self.base.symmetric_state.mix_key(&se);
 
@@ -498,7 +526,7 @@ impl Handshake {
         Machine {
             send_cipher: send,
             recv_cipher: recv,
-            remote_static: self.base.remote_static,
+            remote_static: self.remote_static.unwrap(),
             #[cfg(test)]
             chaining_key: chaining_key,
             message_buffer: Arc::new(RwLock::new([0; std::u16::MAX as usize])),

@@ -5,7 +5,7 @@ use tokio::prelude::Future;
 use secp256k1::{PublicKey, SecretKey};
 use std::time::Duration;
 
-use super::handshake::{Machine, HandshakeNew, HandshakeError};
+use super::handshake::{Machine, HandshakeNew, HandshakeInitiator, HandshakeError};
 
 pub struct BrontideStream<T>
 where
@@ -34,7 +34,7 @@ where
     ) -> impl Future<Item = Self, Error = HandshakeError> {
         use tokio::prelude::IntoFuture;
 
-        HandshakeNew::new(true, local_secret, remote_public)
+        HandshakeInitiator::new(local_secret, remote_public)
             .map_err(HandshakeError::Crypto)
             .and_then(|noise| noise.gen_act_one())
             .into_future()
@@ -69,7 +69,7 @@ where
             .timeout(Self::read_timeout())
             .map_err(HandshakeError::IoTimeout)
             .and_then(move |(stream, a)| {
-                HandshakeNew::new(false, local_secret, PublicKey::from_slice(&[0; 32][..]).unwrap())
+                HandshakeNew::new(local_secret)
                     .map_err(HandshakeError::Crypto)
                     .and_then(move |noise| {
                         let noise = noise.recv_act_one(a)?;

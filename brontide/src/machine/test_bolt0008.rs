@@ -2,7 +2,7 @@ use secp256k1::{Secp256k1, SecretKey, PublicKey};
 use hex;
 use std::error::Error;
 use std::collections::HashMap;
-use super::handshake::HandshakeNew;
+use super::handshake::{HandshakeNew, HandshakeInitiator};
 
 #[test]
 fn test_bolt0008() {
@@ -37,7 +37,7 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
         "036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f7"
     );
 
-    let mut machine = HandshakeNew::new(true, ls_priv, rs_pub)?;
+    let mut machine = HandshakeInitiator::new(ls_priv, rs_pub)?;
     machine.ephemeral_gen = || SecretKey::from_slice(
         hex::decode("1212121212121212121212121212121212121212121212121212121212121212")
             .unwrap()
@@ -52,7 +52,7 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
 
     assert_eq!(hex::encode(&act_one.bytes[..]), "00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a");
 
-    let mut responder_machine = HandshakeNew::new(false, rs_priv, ls_pub)?;
+    let mut responder_machine = HandshakeNew::new(rs_priv)?;
     responder_machine.ephemeral_gen = || SecretKey::from_slice(
         hex::decode("2222222222222222222222222222222222222222222222222222222222222222")
             .unwrap()
