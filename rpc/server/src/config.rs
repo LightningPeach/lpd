@@ -11,6 +11,7 @@ pub enum Error {
 
 enum CommandLineKey {
     RpcAddress,
+    P2pAddress,
     Pkcs12,
     Pkcs12Password,
     DbPath,
@@ -22,6 +23,7 @@ impl CommandLineKey {
 
         match self {
             RpcAddress => "--rpclisten=",
+            P2pAddress => "--listen=",
             Pkcs12 => "--pkcs12=",
             Pkcs12Password => "--pkcs12-password=",
             DbPath => "--db-path=",
@@ -39,6 +41,7 @@ impl CommandLineKey {
 
 pub struct Argument {
     pub address: SocketAddr,
+    pub p2p_address: SocketAddr,
     pub db_path: String,
     pub tls_acceptor: Option<TlsAcceptor>,
 }
@@ -53,11 +56,18 @@ impl Argument {
         use self::Error::*;
         use self::CommandLineKey::*;
 
-        let default_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9735);
+        let default_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 10009);
         let address = env::args()
             .find(|arg| RpcAddress.predicate(arg))
             .map(|arg| RpcAddress.value(arg).parse::<SocketAddr>())
             .unwrap_or(Ok(default_address))
+            .map_err(AddressParse)?;
+
+        let default_p2p_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9735);
+        let p2p_address = env::args()
+            .find(|arg| P2pAddress.predicate(arg))
+            .map(|arg| P2pAddress.value(arg).parse::<SocketAddr>())
+            .unwrap_or(Ok(default_p2p_address))
             .map_err(AddressParse)?;
 
         let default_db_path = "target/db";
@@ -93,6 +103,7 @@ impl Argument {
 
         Ok(Argument {
             address: address,
+            p2p_address: p2p_address,
             db_path: db_path,
             tls_acceptor: acceptor,
         })

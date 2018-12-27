@@ -14,6 +14,9 @@ use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;
 use std::io::Error as IoError;
 use futures::sync::mpsc::SendError;
+
+use implementation::Command;
+use std::net::SocketAddr;
 use std::any::Any;
 
 #[derive(Debug)]
@@ -22,14 +25,14 @@ enum Error {
     Httpbis(HttpbisError),
     CommandLineRead(CommandLineReadError),
     Io(IoError),
-    SendError(SendError<()>),
+    SendError(SendError<Command<SocketAddr>>),
     ThreadError(Box<dyn Any + Send + 'static>),
 }
 
 fn main() -> Result<(), Error> {
-    use std::{sync::{RwLock, Arc}, io::{Read, stdin, stdout, Write}, thread, net::SocketAddr};
+    use std::{sync::{RwLock, Arc}, io::{Read, stdin, stdout, Write}, thread};
     use grpc::ServerBuilder;
-    use implementation::{Node, routing_service, channel_service, payment_service};
+    use implementation::{Node, Command, routing_service, channel_service, payment_service};
     use futures::sync::mpsc;
     use futures::Future;
     use futures::Sink;
@@ -37,23 +40,23 @@ fn main() -> Result<(), Error> {
 
     let argument = Argument::from_env().map_err(CommandLineRead)?;
 
-    let (handle, node, rx) = {
+    let (handle, node, rx, tx) = {
         // tui
-        let (handle, rx) = {
+        let (handle, rx, tx) = {
             write!(stdout(), "\
-                the lightning peach node is running at: {}, database at: {}\n\
-                enter any to shutdown... ", argument.address, argument.db_path).map_err(Io)?;
+                the lightning peach node is listening rpc at: {}, listening peers at: {}, has database at: {}\n\
+                enter any to shutdown... \n", argument.address, argument.p2p_address, argument.db_path).map_err(Io)?;
             stdout().flush().map_err(Io)?;
 
             let (tx, rx) = mpsc::channel(1);
+            let tx_wait = tx.clone();
             (
                 thread::spawn(move || {
                     let _ = stdin().read(&mut [0]).map_err(Io)?;
-                    //tx.send(()).wait().map_err(SendError)
-                    let _ = tx;
-                    Ok(())
+                    tx_wait.send(Command::Terminate).wait().map_err(SendError)
                 }),
-                rx
+                rx,
+                tx,
             )
         };
 
@@ -64,7 +67,7 @@ fn main() -> Result<(), Error> {
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
         ];
 
-        (handle, Arc::new(RwLock::new(Node::new(secret))), rx)
+        (handle, Arc::new(RwLock::new(Node::new(secret))), rx, tx)
     };
 
     let server = {
@@ -74,14 +77,13 @@ fn main() -> Result<(), Error> {
         }
         server.http.set_addr(argument.address).map_err(Httpbis)?;
         server.http.set_cpu_pool_threads(4);
-        server.add_service(routing_service(node.clone()));
+        server.add_service(routing_service(node.clone(), tx));
         server.add_service(channel_service());
         server.add_service(payment_service());
         server.build().map_err(Grpc)?
     };
 
-    let address: SocketAddr = "127.0.0.1:10000".parse().unwrap();
-    Node::listen(node, &address, rx).map_err(Io)?;
+    Node::listen(node, &argument.p2p_address, rx).map_err(Io)?;
 
     handle.join().map_err(ThreadError)??;
 

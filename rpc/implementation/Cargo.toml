@@ -12,3 +12,7 @@ routing = { path = "../../routing", features = ["rpc"] }
 wire = { path = "../../wire" }
 connection = { path = "../../connection" }
 state = { path = "../../state" }
+
+futures = "0.1"
+hex = "0.3"
+secp256k1 = "0.12"
