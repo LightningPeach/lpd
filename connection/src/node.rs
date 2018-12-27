@@ -90,6 +90,8 @@ impl Node {
                 tokio::spawn(ok(()))
             },
             None => {
+                println!("INFO: new peer {:?}", hex::encode(&remote_public.serialize()[..]));
+
                 let peer = Remote {
                     local: {
                         let mut world = World::new();
@@ -118,8 +120,11 @@ impl Node {
         A: AbstractAddress + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
+        use secp256k1::Secp256k1;;
 
         let secret = p_self.read().unwrap().secret.clone();
+        let pk = PublicKey::from_secret_key(&Secp256k1::new(), &secret);
+        println!("INFO: pk {:?}", hex::encode(&pk.serialize()[..]));
         let server = ConnectionStream::new(address, control, secret)?
             .map_err(|e| println!("{:?}", e))
             .for_each(move |stream| Self::process_connection(p_self.clone(), stream));

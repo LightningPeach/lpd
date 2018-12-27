@@ -26,6 +26,7 @@ impl AbstractAddress for SocketAddr {
     fn connect(&self, local_secret: SecretKey, remote_public: PublicKey) -> Self::Outgoing {
         TcpConnection {
             inner: TcpStream::connect(self),
+            handshake: None,
             local_secret: local_secret,
             remote_public: remote_public,
         }
@@ -33,8 +34,8 @@ impl AbstractAddress for SocketAddr {
 
     fn listen(&self, local_secret: SecretKey) -> Result<Self::Incoming, Self::Error> {
         Ok(TcpConnectionStream {
-            inner: TcpListener::bind(self)
-                .map(TcpListener::incoming)?,
+            inner: TcpListener::bind(self).map(TcpListener::incoming)?,
+            handshake: None,
             local_secret: local_secret,
         })
     }
@@ -42,6 +43,7 @@ impl AbstractAddress for SocketAddr {
 
 pub struct TcpConnection {
     inner: ConnectFuture,
+    handshake: Option<Box<dyn Future<Item=BrontideStream<TcpStream>, Error=HandshakeError> + Send + 'static>>,
     local_secret: SecretKey,
     remote_public: PublicKey,
 }
@@ -52,22 +54,45 @@ impl Future for TcpConnection {
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         use tokio::prelude::Async::*;
-        match self.inner.poll() {
-            Ok(Ready(stream)) => {
-                BrontideStream::outgoing(
-                    stream,
-                    self.local_secret.clone(),
-                    self.remote_public.clone()
-                ).poll()
+
+        match &mut self.handshake {
+            &mut None => match self.inner.poll().map_err(HandshakeError::Io)? {
+                NotReady => Ok(NotReady),
+                Ready(stream) => {
+                    let handshake = BrontideStream::outgoing(
+                        stream,
+                        self.local_secret.clone(),
+                        self.remote_public.clone()
+                    );
+                    self.handshake = Some(Box::new(handshake));
+                    self.poll()
+                },
             },
-            Ok(NotReady) => Ok(NotReady),
-            Err(error) => Err(HandshakeError::Io(error)),
+            &mut Some(ref mut f) => match f.poll() {
+                Ok(NotReady) => Ok(NotReady),
+                r @ _ => {
+                    self.handshake = None;
+                    r
+                },
+            }
         }
+        //match self.inner.poll() {
+        //    Ok(Ready(stream)) => {
+        //        BrontideStream::outgoing(
+        //            stream,
+        //            self.local_secret.clone(),
+        //            self.remote_public.clone()
+        //        ).poll()
+        //    },
+        //    Ok(NotReady) => Ok(NotReady),
+        //    Err(error) => Err(HandshakeError::Io(error)),
+        //}
     }
 }
 
 pub struct TcpConnectionStream {
     inner: Incoming,
+    handshake: Option<Box<dyn Future<Item=BrontideStream<TcpStream>, Error=HandshakeError> + Send + 'static>>,
     local_secret: SecretKey,
 }
 
@@ -78,12 +103,23 @@ impl Stream for TcpConnectionStream {
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         use tokio::prelude::Async::*;
 
-        match self.inner.poll() {
-            Ok(Ready(Some(stream))) => BrontideStream::incoming(stream, self.local_secret.clone())
-                .poll().map(|a| a.map(Some)),
-            Ok(Ready(None)) => Ok(Ready(None)),
-            Ok(NotReady) => Ok(NotReady),
-            Err(error) => Err(HandshakeError::Io(error)),
+        match &mut self.handshake {
+            &mut None => match self.inner.poll().map_err(HandshakeError::Io)? {
+                NotReady => Ok(NotReady),
+                Ready(None) => Ok(Ready(None)),
+                Ready(Some(stream)) => {
+                    let handshake = BrontideStream::incoming(stream, self.local_secret.clone());
+                    self.handshake = Some(Box::new(handshake));
+                    self.poll()
+                },
+            },
+            &mut Some(ref mut f) => match f.poll() {
+                Ok(NotReady) => Ok(NotReady),
+                r @ _ => {
+                    self.handshake = None;
+                    r.map(|a| a.map(Some))
+                },
+            }
         }
     }
 }
@@ -96,6 +132,7 @@ where
         address: A,
         remote_public: PublicKey,
     },
+    Terminate,
 }
 
 pub struct ConnectionStream<A, C>
@@ -146,7 +183,8 @@ where
                     let secret = self.local_secret.clone();
                     self.outgoing.push(address.connect(secret, remote_public));
                     Ok(NotReady)
-                }
+                },
+                Command::Terminate => Ok(Ready(None)),
             },
             NotReady => {
                 let incoming = self.incoming.poll()?;

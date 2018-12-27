@@ -24,3 +24,5 @@ shred = "0.7"
 shred-derive = "0.5"
 
 either = "1.5"
+
+hex = "0.3.2"
