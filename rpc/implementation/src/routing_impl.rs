@@ -11,6 +11,7 @@ use interface::common::Void;
 use connection::{Node, Command, AbstractAddress};
 use std::sync::{RwLock, Arc};
 use std::net::SocketAddr;
+use std::fmt::Debug;
 use futures::sync::mpsc::Sender;
 
 pub fn service(node: Arc<RwLock<Node>>, control: Sender<Command<SocketAddr>>) -> ServerServiceDefinition {
@@ -28,6 +29,10 @@ where
     control: Sender<Command<A>>,
 }
 
+fn error<E>(e: E) -> Error where E: Debug {
+    Error::Panic(format!("{:?}", e))
+}
+
 impl RoutingService for RoutingImpl<SocketAddr> {
     fn sign_message(&self, o: RequestOptions, p: SignMessageRequest) -> SingleResponse<SignMessageResponse> {
         let _ = (o, p);
@@ -35,27 +40,36 @@ impl RoutingService for RoutingImpl<SocketAddr> {
     }
 
     fn connect_peer(&self, o: RequestOptions, p: ConnectPeerRequest) -> SingleResponse<Void> {
-        use secp256k1::PublicKey;
-        use futures::{Sink, Future};
+        use futures::{Sink, Future, future::err};
 
         let _ = o;
 
-        let lightning_address = p.address.unwrap();
-        let pk = hex::decode(lightning_address.pubkey.as_bytes()).unwrap();
+        fn connect_command(request: ConnectPeerRequest) -> Result<Command<SocketAddr>, Error> {
+            use secp256k1::PublicKey;
 
-        let command = Command::Connect {
-            address: lightning_address.host.parse().unwrap(),
-            remote_public: PublicKey::from_slice(pk.as_slice()).unwrap(),
-        };
+            let mut request = request;
+            let mut lightning_address = request.take_address();
+            let pk = lightning_address.take_pubkey();
+            let pk = hex::decode(pk.as_bytes()).map_err(error)?;
+            let remote_public = PublicKey::from_slice(pk.as_slice()).map_err(error)?;
+            let address = lightning_address.take_host().parse().map_err(error)?;
 
-        let response = Void::new();
+            Ok(Command::Connect {
+                address: address,
+                remote_public: remote_public,
+            })
+        }
 
-        let response = self.control.clone()
-            .send(command)
-            .map(|_| response)
-            .map_err(|e| Error::Panic(format!("{:?}", e)));
-
-        SingleResponse::no_metadata(response)
+        match connect_command(p) {
+            Ok(command) => {
+                let response = self.control.clone()
+                    .send(command)
+                    .map(|_| Void::new())
+                    .map_err(error);
+                SingleResponse::no_metadata(response)
+            },
+            Err(e) => SingleResponse::no_metadata(err(e)),
+        }
     }
 
     fn list_peers(&self, o: RequestOptions, p: Void) -> SingleResponse<PeerList> {
