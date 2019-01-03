@@ -67,7 +67,7 @@ fn main() -> Result<(), Error> {
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
         ];
 
-        (handle, Arc::new(RwLock::new(Node::new(secret))), rx, tx)
+        (handle, Arc::new(RwLock::new(Node::new(secret, argument.db_path))), rx, tx)
     };
 
     let server = {

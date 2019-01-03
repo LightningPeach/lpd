@@ -8,7 +8,6 @@ edition = "2018"
 grpc = "0.6.*"
 
 interface = { path = "../interface" }
-routing = { path = "../../routing", features = ["rpc"] }
 wire = { path = "../../wire" }
 connection = { path = "../../connection" }
 state = { path = "../../state" }
