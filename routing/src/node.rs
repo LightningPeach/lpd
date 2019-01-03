@@ -10,7 +10,7 @@ use specs::prelude::*;
 use serde_derive::{Serialize, Deserialize};
 
 use rocksdb::Error as DBError;
-use super::db::{DB, DBValue};
+use state::{DB, DBValue};
 use super::tools::GenericSystem;
 
 #[derive(Component, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +20,12 @@ pub struct Node {
     color: Color,
     alias: NodeAlias,
     address: Vec<Address>,
+}
+
+impl Node {
+    pub fn id(&self) -> PublicKey {
+        self.node_id.clone()
+    }
 }
 
 // TODO: add rebroadcasting subsystem
@@ -84,11 +90,17 @@ impl<'a> System<'a> for GenericSystem<LogNodes, ()> {
 }
 
 impl DBValue for Node {
+    type Extension = ();
+
+    fn extend(self, e: Self::Extension) -> Self {
+        let _ = e;
+        self
+    }
+
     fn cf_name() -> &'static str {
         "node"
     }
 }
-
 
 #[derive(Debug)]
 pub struct LoadNodes;

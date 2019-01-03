@@ -1,9 +1,14 @@
 use specs::prelude::*;
-use super::db::DBBuilder;
-use rocksdb::Error as DBError;
-use super::channel::{LoadChannels, StoreChannels, LogChannels, ChannelInfo};
+use state::{DBBuilder, DBError};
+use super::channel::{
+    LoadChannels, StoreChannels, LogChannels, ChannelInfo,
+    ChannelPolicy, ChannelParties, ChannelHistory,
+};
 use super::node::{LoadNodes, StoreNodes, LogNodes, Node};
 use super::tools::GenericSystem;
+
+use dijkstras_search::Graph;
+use wire::PublicKey;
 
 use wire::{
     Message, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel,
@@ -40,7 +45,7 @@ impl State {
         world.setup::<<GenericSystem<StoreChannels, Result<(), DBError>> as System>::SystemData>();
         world.setup::<<GenericSystem<LogChannels, ()> as System>::SystemData>();
 
-        let db = DBBuilder::new()
+        let db = DBBuilder::default()
             .register::<ChannelInfo>()
             .register::<Node>()
             .build(path)?;
@@ -97,6 +102,47 @@ impl State {
         }
 
         (e, n)
+    }
+
+    #[cfg(feature = "rpc")]
+    pub fn path(&self, start: PublicKey, goal: PublicKey) -> Vec<PublicKey> {
+        self.shortest_path(start.clone()).sequence(start, goal)
+    }
+}
+
+impl Graph for State {
+    type Node = PublicKey;
+    type Edge = ChannelPolicy;
+
+    fn neighbors(&self, node: Self::Node) -> Vec<(Self::Node, Self::Edge)> {
+        let mut system = GenericSystem::<PublicKey, Vec<(PublicKey, ChannelPolicy)>>::from(node);
+        system.run((self.world.read_storage(), self.world.read_storage(), self.world.read_storage()));
+        system.output()
+    }
+}
+
+impl<'a> System<'a> for GenericSystem<PublicKey, Vec<(PublicKey, ChannelPolicy)>> {
+    type SystemData = (
+        ReadStorage<'a, Node>,
+        ReadStorage<'a, ChannelParties>,
+        ReadStorage<'a, ChannelHistory>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        use specs::Join;
+
+        self.run_func(|node| {
+            let mut neighbours = Vec::new();
+
+            for (parties, history) in (&data.1, &data.2).join() {
+                if let Some(id) = parties.other(&node) {
+                    if let Some(other) = (&data.0).join().find(|&node| node.id() == id) {
+                        neighbours.push((other.id(), history.current().unwrap().clone()));
+                    }
+                }
+            }
+            neighbours
+        })
     }
 }
 

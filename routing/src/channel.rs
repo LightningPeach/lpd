@@ -6,7 +6,8 @@ use wire::{
 use specs::prelude::*;
 
 use rocksdb::Error as DBError;
-use super::db::{DB, DBValue};
+use state::{DB, DBValue};
+use dijkstras_search::Edge;
 use super::tools::GenericSystem;
 
 use serde_derive::{Serialize, Deserialize};
@@ -32,13 +33,22 @@ pub struct ChannelParties {
     origin: (PublicKey, PublicKey),
 }
 
+impl ChannelParties {
+    pub fn other(&self, id: &PublicKey) -> Option<PublicKey> {
+        match (self.lightning.0.eq(id), self.lightning.1.eq(id)) {
+            (true, _) => Some(self.lightning.1.clone()),
+            (_, true) => Some(self.lightning.0.clone()),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Component, Clone, Default, Serialize, Deserialize)]
 pub struct ChannelHistory {
     records: Vec<ChannelPolicy>,
 }
 
 impl ChannelHistory {
-    #[cfg(feature = "rpc")]
     pub fn current(&self) -> Option<&ChannelPolicy> {
         self.records.last()
     }
@@ -52,6 +62,14 @@ pub struct ChannelPolicy {
     htlc_minimum: MilliSatoshi,
     base_fee: u32,
     fee_rate: u32,
+}
+
+impl Edge for ChannelPolicy {
+    type Cost = u32;
+
+    fn cost(&self) -> Self::Cost {
+        self.fee_rate.clone()
+    }
 }
 
 // TODO: add subsystem to poll if founding output is still there
@@ -235,6 +253,13 @@ impl<'a> System<'a> for GenericSystem<LogChannels, ()> {
 pub struct ChannelInfo(pub ChannelId, pub ChannelParties, pub ChannelHistory);
 
 impl DBValue for ChannelInfo {
+    type Extension = ();
+
+    fn extend(self, e: Self::Extension) -> Self {
+        let _ = e;
+        self
+    }
+
     fn cf_name() -> &'static str {
         "channel"
     }

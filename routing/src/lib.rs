@@ -4,6 +4,8 @@
 extern crate secp256k1;
 extern crate chrono;
 extern crate wire;
+extern crate state;
+extern crate dijkstras_search;
 extern crate binformat;
 extern crate brontide;
 extern crate bitcoin_types;
@@ -32,11 +34,10 @@ extern crate serde_derive;
 #[cfg(feature = "rpc")]
 extern crate interface;
 
-mod state;
+mod graph_state;
 mod node;
 mod channel;
-mod db;
 mod tools;
 
-pub use self::state::{State, TopologyMessage};
+pub use self::graph_state::{State, TopologyMessage};
 pub use rocksdb::Error as DBError;

@@ -5,12 +5,14 @@ authors = ["LightningPeach <contact@lightningpeach.com>"]
 
 [dependencies]
 secp256k1 = "0.9.2"
+state = { path = "../state" }
 interface = { path = "../rpc/interface", optional = true }
 wire = { path = "../wire" }
 binformat = { path = "../binformat" }
 brontide = { path = "../brontide" }
 common-types = { path = "../common-types" }
 bitcoin-types = { path = "../bitcoin-types" }
+dijkstras_search = { git = "https://github.com/LightningPeach/dijkstras_search" }
 chrono = "0.4.5"
 rand = "0.5.4"
 specs = "0.12.2"
