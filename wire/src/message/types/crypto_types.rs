@@ -9,7 +9,7 @@ pub use secp256k1::constants::PUBLIC_KEY_SIZE;
 pub use secp256k1::constants::SECRET_KEY_SIZE;
 pub const SIGNATURE_SIZE: usize = 64;
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, PartialOrd, Ord)]
 pub struct PublicKey {
     raw: Secp256k1PublicKey,
 }
@@ -372,7 +372,7 @@ macro_rules! public_key {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::BinarySD;
+    use binformat::BinarySD;
 
     #[test]
     fn signature() {
