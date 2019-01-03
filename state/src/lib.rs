@@ -56,6 +56,12 @@ impl Deref for DB {
     }
 }
 
+impl Default for DB {
+    fn default() -> Self {
+        panic!()
+    }
+}
+
 impl DerefMut for DB {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
