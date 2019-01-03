@@ -4,7 +4,6 @@ use secp256k1::{SecretKey, PublicKey};
 use tokio::prelude::{Future, AsyncRead, AsyncWrite};
 use tokio::executor::Spawn;
 use futures::sync::mpsc::Receiver;
-use specs::{World, System};
 use wire::Message;
 
 use super::address::{AbstractAddress, ConnectionStream, Command};
@@ -24,38 +23,26 @@ pub fn database<P: AsRef<Path>>(path: P) -> Result<DB, DBError> {
 }
 
 pub struct Node {
-    world: World,
-    // TODO: store as entity in the world
     peers: Vec<PublicKey>,
+    db: DB,
     secret: SecretKey,
 }
 
 pub struct Remote {
-    local: World,
     public: PublicKey,
 }
 
-pub struct Msg(pub Option<Message>);
-
-impl<'a> System<'a> for Msg {
-    type SystemData = ();
-
-    fn run(&mut self, data: Self::SystemData) {
-        let _ = data;
-        let &mut Msg(ref mut maybe) = self;
-        println!("message: {:?}", maybe.as_ref().unwrap());
+impl Remote {
+    pub fn process_message(&mut self, db: &mut DB, message: Message) {
+        let _ = (message, &mut self.public, db);
     }
 }
 
 impl Node {
-    pub fn new(secret: [u8; 32]) -> Self {
+    pub fn new<P: AsRef<Path>>(secret: [u8; 32], path: P) -> Self {
         Node {
-            world: {
-                let mut world = World::new();
-                // world.register();
-                world
-            },
             peers: Vec::new(),
+            db: database(path).unwrap(),
             secret: SecretKey::from_slice(&secret[..]).unwrap(),
         }
     }
@@ -74,7 +61,6 @@ impl Node {
         S: AsyncRead + AsyncWrite + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
-        use specs::RunNow;
 
         let remote_public = stream.remote_key().clone();
         let (sink, stream) = stream.framed().split();
@@ -82,7 +68,7 @@ impl Node {
         // nll will fix it,
         // p_self is borrowed, but it is not used in match's `None` arm
         // however, the compiler still complains, so let's clone the pointer here
-        let _shared = p_self.clone();
+        let shared = p_self.clone();
         match p_self.write().unwrap().add(remote_public) {
             Some(k) => {
                 use futures::future::ok;
@@ -93,11 +79,6 @@ impl Node {
                 println!("INFO: new peer {:?}", hex::encode(&remote_public.serialize()[..]));
 
                 let peer = Remote {
-                    local: {
-                        let mut world = World::new();
-                        // world.register();
-                        world
-                    },
                     public: remote_public,
                 };
 
@@ -105,7 +86,9 @@ impl Node {
                     .map_err(|e| println!("{:?}", e))
                     .fold(peer, move |mut peer, message| {
                         println!("{:?}", message);
-                        Msg(Some(message)).run_now(&mut peer.local.res);
+                        // process message using sink
+                        let _ = &sink;
+                        peer.process_message(&mut shared.clone().write().unwrap().db, message);
                         Ok(peer)
                     })
                     .map(|_| ());

@@ -8,6 +8,8 @@ edition = "2018"
 brontide = { path = "../brontide" }
 wire = { path = "../wire" }
 state = { path = "../state" }
+routing = { path = "../routing" }
+
 secp256k1 = "0.12"
 
 tokio = "0.1"
@@ -17,12 +19,5 @@ rayon = "1.0"
 rocksdb = "0.10"
 serde = "1.0"
 serde_derive = "1.0"
-
-specs = "0.12"
-specs-derive = "0.2"
-shred = "0.7"
-shred-derive = "0.5"
-
-either = "1.5"
 
 hex = "0.3.2"
