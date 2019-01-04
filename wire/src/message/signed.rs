@@ -75,18 +75,14 @@ pub enum SignError {
 
 impl<T> Signed<T> where T: DataToSign {
     pub fn sign(value: T, key: &SecretKey) -> Result<Self, SignError> {
-        use self::SignError::*;
         use secp256k1::Secp256k1;
 
         let msg = value.hash()?;
-        Secp256k1::new().sign(&msg, key.as_ref())
-            .map_err(Secp256k1Error)
-            .map(|s| {
-                Signed {
-                    signature: Signature::from(s),
-                    value: value,
-                }
-            })
+        let s = Secp256k1::new().sign(&msg, key.as_ref());
+        Ok(Signed {
+            signature: Signature::from(s),
+            value: value,
+        })
     }
 
     fn check(&self, public_key: &PublicKey) -> Result<(), SignError> {

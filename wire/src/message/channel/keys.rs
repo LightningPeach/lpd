@@ -1,6 +1,5 @@
 use super::PublicKey;
 use super::SecretKey;
-use super::Secp256k1Error;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ChannelKeys {
@@ -13,15 +12,15 @@ pub struct ChannelKeys {
 }
 
 impl ChannelKeys {
-    pub fn new(private: &ChannelPrivateKeys) -> Result<Self, Secp256k1Error> {
-        Ok(ChannelKeys {
-            funding: PublicKey::paired(&private.funding)?,
-            revocation: PublicKey::paired(&private.revocation)?,
-            payment: PublicKey::paired(&private.payment)?,
-            delayed_payment: PublicKey::paired(&private.delayed_payment)?,
-            htlc: PublicKey::paired(&private.htlc)?,
-            first_per_commitment: PublicKey::paired(&private.first_per_commitment)?,
-        })
+    pub fn new(private: &ChannelPrivateKeys) -> Self {
+        ChannelKeys {
+            funding: PublicKey::paired(&private.funding),
+            revocation: PublicKey::paired(&private.revocation),
+            payment: PublicKey::paired(&private.payment),
+            delayed_payment: PublicKey::paired(&private.delayed_payment),
+            htlc: PublicKey::paired(&private.htlc),
+            first_per_commitment: PublicKey::paired(&private.first_per_commitment),
+        }
     }
 
     pub fn funding(&self) -> &PublicKey {

@@ -70,10 +70,9 @@ mod serde {
     impl Serialize for Signature {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
             use serde::ser::SerializeTuple;
-            use secp256k1::Secp256k1;
 
             let mut tuple = serializer.serialize_tuple(SIGNATURE_SIZE)?;
-            let data = self.data.serialize_compact(&Secp256k1::new());
+            let data = self.data.serialize_compact();
             for i in 0..SIGNATURE_SIZE {
                 tuple.serialize_element(&data[i])?;
             }
@@ -94,8 +93,6 @@ mod serde {
                 }
 
                 fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
-                    use secp256k1::Secp256k1;
-
                     let mut seq = seq;
                     let mut data = [0u8; SIGNATURE_SIZE];
                     for i in 0..SIGNATURE_SIZE {
@@ -103,7 +100,7 @@ mod serde {
                             .ok_or(<A::Error as Error>::custom("unexpected end"))?;
                     }
 
-                    Secp256k1Signature::from_compact(&Secp256k1::new(), &data)
+                    Secp256k1Signature::from_compact(&data)
                         .map(Into::into)
                         .map_err(A::Error::custom)
                 }
@@ -139,8 +136,6 @@ mod serde {
                 }
 
                 fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
-                    use secp256k1::Secp256k1;
-
                     let mut seq = seq;
                     let mut data = [0; PUBLIC_KEY_SIZE];
 
@@ -149,7 +144,7 @@ mod serde {
                             .ok_or(<A::Error as Error>::custom("unexpected end"))?;
                     }
 
-                    Secp256k1PublicKey::from_slice(&Secp256k1::new(), &data[..])
+                    Secp256k1PublicKey::from_slice(&data[..])
                         .map(|v| PublicKey { raw: v })
                         .map_err(|e| <A::Error as Error>::custom(format!("secp256k1::PublicKey cannot be created from such data: {:?}", e)))
                 }
@@ -171,8 +166,6 @@ mod serde {
                 }
 
                 fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
-                    use secp256k1::Secp256k1;
-
                     let mut seq = seq;
                     let mut data = [0; SECRET_KEY_SIZE];
 
@@ -181,7 +174,7 @@ mod serde {
                             .ok_or(<A::Error as Error>::custom("unexpected end"))?;
                     }
 
-                    Secp256k1SecretKey::from_slice(&Secp256k1::new(), &data[..])
+                    Secp256k1SecretKey::from_slice(&data[..])
                         .map(|v| SecretKey { raw: v })
                         .map_err(|e| <A::Error as Error>::custom(format!("secp256k1::SecretKey cannot be created from such data: {:?}", e)))
                 }
@@ -221,7 +214,7 @@ mod debug {
 
     impl Debug for Signature {
         fn fmt(&self, f: &mut Formatter) -> Result {
-            write!(f, "Signature [ {} ]", encode(&self.data[0..]))
+            write!(f, "Signature [ {} ]", encode(&self.data.serialize_compact()[0..]))
         }
     }
 
@@ -249,23 +242,29 @@ mod secp256k1 {
     use super::SecretKey as LpdPrivateKey;
     use super::Signature as LpdSignature;
 
-    use super::Secp256k1Error;
-
     use secp256k1::Secp256k1;
     use secp256k1::PublicKey;
+    use secp256k1::SecretKey;
     use secp256k1::Signature;
 
     impl LpdPublicKey {
-        pub fn paired(private: &LpdPrivateKey) -> Result<Self, Secp256k1Error> {
+        pub fn paired(private: &LpdPrivateKey) -> Self {
             let ctx = Secp256k1::new();
-            let pk = PublicKey::from_secret_key(&ctx, &private.raw)?;
-            Ok(pk.into())
+            PublicKey::from_secret_key(&ctx, &private.raw).into()
         }
     }
 
     impl From<PublicKey> for LpdPublicKey {
         fn from(v: PublicKey) -> Self {
             LpdPublicKey {
+                raw: v,
+            }
+        }
+    }
+
+    impl From<SecretKey> for LpdPrivateKey {
+        fn from(v: SecretKey) -> Self {
+            LpdPrivateKey {
                 raw: v,
             }
         }
@@ -308,14 +307,13 @@ mod rand {
 
     impl Distribution<PublicKey> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> PublicKey {
-            use secp256k1::Secp256k1;
             use super::Secp256k1PublicKey;
 
             let mut rng = rng;
             let mut rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(PUBLIC_KEY_SIZE).collect();
             rnd_bytes[0] = 2;
             PublicKey {
-                raw: Secp256k1PublicKey::from_slice(&Secp256k1::new(), rnd_bytes.as_slice()).unwrap(),
+                raw: Secp256k1PublicKey::from_slice(rnd_bytes.as_slice()).unwrap(),
             }
         }
     }
@@ -323,26 +321,24 @@ mod rand {
     impl Distribution<SecretKey> for Standard {
 
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> SecretKey {
-            use secp256k1::Secp256k1;
             use super::Secp256k1SecretKey;
 
             let mut rng = rng;
             let rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(SECRET_KEY_SIZE).collect();
             SecretKey {
-                raw: Secp256k1SecretKey::from_slice(&Secp256k1::new(), rnd_bytes.as_slice()).unwrap(),
+                raw: Secp256k1SecretKey::from_slice(rnd_bytes.as_slice()).unwrap(),
             }
         }
     }
 
     impl Distribution<Signature> for Standard {
         fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Signature {
-            use secp256k1::Secp256k1;
             use super::Secp256k1Signature;
 
             let mut rng = rng;
             let mut try_inner = || {
                 let rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(SIGNATURE_SIZE).collect();
-                Secp256k1Signature::from_compact(&Secp256k1::new(), &rnd_bytes.as_slice())
+                Secp256k1Signature::from_compact(&rnd_bytes.as_slice())
             };
             let mut inner: Option<Secp256k1Signature> = None;
             for _ in 0..8 {

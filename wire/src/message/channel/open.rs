@@ -97,7 +97,7 @@ mod test {
             fee: SatoshiPerKiloWeight::default(),
             csv_delay: CsvDelay::default(),
             max_accepted_htlc_number: Default::default(),
-            keys: ChannelKeys::new(&private).unwrap(),
+            keys: ChannelKeys::new(&private),
             flags: ChannelFlags::FF_ANNOUNCE_CHANNEL,
         };
 
