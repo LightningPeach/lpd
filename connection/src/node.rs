@@ -122,4 +122,16 @@ impl Node {
         let secret_key = From::from(p_self.read().unwrap().secret.clone());
         Signed::sign(SignedData(SerdeRawVec(message)), &secret_key).map(|s| s.signature)
     }
+
+    // TODO: add missing fields:
+    //    pub address: ::std::string::String,
+    //    pub bytes_sent: u64,
+    //    pub bytes_recv: u64,
+    //    pub sat_sent: ::protobuf::SingularPtrField<super::common::Satoshi>,
+    //    pub sat_recv: ::protobuf::SingularPtrField<super::common::Satoshi>,
+    //    pub inbound: bool,
+    //    pub ping_time: i64,
+    pub fn list_peers(p_self: Arc<RwLock<Self>>) -> Vec<PublicKey> {
+        p_self.read().unwrap().peers.clone()
+    }
 }

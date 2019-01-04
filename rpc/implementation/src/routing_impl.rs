@@ -84,8 +84,24 @@ impl RoutingService for RoutingImpl<SocketAddr> {
     }
 
     fn list_peers(&self, o: RequestOptions, p: Void) -> SingleResponse<PeerList> {
+        use std::string::ToString;
+        use interface::routing::Peer;
+
         let _ = (o, p);
-        unimplemented!()
+
+        let peers = Node::list_peers(self.node.clone())
+            .iter()
+            .map(ToString::to_string)
+            .map(|pub_key| {
+                let mut peer = Peer::new();
+                peer.set_pub_key(pub_key);
+                peer
+            })
+            .collect();
+
+        let mut response = PeerList::new();
+        response.set_peers(peers);
+        SingleResponse::completed(response)
     }
 
     fn get_info(&self, o: RequestOptions, p: Void) -> SingleResponse<Info> {
