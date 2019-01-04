@@ -41,7 +41,7 @@ fn main() {
     thread::sleep(Duration::from_secs(5));
 
     // creating two nodes with base port 10000
-    let nodes = LnRunning::batch(3, 10000, btc_running.as_ref());
+    let nodes = LnRunning::batch(3, 9800, btc_running.as_ref());
     thread::sleep(Duration::from_secs(5));
 
     let mining_address = nodes[0].new_address().wait().unwrap();

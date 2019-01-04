@@ -24,7 +24,7 @@ pub struct Error {
 
 #[cfg(test)]
 mod test {
-    use ::serde_facade::BinarySD;
+    use binformat::BinarySD;
 
     use super::Init;
     use super::super::types::RawFeatureVector;

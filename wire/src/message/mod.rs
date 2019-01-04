@@ -199,7 +199,7 @@ impl<'de> Deserialize<'de> for Message {
 
 #[cfg(test)]
 mod tests {
-    use ::BinarySD;
+    use binformat::BinarySD;
     use super::*;
 
     use hex;

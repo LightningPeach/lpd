@@ -8,7 +8,7 @@ use serde::Deserializer;
 use serde::ser;
 use serde::de;
 
-use ::BinarySD;
+use super::BinarySD;
 use std::io::Read;
 
 use std::mem;
@@ -91,6 +91,24 @@ impl<'de, T> Deserialize<'de> for SerdeVec<T> where T: PackSized + de::Deseriali
         deserializer.deserialize_seq(Visitor {
             phantom_data: PhantomData,
         })
+    }
+}
+
+/// does not write size at all
+#[derive(Eq, PartialEq, Debug)]
+pub struct SerdeRawVec<T>(pub Vec<T>);
+
+impl<T> Serialize for SerdeRawVec<T> where T: Serialize {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        use serde::ser::SerializeTuple;
+
+        let &SerdeRawVec(ref data) = self;
+        let mut tuple = serializer.serialize_tuple(data.len())?;
+        for item in data {
+            let _ = tuple.serialize_element(&item)?;
+        }
+
+        tuple.end()
     }
 }
 

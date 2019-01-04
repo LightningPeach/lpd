@@ -14,22 +14,16 @@ extern crate digest;
 extern crate flate2;
 extern crate common_types;
 extern crate bitcoin_types;
+extern crate binformat;
 
 extern crate hex;
 extern crate tokio;
 
 mod message;
 
-mod serde_facade;
-mod compression_facade;
 mod message_processor;
 
 pub use self::message::*;
 pub use self::message::types::*;
 
-pub use self::serde_facade::BinarySD;
-pub use self::serde_facade::WireError;
-pub use self::compression_facade::UncompressedData;
-pub use self::compression_facade::SerdeVec;
-pub use self::compression_facade::PackSized;
 pub use self::message_processor::*;
