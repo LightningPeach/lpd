@@ -94,6 +94,24 @@ impl<'de, T> Deserialize<'de> for SerdeVec<T> where T: PackSized + de::Deseriali
     }
 }
 
+/// does not write size at all
+#[derive(Eq, PartialEq, Debug)]
+pub struct SerdeRawVec<T>(pub Vec<T>);
+
+impl<T> Serialize for SerdeRawVec<T> where T: Serialize {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        use serde::ser::SerializeTuple;
+
+        let &SerdeRawVec(ref data) = self;
+        let mut tuple = serializer.serialize_tuple(data.len())?;
+        for item in data {
+            let _ = tuple.serialize_element(&item)?;
+        }
+
+        tuple.end()
+    }
+}
+
 /// the underlying data is uncompressed and deserialized into rust type,
 /// but serialization / deserialization will read / write zlib compressed data
 /// this is exactly desired by lnd specification

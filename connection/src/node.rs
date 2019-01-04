@@ -4,7 +4,7 @@ use secp256k1::{SecretKey, PublicKey};
 use tokio::prelude::{Future, AsyncRead, AsyncWrite};
 use tokio::executor::Spawn;
 use futures::sync::mpsc::Receiver;
-use wire::Message;
+use wire::{Message, Signature, SignError};
 
 use super::address::{AbstractAddress, ConnectionStream, Command};
 
@@ -113,5 +113,13 @@ impl Node {
             .for_each(move |stream| Self::process_connection(p_self.clone(), stream));
         tokio::run(server);
         Ok(())
+    }
+
+    pub fn sign_message(p_self: Arc<RwLock<Self>>, message: Vec<u8>) -> Result<Signature, SignError> {
+        use wire::{Signed, SignedData};
+        use binformat::SerdeRawVec;
+
+        let secret_key = From::from(p_self.read().unwrap().secret.clone());
+        Signed::sign(SignedData(SerdeRawVec(message)), &secret_key).map(|s| s.signature)
     }
 }
