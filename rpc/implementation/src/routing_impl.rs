@@ -35,8 +35,19 @@ fn error<E>(e: E) -> Error where E: Debug {
 
 impl RoutingService for RoutingImpl<SocketAddr> {
     fn sign_message(&self, o: RequestOptions, p: SignMessageRequest) -> SingleResponse<SignMessageResponse> {
-        let _ = (o, p);
-        unimplemented!()
+        use futures::future::err;
+        use std::string::ToString;
+
+        let _ = o;
+
+        match Node::sign_message(self.node.clone(), p.message).map_err(error) {
+            Ok(data) => {
+                let mut response = SignMessageResponse::new();
+                response.signature = data.to_string();
+                SingleResponse::completed(response)
+            }
+            Err(e) => SingleResponse::no_metadata(err(e))
+        }
     }
 
     fn connect_peer(&self, o: RequestOptions, p: ConnectPeerRequest) -> SingleResponse<Void> {

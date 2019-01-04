@@ -218,6 +218,12 @@ mod debug {
         }
     }
 
+    impl Display for Signature {
+        fn fmt(&self, f: &mut Formatter) -> Result {
+            write!(f, "{}", encode(&self.data.serialize_compact()[..]))
+        }
+    }
+
     impl Debug for PublicKey {
         fn fmt(&self, f: &mut Formatter) -> Result {
             write!(f, "{:?}", self.raw)
