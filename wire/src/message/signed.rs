@@ -17,10 +17,21 @@ pub struct Signed<T> where T: DataToSign {
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct SignedData<T>(pub T) where T: Serialize;
 
-pub trait DataToSign: Serialize {
-    type Inner: Serialize;
+pub trait DataToSign {
+    type Inner;
 
     fn as_ref_data(&self) -> &Self::Inner;
+
+    fn hash(&self) -> Result<Secp256k1Message, SignError>;
+}
+
+// recursion base
+impl<T> DataToSign for SignedData<T> where T: Serialize {
+    type Inner = T;
+
+    fn as_ref_data(&self) -> &Self::Inner {
+        &self.0
+    }
 
     fn hash(&self) -> Result<Secp256k1Message, SignError> {
         use self::SignError::*;
@@ -42,21 +53,16 @@ pub trait DataToSign: Serialize {
     }
 }
 
-// recursion base
-impl<T> DataToSign for SignedData<T> where T: Serialize {
-    type Inner = T;
-
-    fn as_ref_data(&self) -> &Self::Inner {
-        &self.0
-    }
-}
-
 // recursion step
 impl<T> DataToSign for Signed<T> where T: DataToSign {
     type Inner = T::Inner;
 
     fn as_ref_data(&self) -> &Self::Inner {
         &self.value.as_ref_data()
+    }
+
+    fn hash(&self) -> Result<Secp256k1Message, SignError> {
+        self.value.hash()
     }
 }
 
