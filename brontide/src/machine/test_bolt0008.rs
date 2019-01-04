@@ -1,8 +1,8 @@
-use secp256k1::{Secp256k1, SecretKey, PublicKey, Error as CryptoError};
+use secp256k1::{Secp256k1, SecretKey, PublicKey};
 use hex;
 use std::error::Error;
 use std::collections::HashMap;
-use super::handshake::HandshakeNew;
+use super::handshake::{HandshakeNew, HandshakeInitiator};
 
 #[test]
 fn test_bolt0008() {
@@ -11,45 +11,38 @@ fn test_bolt0008() {
 
 fn test_bolt0008_internal() -> Result<(), Box<Error>> {
     let rs_priv = SecretKey::from_slice(
-        &Secp256k1::new(),
         hex::decode("2121212121212121212121212121212121212121212121212121212121212121")?.as_slice(),
     )?;
-    let rs_pub = PublicKey::from_secret_key(&Secp256k1::new(), &rs_priv)?;
+    let rs_pub = PublicKey::from_secret_key(&Secp256k1::new(), &rs_priv);
     assert_eq!(
         hex::encode(&rs_pub.serialize()[..]),
         "028d7500dd4c12685d1f568b4c2b5048e8534b873319f3a8daa612b469132ec7f7"
     );
 
     let ls_priv = SecretKey::from_slice(
-        &Secp256k1::new(),
         hex::decode("1111111111111111111111111111111111111111111111111111111111111111")?.as_slice(),
     )?;
-    let ls_pub = PublicKey::from_secret_key(&Secp256k1::new(), &ls_priv)?;
+    let ls_pub = PublicKey::from_secret_key(&Secp256k1::new(), &ls_priv);
     assert_eq!(
         hex::encode(&ls_pub.serialize()[..]),
         "034f355bdcb7cc0af728ef3cceb9615d90684bb5b2ca5f859ab0f0b704075871aa"
     );
 
     let e_priv = SecretKey::from_slice(
-        &Secp256k1::new(),
         hex::decode("1212121212121212121212121212121212121212121212121212121212121212")?.as_slice(),
     )?;
-    let e_pub = PublicKey::from_secret_key(&Secp256k1::new(), &e_priv)?;
+    let e_pub = PublicKey::from_secret_key(&Secp256k1::new(), &e_priv);
     assert_eq!(
         hex::encode(&e_pub.serialize()[..]),
         "036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f7"
     );
 
-    let mut machine = HandshakeNew::new(true, ls_priv, rs_pub)?;
-    machine.ephemeral_gen = || -> Result<SecretKey, CryptoError> {
-        let sk = SecretKey::from_slice(
-            &Secp256k1::new(),
-            hex::decode("1212121212121212121212121212121212121212121212121212121212121212")
-                .unwrap()
-                .as_slice(),
-        )?;
-        Ok(sk)
-    };
+    let mut machine = HandshakeInitiator::new(ls_priv, rs_pub)?;
+    machine.ephemeral_gen = || SecretKey::from_slice(
+        hex::decode("1212121212121212121212121212121212121212121212121212121212121212")
+            .unwrap()
+            .as_slice(),
+        ).unwrap();
     assert_eq!(
         hex::encode(machine.handshake_digest()),
         "8401b3fdcaaa710b5405400536a3d5fd7792fe8e7fe29cd8b687216fe323ecbd"
@@ -59,16 +52,12 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
 
     assert_eq!(hex::encode(&act_one.bytes[..]), "00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a");
 
-    let mut responder_machine = HandshakeNew::new(false, rs_priv, ls_pub)?;
-    responder_machine.ephemeral_gen = || -> Result<SecretKey, CryptoError> {
-        let sk = SecretKey::from_slice(
-            &Secp256k1::new(),
-            hex::decode("2222222222222222222222222222222222222222222222222222222222222222")
-                .unwrap()
-                .as_slice(),
-        )?;
-        Ok(sk)
-    };
+    let mut responder_machine = HandshakeNew::new(rs_priv)?;
+    responder_machine.ephemeral_gen = || SecretKey::from_slice(
+        hex::decode("2222222222222222222222222222222222222222222222222222222222222222")
+            .unwrap()
+            .as_slice(),
+        ).unwrap();
 
     let responder_machine = responder_machine.recv_act_one(act_one)?;
 

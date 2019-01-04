@@ -1,5 +1,5 @@
 use serde::Serialize;
-use ::WireError;
+use binformat::WireError;
 
 use secp256k1::Error as Secp256k1Error;
 use secp256k1::Message as Secp256k1Message;
@@ -17,17 +17,28 @@ pub struct Signed<T> where T: DataToSign {
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct SignedData<T>(pub T) where T: Serialize;
 
-pub trait DataToSign: Serialize {
-    type Inner: Serialize;
+pub trait DataToSign {
+    type Inner;
 
     fn as_ref_data(&self) -> &Self::Inner;
+
+    fn hash(&self) -> Result<Secp256k1Message, SignError>;
+}
+
+// recursion base
+impl<T> DataToSign for SignedData<T> where T: Serialize {
+    type Inner = T;
+
+    fn as_ref_data(&self) -> &Self::Inner {
+        &self.0
+    }
 
     fn hash(&self) -> Result<Secp256k1Message, SignError> {
         use self::SignError::*;
         use sha2::Sha256;
         use digest::FixedOutput;
         use digest::Input;
-        use ::BinarySD;
+        use binformat::BinarySD;
 
         let mut v = Vec::new();
         let data = self.as_ref_data();
@@ -42,21 +53,16 @@ pub trait DataToSign: Serialize {
     }
 }
 
-// recursion base
-impl<T> DataToSign for SignedData<T> where T: Serialize {
-    type Inner = T;
-
-    fn as_ref_data(&self) -> &Self::Inner {
-        &self.0
-    }
-}
-
 // recursion step
 impl<T> DataToSign for Signed<T> where T: DataToSign {
     type Inner = T::Inner;
 
     fn as_ref_data(&self) -> &Self::Inner {
         &self.value.as_ref_data()
+    }
+
+    fn hash(&self) -> Result<Secp256k1Message, SignError> {
+        self.value.hash()
     }
 }
 
@@ -69,18 +75,14 @@ pub enum SignError {
 
 impl<T> Signed<T> where T: DataToSign {
     pub fn sign(value: T, key: &SecretKey) -> Result<Self, SignError> {
-        use self::SignError::*;
         use secp256k1::Secp256k1;
 
         let msg = value.hash()?;
-        Secp256k1::new().sign(&msg, key.as_ref())
-            .map_err(Secp256k1Error)
-            .map(|s| {
-                Signed {
-                    signature: Signature::from(s),
-                    value: value,
-                }
-            })
+        let s = Secp256k1::new().sign(&msg, key.as_ref());
+        Ok(Signed {
+            signature: Signature::from(s),
+            value: value,
+        })
     }
 
     fn check(&self, public_key: &PublicKey) -> Result<(), SignError> {

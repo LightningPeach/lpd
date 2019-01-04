@@ -1,4 +1,4 @@
-use super::WireError;
+use binformat::WireError;
 use super::Message;
 
 use tokio::prelude::Future;

@@ -1,0 +1,10 @@
+[package]
+name = "state"
+version = "0.1.0"
+authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
+edition = "2018"
+
+[dependencies]
+rocksdb = "0.10"
+serde = "1.0"
+binformat = { path = "../binformat" }

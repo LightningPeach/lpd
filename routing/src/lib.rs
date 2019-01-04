@@ -1,13 +1,12 @@
 #![forbid(unsafe_code)]
 #![allow(non_shorthand_field_patterns)]
 
-// The crate is bunch of public modules and tests module.
-// Its structure will change.
-
 extern crate secp256k1;
 extern crate chrono;
-#[macro_use]
 extern crate wire;
+extern crate state;
+extern crate dijkstras_search;
+extern crate binformat;
 extern crate brontide;
 extern crate bitcoin_types;
 extern crate common_types;
@@ -16,60 +15,29 @@ extern crate specs;
 #[macro_use]
 extern crate specs_derive;
 extern crate shred;
-#[macro_use]
-extern crate shred_derive;
 extern crate rayon;
 
 #[cfg(test)]
 #[macro_use]
 extern crate hex_literal;
 
-#[cfg(test)]
+#[cfg(any(feature = "rpc", test))]
 extern crate hex;
 
 extern crate tokio;
 
-pub mod tcp_connection;
-mod graph;
+extern crate rocksdb;
 
-use wire::{
-    Message, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel,
-    MessageFiltered, MessageConsumer, WireError
-};
+extern crate serde;
+extern crate serde_derive;
 
-use tokio::prelude::{Future, Sink};
+#[cfg(feature = "rpc")]
+extern crate interface;
 
-pub use self::graph::Graph;
+mod graph_state;
+mod node;
+mod channel;
+mod tools;
 
-pub enum TopologyMessage {
-    Init(Init),
-    AnnouncementNode(AnnouncementNode),
-    AnnouncementChannel(AnnouncementChannel),
-    UpdateChannel(UpdateChannel),
-}
-
-impl MessageFiltered for TopologyMessage {
-    fn filter(v: Message) -> Result<Self, Message> {
-        match v {
-            Message::Init(v) => Ok(TopologyMessage::Init(v)),
-            Message::AnnouncementNode(v) => Ok(TopologyMessage::AnnouncementNode(v)),
-            Message::AnnouncementChannel(v) => Ok(TopologyMessage::AnnouncementChannel(v)),
-            Message::UpdateChannel(v) => Ok(TopologyMessage::UpdateChannel(v)),
-            v @ _ => Err(v),
-        }
-    }
-}
-
-impl MessageConsumer for Graph {
-    type Message = TopologyMessage;
-
-    fn consume<S>(mut self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError>>
-    where
-        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
-    {
-        use tokio::prelude::IntoFuture;
-
-        self.message(message);
-        Box::new(Ok((self, sink)).into_future())
-    }
-}
+pub use self::graph_state::{State, TopologyMessage};
+pub use rocksdb::Error as DBError;

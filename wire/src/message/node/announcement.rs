@@ -5,8 +5,8 @@ use super::PublicKey;
 use super::NodeAlias;
 use super::Color;
 
-use ::SerdeVec;
-use ::PackSized;
+use binformat::SerdeVec;
+use binformat::PackSized;
 
 use std::net::SocketAddr;
 use std::net::IpAddr;
@@ -200,7 +200,7 @@ mod serde {
 
 #[cfg(test)]
 mod tests {
-    use ::BinarySD;
+    use binformat::BinarySD;
     use super::*;
 
     #[test]

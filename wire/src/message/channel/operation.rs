@@ -6,7 +6,7 @@ use super::Signature;
 use super::PublicKey;
 use super::SatoshiPerKiloWeight;
 
-use ::SerdeVec;
+use binformat::SerdeVec;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct HtlcId {

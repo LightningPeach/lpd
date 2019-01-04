@@ -151,7 +151,7 @@ mod test {
     use super::RawFeatureVector;
     use super::FeatureBit;
 
-    use ::serde_facade::BinarySD;
+    use binformat::BinarySD;
 
     use rand::thread_rng;
     use rand::Rng;

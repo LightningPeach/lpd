@@ -2,7 +2,7 @@
 members = [
     "../lpd", "bincode", "wire", "brontide", "shachain", "chainntfs", "channel", "wallet",
     "routing", "bitcoin-types", "common-types",
-    "testenv"
+    "testenv", "rpc/interface", "rpc/implementation", "rpc/server", "rpc/client", "connection", "state", "binformat"
 ]
 
 [package]

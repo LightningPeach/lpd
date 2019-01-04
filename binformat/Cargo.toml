@@ -1,0 +1,10 @@
+[package]
+name = "binformat"
+version = "0.1.0"
+authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
+edition = "2018"
+
+[dependencies]
+bincode = { path = "../bincode" }
+flate2 = "1.0.6"
+serde = "1.0.82"

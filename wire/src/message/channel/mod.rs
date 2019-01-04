@@ -31,7 +31,7 @@ pub use self::query_short_channel_ids::*;
 mod query_channel_range;
 pub use self::query_channel_range::*;
 
-use ::PackSized;
+use binformat::PackSized;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]
@@ -168,7 +168,7 @@ mod rand {
 
 #[cfg(test)]
 mod tests {
-    use ::BinarySD;
+    use binformat::BinarySD;
     use super::ShortChannelId;
     use rand;
 

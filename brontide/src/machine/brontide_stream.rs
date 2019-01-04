@@ -5,16 +5,13 @@ use tokio::prelude::Future;
 use secp256k1::{PublicKey, SecretKey};
 use std::time::Duration;
 
-use super::handshake::{Machine, HandshakeNew, HandshakeError};
+use super::handshake::{Machine, HandshakeNew, HandshakeInitiator, HandshakeError};
 
 pub struct BrontideStream<T>
 where
     T: io::AsyncRead + io::AsyncWrite,
 {
-    // the Machine holds a lot of byte arrays,
-    // combined with tokio runtime it overflows stack,
-    // let us put it in the box
-    noise: Box<Machine>,
+    noise: Machine,
     stream: T,
 }
 
@@ -37,7 +34,7 @@ where
     ) -> impl Future<Item = Self, Error = HandshakeError> {
         use tokio::prelude::IntoFuture;
 
-        HandshakeNew::new(true, local_secret, remote_public)
+        HandshakeInitiator::new(local_secret, remote_public)
             .map_err(HandshakeError::Crypto)
             .and_then(|noise| noise.gen_act_one())
             .into_future()
@@ -56,7 +53,7 @@ where
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
                     .map(move |(stream, _)| BrontideStream {
-                        noise: Box::new(noise),
+                        noise: noise,
                         stream: stream,
                     })
             })
@@ -72,7 +69,7 @@ where
             .timeout(Self::read_timeout())
             .map_err(HandshakeError::IoTimeout)
             .and_then(move |(stream, a)| {
-                HandshakeNew::new(false, local_secret, PublicKey::new())
+                HandshakeNew::new(local_secret)
                     .map_err(HandshakeError::Crypto)
                     .and_then(move |noise| {
                         let noise = noise.recv_act_one(a)?;
@@ -88,7 +85,7 @@ where
                     .map_err(HandshakeError::IoTimeout)
                     .and_then(move |(stream, a)| {
                         Ok(BrontideStream {
-                            noise: Box::new(noise.recv_act_three(a)?),
+                            noise: noise.recv_act_three(a)?,
                             stream: stream,
                         })
                     })
@@ -99,7 +96,7 @@ where
         &self.noise.remote_static()
     }
 
-    pub fn framed(self) -> Framed<T, Box<Machine>> {
+    pub fn framed(self) -> Framed<T, Machine> {
         self.noise.framed(self.stream)
     }
 }
