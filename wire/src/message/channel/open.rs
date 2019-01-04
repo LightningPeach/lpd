@@ -74,7 +74,7 @@ pub struct ReestablishChannel {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ::BinarySD;
+    use binformat::BinarySD;
 
     #[test]
     fn open_channel_ser() {

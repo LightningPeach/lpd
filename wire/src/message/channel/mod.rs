@@ -168,7 +168,7 @@ mod rand {
 
 #[cfg(test)]
 mod tests {
-    use ::BinarySD;
+    use binformat::BinarySD;
     use super::ShortChannelId;
     use rand;
 

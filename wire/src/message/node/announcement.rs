@@ -200,7 +200,7 @@ mod serde {
 
 #[cfg(test)]
 mod tests {
-    use ::BinarySD;
+    use binformat::BinarySD;
     use super::*;
 
     #[test]

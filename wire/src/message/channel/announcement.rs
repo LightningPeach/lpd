@@ -48,7 +48,7 @@ impl AnnouncementChannel {
 mod test {
     use super::*;
     use super::super::DataToSign;
-    use ::BinarySD;
+    use binformat::BinarySD;
 
     #[test]
     fn announcement_channel() {
