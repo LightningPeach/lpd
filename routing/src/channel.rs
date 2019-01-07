@@ -8,7 +8,9 @@ use specs::prelude::*;
 use rocksdb::Error as DBError;
 use state::{DB, DBValue};
 use dijkstras_search::Edge;
+
 use super::tools::GenericSystem;
+use super::node::{NodeRef, Node, NodeLinks};
 
 use serde_derive::{Serialize, Deserialize};
 
@@ -20,6 +22,12 @@ pub struct Peer {
 #[derive(Component, Default)]
 #[storage(NullStorage)]
 pub struct Blacklisted;
+
+#[derive(Clone, Debug)]
+pub struct ChannelRef(pub Entity);
+
+#[derive(Component, Default)]
+pub struct ChannelLinks(pub Option<NodeRef>, pub Option<NodeRef>);
 
 #[derive(Component, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ChannelId {
@@ -33,11 +41,20 @@ pub struct ChannelParties {
     origin: (PublicKey, PublicKey),
 }
 
+pub enum Side {
+    Left {
+        other: PublicKey,
+    },
+    Right {
+        other: PublicKey,
+    },
+}
+
 impl ChannelParties {
-    pub fn other(&self, id: &PublicKey) -> Option<PublicKey> {
+    pub fn other(&self, id: &PublicKey) -> Option<Side> {
         match (self.lightning.0.eq(id), self.lightning.1.eq(id)) {
-            (true, _) => Some(self.lightning.1.clone()),
-            (_, true) => Some(self.lightning.0.clone()),
+            (true, _) => Some(Side::Left { other: self.lightning.1.clone() }),
+            (_, true) => Some(Side::Right { other: self.lightning.0.clone() }),
             _ => None,
         }
     }
@@ -64,11 +81,20 @@ pub struct ChannelPolicy {
     fee_rate: u32,
 }
 
-impl Edge for ChannelPolicy {
+impl Edge for ChannelRef {
     type Cost = u32;
+    type Context = World;
 
-    fn cost(&self) -> Self::Cost {
-        self.fee_rate.clone()
+    fn cost(&self, context: &World) -> Self::Cost {
+        // find the history in the world, fetch the last record, return max int if nothing
+        let max_int = 0xffffffff_u32;
+        context.read_storage::<ChannelHistory>().get(self.0.clone())
+            .map(|history| {
+                history.current()
+                    .map(|policy| policy.fee_rate.clone())
+                    .unwrap_or(max_int)
+            })
+            .unwrap_or(max_int)
     }
 }
 
@@ -83,6 +109,8 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
         WriteStorage<'a, Blacklisted>,
         WriteStorage<'a, ChannelId>,
         WriteStorage<'a, ChannelParties>,
+        ReadStorage<'a, Node>,
+        WriteStorage<'a, NodeLinks>,
     );
 
     fn run(&mut self, mut data: Self::SystemData) {
@@ -97,7 +125,9 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
                 blacklist_mark,
                 channel_id,
                 mut channel_parties,
-            ) = (&*data.0, &*data.1, &*data.2, data.3, &mut data.4, &mut data.5, data.6, );
+                node,
+                mut node_links
+            ) = (&*data.0, &*data.1, &*data.2, data.3, &mut data.4, &mut data.5, data.6, data.7, data.8);
 
             if let Err(()) = announcement_channel.check_features(features) {
                 return;
@@ -167,6 +197,7 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
                         update.remove::<ChannelParties>(entity);
                         update.remove::<ChannelId>(entity);
                         update.remove::<ChannelHistory>(entity);
+                        update.remove::<ChannelLinks>(entity);
                     }
                 }
 
@@ -175,6 +206,20 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
             }
 
             let channel_ref = entities.create();
+
+            // try link
+            let mut links = ChannelLinks::default();
+            for (entity, node, mut node_links) in (entities, &node, &mut node_links).join() {
+                if node.id() == this_parties.lightning.0.clone() {
+                    links.0 = Some(NodeRef(entity));
+                }
+                if node.id() == this_parties.lightning.1.clone() {
+                    links.1 = Some(NodeRef(entity));
+                }
+                node_links.0.push(ChannelRef(channel_ref));
+            }
+
+            update.insert(channel_ref, links);
             update.insert(channel_ref, id);
             update.insert(channel_ref, this_parties);
             update.insert(channel_ref, ChannelHistory::default());

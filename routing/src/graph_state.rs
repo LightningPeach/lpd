@@ -1,10 +1,11 @@
 use specs::prelude::*;
-use state::{DBBuilder, DBError};
+use state::{DB, DBBuilder, DBError, DBUser};
 use super::channel::{
     LoadChannels, StoreChannels, LogChannels, ChannelInfo,
-    ChannelPolicy, ChannelParties, ChannelHistory,
+    ChannelParties, ChannelHistory,
+    ChannelRef, ChannelLinks,
 };
-use super::node::{LoadNodes, StoreNodes, LogNodes, Node};
+use super::node::{LoadNodes, StoreNodes, LogNodes, Node, NodeRef, NodeLinks};
 use super::tools::GenericSystem;
 
 use dijkstras_search::Graph;
@@ -18,7 +19,7 @@ use wire::{
 use binformat::WireError;
 
 use std::fmt::Debug;
-use std::path::Path;
+use std::sync::{Arc, RwLock};
 
 #[cfg(feature = "rpc")]
 use interface::routing::{ChannelEdge, LightningNode};
@@ -29,11 +30,16 @@ pub struct State {
     world: World,
 }
 
+impl DBUser for State {
+    fn db_prepare(builder: DBBuilder) -> DBBuilder {
+        builder
+            .register::<ChannelInfo>()
+            .register::<Node>()
+    }
+}
+
 impl State {
-    pub fn new<P>(path: P) -> Result<Self, DBError>
-    where
-        P: AsRef<Path>,
-    {
+    pub fn new(db: Arc<RwLock<DB>>) -> Self {
         let mut world = World::new();
         world.setup::<<GenericSystem<AnnouncementChannel, ()> as System>::SystemData>();
         world.setup::<<GenericSystem<UpdateChannel, ()> as System>::SystemData>();
@@ -45,15 +51,11 @@ impl State {
         world.setup::<<GenericSystem<StoreChannels, Result<(), DBError>> as System>::SystemData>();
         world.setup::<<GenericSystem<LogChannels, ()> as System>::SystemData>();
 
-        let db = DBBuilder::default()
-            .register::<ChannelInfo>()
-            .register::<Node>()
-            .build(path)?;
         world.add_resource(db);
 
-        Ok(State {
+        State {
             world: world,
-        })
+        }
     }
 
     fn run<'a, Input, Output>(&'a mut self, input: Input) -> Output
@@ -105,43 +107,84 @@ impl State {
     }
 
     #[cfg(feature = "rpc")]
-    pub fn path(&self, start: PublicKey, goal: PublicKey) -> Vec<PublicKey> {
-        self.shortest_path(start.clone()).sequence(start, goal)
+    pub fn path(&mut self, start: PublicKey, goal: PublicKey) -> Vec<(LightningNode, ChannelEdge)> {
+        let entities = &self.world.entities();
+        let nodes = &self.world.read_storage::<Node>();
+        let (mut start_ref, mut goal_ref) = (None, None);
+        for (entity, node) in (entities, nodes).join() {
+            if node.id().eq(&start) {
+                start_ref = Some(NodeRef(entity.clone()));
+            } else if node.id().eq(&goal) {
+                goal_ref = Some(NodeRef(entity.clone()));
+            }
+        }
+
+        match (start_ref, goal_ref) {
+            (Some(start_ref), Some(goal_ref)) => {
+                self.shortest_path(&self.world, start_ref.clone())
+                    .sequence(start_ref, goal_ref)
+                    .into_iter()
+                    .map(|(node_ref, channel_ref)| {
+                        use super::channel::ChannelId;
+
+                        let node = nodes.get(node_ref.0).unwrap().clone().into();
+                        let id = self.world.read_storage::<ChannelId>().get(channel_ref.0).unwrap().clone();
+                        let parties = self.world.read_storage::<ChannelParties>().get(channel_ref.0).unwrap().clone();
+                        let history = self.world.read_storage::<ChannelHistory>().get(channel_ref.0).unwrap().clone();
+                        let info = ChannelInfo(id, parties, history);
+                        let channel = info.into();
+
+                        (node, channel)
+                    })
+                    .collect()
+            },
+            _ => Vec::new(),
+        }
     }
 }
 
 impl Graph for State {
-    type Node = PublicKey;
-    type Edge = ChannelPolicy;
+    type Node = NodeRef;
+    type Edge = ChannelRef;
+    type Context = World;
 
     fn neighbors(&self, node: Self::Node) -> Vec<(Self::Node, Self::Edge)> {
-        let mut system = GenericSystem::<PublicKey, Vec<(PublicKey, ChannelPolicy)>>::from(node);
-        system.run((self.world.read_storage(), self.world.read_storage(), self.world.read_storage()));
+        let mut system = GenericSystem::<NodeRef, Vec<(NodeRef, ChannelRef)>>::from(node);
+        system.run((self.world.read_storage(), self.world.read_storage()));
         system.output()
     }
 }
 
-impl<'a> System<'a> for GenericSystem<PublicKey, Vec<(PublicKey, ChannelPolicy)>> {
+impl<'a> System<'a> for GenericSystem<NodeRef, Vec<(NodeRef, ChannelRef)>> {
     type SystemData = (
-        ReadStorage<'a, Node>,
-        ReadStorage<'a, ChannelParties>,
-        ReadStorage<'a, ChannelHistory>,
+        ReadStorage<'a, NodeLinks>,
+        ReadStorage<'a, ChannelLinks>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        use specs::Join;
-
         self.run_func(|node| {
-            let mut neighbours = Vec::new();
-
-            for (parties, history) in (&data.1, &data.2).join() {
-                if let Some(id) = parties.other(&node) {
-                    if let Some(other) = (&data.0).join().find(|&node| node.id() == id) {
-                        neighbours.push((other.id(), history.current().unwrap().clone()));
-                    }
-                }
-            }
-            neighbours
+            data.0.get(node.0)
+                .map(|node_links| node_links.0.clone())
+                .unwrap_or(Vec::new())
+                .into_iter()
+                .filter_map(|channel_ref| {
+                    data.1.get(channel_ref.0)
+                        .and_then(|channel_links| {
+                            match channel_links {
+                                &ChannelLinks(Some(ref left), Some(ref right)) => {
+                                    if *left == node {
+                                        Some((right.clone(), channel_ref))
+                                    } else if *right == node {
+                                        Some((left.clone(), channel_ref))
+                                    } else {
+                                        None
+                                    }
+                                },
+                                _ => None,
+                            }
+                        })
+                })
+                .collect()
         })
     }
 }
