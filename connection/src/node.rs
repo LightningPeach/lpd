@@ -1,58 +1,79 @@
 use std::sync::{Arc, RwLock};
 
 use secp256k1::{SecretKey, PublicKey};
-use tokio::prelude::{Future, AsyncRead, AsyncWrite};
+use tokio::prelude::{Future, AsyncRead, AsyncWrite, Sink};
 use tokio::executor::Spawn;
 use futures::sync::mpsc::Receiver;
-use wire::{Message, Signature, SignError};
+use wire::{Message, Signature, SignError, MessageConsumer};
+use binformat::WireError;
 
 use super::address::{AbstractAddress, ConnectionStream, Command};
 
-use state::{DB, DBError};
+use state::DB;
 use brontide::BrontideStream;
 
+use routing::{State, SharedState};
+
 use std::path::Path;
+use either::Either;
 
-pub fn database<P: AsRef<Path>>(path: P) -> Result<DB, DBError> {
-    use state::DBBuilder;
-
-    DBBuilder::default()
-        // add here database inhabitants
-        //.register::<SomeType>()
-        .build(path)
-}
+#[cfg(feature = "rpc")]
+use interface::routing::{LightningNode, ChannelEdge};
 
 pub struct Node {
     peers: Vec<PublicKey>,
-    db: DB,
+    shared_state: SharedState,
+    db: Arc<RwLock<DB>>,
     secret: SecretKey,
 }
 
 pub struct Remote {
+    db: Arc<RwLock<DB>>,
     public: PublicKey,
 }
 
-impl Remote {
-    pub fn process_message(&mut self, db: &mut DB, message: Message) {
-        let _ = (message, &mut self.public, db);
+impl MessageConsumer for Remote {
+    type Message = Message;
+
+    fn consume<S>(self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
+    where
+        Self: Sized,
+        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+    {
+        use tokio::prelude::future::IntoFuture;
+
+        // TODO: process the message using db and public
+        let _ = (&self.db, &self.public);
+        let _ = message;
+
+        Box::new(Ok((self, sink)).into_future())
     }
 }
 
 impl Node {
     pub fn new<P: AsRef<Path>>(secret: [u8; 32], path: P) -> Self {
+        use state::DBBuilder;
+
+        let db = DBBuilder::default().user::<State>().build(path).unwrap();
+        let p_db = Arc::new(RwLock::new(db));
+
         Node {
             peers: Vec::new(),
-            db: database(path).unwrap(),
+            shared_state: SharedState(Arc::new(RwLock::new(State::new(p_db.clone())))),
+            db: p_db,
             secret: SecretKey::from_slice(&secret[..]).unwrap(),
         }
     }
 
-    fn add(&mut self, remote_public: PublicKey) -> Option<PublicKey> {
+    fn add(&mut self, remote_public: PublicKey) -> Either<PublicKey, Remote> {
         if self.peers.contains(&remote_public) {
-            Some(remote_public)
+            Either::Left(remote_public)
         } else {
-            self.peers.push(remote_public);
-            None
+            self.peers.push(remote_public.clone());
+            Either::Right(Remote {
+                db: self.db.clone(),
+                public: remote_public,
+            })
         }
     }
 
@@ -61,36 +82,27 @@ impl Node {
         S: AsyncRead + AsyncWrite + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
+        use wire::MessageConsumerChain;
 
         let remote_public = stream.remote_key().clone();
         let (sink, stream) = stream.framed().split();
 
-        // nll will fix it,
-        // p_self is borrowed, but it is not used in match's `None` arm
-        // however, the compiler still complains, so let's clone the pointer here
-        let shared = p_self.clone();
+        let p_graph = p_self.read().unwrap().shared_state.clone();
         match p_self.write().unwrap().add(remote_public) {
-            Some(k) => {
+            Either::Left(k) => {
                 use futures::future::ok;
                 println!("WARNING: {} is connected, ignoring", k);
                 tokio::spawn(ok(()))
             },
-            None => {
-                println!("INFO: new peer {:?}", hex::encode(&remote_public.serialize()[..]));
+            Either::Right(peer) => {
+                println!("INFO: new peer {}", peer.public);
 
-                let peer = Remote {
-                    public: remote_public,
-                };
-
+                let processor = (p_graph, (peer, ()));
                 let connection = stream
-                    .map_err(|e| println!("{:?}", e))
-                    .fold(peer, move |mut peer, message| {
-                        println!("{:?}", message);
-                        // process message using sink
-                        let _ = &sink;
-                        peer.process_message(&mut shared.clone().write().unwrap().db, message);
-                        Ok(peer)
+                    .fold((processor, sink), |(processor, sink), message| {
+                        processor.process(sink, message).ok().unwrap()
                     })
+                    .map_err(|e| panic!("{:?}", e))
                     .map(|_| ());
 
                 tokio::spawn(connection)
@@ -103,11 +115,8 @@ impl Node {
         A: AbstractAddress + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
-        use secp256k1::Secp256k1;;
 
         let secret = p_self.read().unwrap().secret.clone();
-        let pk = PublicKey::from_secret_key(&Secp256k1::new(), &secret);
-        println!("INFO: pk {:?}", hex::encode(&pk.serialize()[..]));
         let server = ConnectionStream::new(address, control, secret)?
             .map_err(|e| println!("{:?}", e))
             .for_each(move |stream| Self::process_connection(p_self.clone(), stream));
@@ -131,7 +140,29 @@ impl Node {
     //    pub sat_recv: ::protobuf::SingularPtrField<super::common::Satoshi>,
     //    pub inbound: bool,
     //    pub ping_time: i64,
+    #[cfg(feature = "rpc")]
     pub fn list_peers(p_self: Arc<RwLock<Self>>) -> Vec<PublicKey> {
         p_self.read().unwrap().peers.clone()
+    }
+
+    #[cfg(feature = "rpc")]
+    pub fn describe_graph(p_self: Arc<RwLock<Self>>, include_unannounced: bool) -> (Vec<ChannelEdge>, Vec<LightningNode>) {
+        p_self.read().unwrap().shared_state.clone().0.read().unwrap().describe(include_unannounced)
+    }
+
+    // TODO: add missing fields
+    #[cfg(feature = "rpc")]
+    pub fn get_info(p_self: Arc<RwLock<Self>>) -> PublicKey {
+        use secp256k1::Secp256k1;
+
+        PublicKey::from_secret_key(&Secp256k1::new(), &p_self.read().unwrap().secret)
+    }
+
+    // TODO: add missing fields
+    #[cfg(feature = "rpc")]
+    pub fn find_route(p_self: Arc<RwLock<Self>>, goal: PublicKey) -> Vec<(LightningNode, ChannelEdge)> {
+        let start = Node::get_info(p_self.clone());
+        // goal is not included, so let's swap start and goal so starting node is not included
+        p_self.read().unwrap().shared_state.clone().0.read().unwrap().path(goal.as_ref().clone(), start.as_ref().clone())
     }
 }

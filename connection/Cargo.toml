@@ -9,7 +9,8 @@ brontide = { path = "../brontide" }
 binformat = { path = "../binformat" }
 wire = { path = "../wire" }
 state = { path = "../state" }
-routing = { path = "../routing" }
+interface = { path = "../rpc/interface", optional = true }
+routing = { path = "../routing", features = ["rpc"] }
 
 secp256k1 = "0.12"
 
@@ -22,3 +23,7 @@ serde = "1.0"
 serde_derive = "1.0"
 
 hex = "0.3.2"
+either = "1.5.0"
+
+[features]
+rpc = ["interface"]

@@ -9,7 +9,7 @@ grpc = "0.6.*"
 
 interface = { path = "../interface" }
 wire = { path = "../../wire" }
-connection = { path = "../../connection" }
+connection = { path = "../../connection", features = ["rpc"] }
 state = { path = "../../state" }
 
 futures = "0.1"
