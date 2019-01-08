@@ -132,7 +132,6 @@ impl RoutingService for RoutingImpl<SocketAddr> {
 
     fn query_routes(&self, o: RequestOptions, p: QueryRoutesRequest) -> SingleResponse<RouteList> {
         use futures::future::err;
-        use std::string::ToString;
         use secp256k1::PublicKey;
 
         let _ = o;
@@ -151,7 +150,7 @@ impl RoutingService for RoutingImpl<SocketAddr> {
                 let v = Node::find_route(self.node.clone(), goal);
 
                 let hops = v.into_iter()
-                    .map(|(mut node, mut channel)| {
+                    .map(|(mut node, channel)| {
                         let mut hop = Hop::new();
                         hop.set_chan_id(channel.get_channel_id());
                         hop.set_chan_capacity(channel.get_capacity());
@@ -163,7 +162,7 @@ impl RoutingService for RoutingImpl<SocketAddr> {
                 let mut route = Route::new();
                 route.set_hops(hops);
 
-                let list = vec![route].into;
+                let list = vec![route].into();
                 let mut response = RouteList::new();
                 response.set_routes(list);
 
