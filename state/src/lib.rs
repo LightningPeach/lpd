@@ -33,6 +33,14 @@ impl DBBuilder {
         s
     }
 
+    // make the user able to register its private types
+    pub fn user<U>(self) -> Self
+    where
+        U: DBUser,
+    {
+        U::db_prepare(self)
+    }
+
     pub fn build<P>(self, path: P) -> Result<DB, DBError>
     where
         P: AsRef<Path>,
@@ -42,29 +50,34 @@ impl DBBuilder {
         let mut options = Options::default();
         options.create_if_missing(true);
         options.create_missing_column_families(true);
-        Ok(DB(RocksDB::open_cf_descriptors(&options, path, self.cfs)?))
+        Ok(DB(Some(RocksDB::open_cf_descriptors(&options, path, self.cfs)?)))
     }
 }
 
-pub struct DB(RocksDB);
+pub trait DBUser {
+    fn db_prepare(builder: DBBuilder) -> DBBuilder;
+}
+
+#[derive(Default)]
+pub struct DB(Option<RocksDB>);
 
 impl Deref for DB {
     type Target = RocksDB;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Default for DB {
-    fn default() -> Self {
-        panic!()
+        match self {
+            &DB(Some(ref v)) => v,
+            _ => panic!(),
+        }
     }
 }
 
 impl DerefMut for DB {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        match self {
+            &mut DB(Some(ref mut v)) => v,
+            _ => panic!(),
+        }
     }
 }
 

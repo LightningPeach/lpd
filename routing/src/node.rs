@@ -11,7 +11,15 @@ use serde_derive::{Serialize, Deserialize};
 
 use rocksdb::Error as DBError;
 use state::{DB, DBValue};
+
+use super::channel::{ChannelParties, ChannelLinks, ChannelRef, Side};
 use super::tools::GenericSystem;
+
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
+pub struct NodeRef(pub Entity);
+
+#[derive(Component, Default)]
+pub struct NodeLinks(pub Vec<ChannelRef>);
 
 #[derive(Component, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
@@ -34,6 +42,8 @@ impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
         Entities<'a>,
         Read<'a, LazyUpdate>,
         ReadStorage<'a, Node>,
+        ReadStorage<'a, ChannelParties>,
+        WriteStorage<'a, ChannelLinks>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -41,7 +51,13 @@ impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
         use std::iter::Iterator;
 
         self.run_func(|announcement_node| {
-            let (entities, update, node_storage) = (&*data.0, &*data.1, data.2);
+            let (
+                entities,
+                update,
+                node_storage,
+                channel_parties,
+                mut channel_links,
+            ) = (&*data.0, &*data.1, data.2, data.3, data.4);
 
             // TODO: check features
 
@@ -61,8 +77,27 @@ impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
             };
 
             if (&node_storage).join().find(|&n| n == &node).is_none() {
+                let id = node.node_id.clone();
                 let node_ref = entities.create();
                 update.insert(node_ref, node);
+
+                let mut links = NodeLinks(Vec::new());
+
+                for (entity, parties, mut channel_links) in (entities, &channel_parties, &mut channel_links).join() {
+                    match parties.other(&id) {
+                        Some(side) => {
+                            let node_ref = NodeRef(node_ref);
+                            match side {
+                                Side::Left { other: _ } => channel_links.0 = Some(node_ref),
+                                Side::Right { other: _ } => channel_links.1 = Some(node_ref),
+                            }
+                            links.0.push(ChannelRef(entity));
+                        },
+                        None => (),
+                    }
+                }
+
+                update.insert(node_ref, links);
             }
         });
     }

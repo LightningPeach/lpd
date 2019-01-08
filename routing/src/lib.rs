@@ -39,5 +39,5 @@ mod node;
 mod channel;
 mod tools;
 
-pub use self::graph_state::{State, TopologyMessage};
+pub use self::graph_state::{State, SharedState};
 pub use rocksdb::Error as DBError;

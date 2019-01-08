@@ -5,10 +5,16 @@ use tokio::prelude::Future;
 use tokio::prelude::Sink;
 
 pub trait MessageFiltered
-    where
-        Self: Sized,
+where
+    Self: Sized,
 {
     fn filter(v: Message) -> Result<Self, Message>;
+}
+
+impl MessageFiltered for Message {
+    fn filter(v: Message) -> Result<Self, Message> {
+        Ok(v)
+    }
 }
 
 pub trait MessageConsumer {
@@ -16,13 +22,12 @@ pub trait MessageConsumer {
 
     // consumes message and return future with the sink and maybe modified self
     // works synchronously
-    // TODO: get rid of static
-    fn consume<S>(self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError>>
+    fn consume<S>(self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
     where
         Self: Sized,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
 
-    fn try<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError>>, (Self, S, Message)>
+    fn try<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>, (Self, S, Message)>
     where
         Self: Sized + 'static,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
@@ -35,28 +40,32 @@ pub trait MessageConsumer {
 }
 
 pub trait MessageConsumerChain {
-    fn process<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError>>, (Self, S, Message)>
+    fn process<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>, (Self, S, Message)>
     where
         Self: Sized,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
 }
 
 impl MessageConsumerChain for () {
-    fn process<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError>>, (Self, S, Message)>
+    fn process<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>, (Self, S, Message)>
     where
         Self: Sized,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
-        Err((self, sink, message))
+        use tokio::prelude::future::IntoFuture;
+
+        println!("WARNING: skipped message {:?}", message);
+        // always Ok, so could unwrap
+        Ok(Box::new(Ok((self, sink)).into_future()))
     }
 }
 
 impl<X, XS> MessageConsumerChain for (X, XS)
 where
-    X: MessageConsumer + 'static,
-    XS: MessageConsumerChain + 'static,
+    X: MessageConsumer + Send + 'static,
+    XS: MessageConsumerChain + Send + 'static,
 {
-    fn process<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError>>, (Self, S, Message)>
+    fn process<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>, (Self, S, Message)>
     where
         Self: Sized,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
