@@ -2,13 +2,14 @@ use specs::prelude::*;
 use state::{DB, DBBuilder, DBError, DBUser};
 use super::channel::{
     LoadChannels, StoreChannels, LogChannels, ChannelInfo,
-    ChannelParties, ChannelHistory,
     ChannelRef, ChannelLinks,
 };
 use super::node::{LoadNodes, StoreNodes, LogNodes, Node, NodeRef, NodeLinks};
 use super::tools::GenericSystem;
 
 use dijkstras_search::Graph;
+
+#[cfg(feature = "rpc")]
 use wire::PublicKey;
 
 use wire::{
@@ -125,7 +126,7 @@ impl State {
                     .sequence(start_ref, goal_ref)
                     .into_iter()
                     .map(|(node_ref, channel_ref)| {
-                        use super::channel::ChannelId;
+                        use super::channel::{ChannelId, ChannelParties, ChannelHistory};
 
                         let node = nodes.get(node_ref.0).unwrap().clone().into();
                         let id = self.world.read_storage::<ChannelId>().get(channel_ref.0).unwrap().clone();
@@ -211,7 +212,7 @@ impl MessageFiltered for TopologyMessage {
 impl MessageConsumer for State {
     type Message = TopologyMessage;
 
-    fn consume<S>(mut self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError>>
+    fn consume<S>(mut self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
     where
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {

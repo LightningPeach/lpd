@@ -1,48 +1,60 @@
 use std::sync::{Arc, RwLock};
 
 use secp256k1::{SecretKey, PublicKey};
-use tokio::prelude::{Future, AsyncRead, AsyncWrite};
+use tokio::prelude::{Future, AsyncRead, AsyncWrite, Sink};
 use tokio::executor::Spawn;
 use futures::sync::mpsc::Receiver;
-use wire::{Message, Signature, SignError};
+use wire::{Message, Signature, SignError, MessageConsumer};
+use binformat::WireError;
 
 use super::address::{AbstractAddress, ConnectionStream, Command};
 
-use state::{DB, DBError};
+use state::DB;
 use brontide::BrontideStream;
+
+use routing::State;
 
 use std::path::Path;
 
-pub fn database<P: AsRef<Path>>(path: P) -> Result<DB, DBError> {
-    use state::DBBuilder;
-
-    DBBuilder::default()
-        // add here database inhabitants
-        //.register::<SomeType>()
-        .build(path)
-}
-
 pub struct Node {
     peers: Vec<PublicKey>,
-    db: DB,
+    db: Arc<RwLock<DB>>,
     secret: SecretKey,
 }
 
 pub struct Remote {
+    db: Arc<RwLock<DB>>,
     public: PublicKey,
 }
 
-impl Remote {
-    pub fn process_message(&mut self, db: &mut DB, message: Message) {
-        let _ = (message, &mut self.public, db);
+impl MessageConsumer for Remote {
+    type Message = Message;
+
+    fn consume<S>(self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
+    where
+        Self: Sized,
+        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+    {
+        use tokio::prelude::future::IntoFuture;
+
+        // TODO: process the message using db and public
+        let _ = (&self.db, &self.public);
+        let _ = message;
+
+        Box::new(Ok((self, sink)).into_future())
     }
 }
 
 impl Node {
     pub fn new<P: AsRef<Path>>(secret: [u8; 32], path: P) -> Self {
+        use state::DBBuilder;
+
+        let db = DBBuilder::default().user::<State>().build(path).unwrap();
+        let p_db = Arc::new(RwLock::new(db));
+
         Node {
             peers: Vec::new(),
-            db: database(path).unwrap(),
+            db: p_db,
             secret: SecretKey::from_slice(&secret[..]).unwrap(),
         }
     }
@@ -61,6 +73,7 @@ impl Node {
         S: AsyncRead + AsyncWrite + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
+        use wire::MessageConsumerChain;
 
         let remote_public = stream.remote_key().clone();
         let (sink, stream) = stream.framed().split();
@@ -79,18 +92,17 @@ impl Node {
                 println!("INFO: new peer {:?}", hex::encode(&remote_public.serialize()[..]));
 
                 let peer = Remote {
+                    db: shared.read().unwrap().db.clone(),
                     public: remote_public,
                 };
+                let graph = State::new(p_self.write().unwrap().db.clone());
+                let processor = (peer, (graph, ()));
 
                 let connection = stream
-                    .map_err(|e| println!("{:?}", e))
-                    .fold(peer, move |mut peer, message| {
-                        println!("{:?}", message);
-                        // process message using sink
-                        let _ = &sink;
-                        peer.process_message(&mut shared.clone().write().unwrap().db, message);
-                        Ok(peer)
+                    .fold((processor, sink), |(processor, sink), message| {
+                        processor.process(sink, message).ok().unwrap()
                     })
+                    .map_err(|e| panic!("{:?}", e))
                     .map(|_| ());
 
                 tokio::spawn(connection)
@@ -133,5 +145,9 @@ impl Node {
     //    pub ping_time: i64,
     pub fn list_peers(p_self: Arc<RwLock<Self>>) -> Vec<PublicKey> {
         p_self.read().unwrap().peers.clone()
+    }
+
+    pub fn describe_graph(_p_self: Arc<RwLock<Self>>) -> (Vec<()>, Vec<()>) {
+        unimplemented!()
     }
 }
