@@ -8,6 +8,8 @@ use super::SatoshiPerKiloWeight;
 
 use binformat::SerdeVec;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct HtlcId {
     id: u64,

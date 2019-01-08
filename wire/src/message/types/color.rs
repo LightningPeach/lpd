@@ -1,5 +1,7 @@
 use super::common::Module;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Clone, Default, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Color {
     data: [u8; 3],

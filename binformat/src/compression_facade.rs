@@ -1,16 +1,4 @@
-use flate2::Compression;
-use flate2::read;
-
-use serde::Serialize;
-use serde::Serializer;
-use serde::Deserialize;
-use serde::Deserializer;
-use serde::ser;
-use serde::de;
-
-use super::BinarySD;
-use std::io::Read;
-
+use serde::{Serialize, Serializer, Deserialize, Deserializer, de};
 use std::mem;
 
 pub trait PackSized: Sized {
@@ -27,7 +15,7 @@ pub struct SerdeVec<T>(pub Vec<T>) where T: PackSized;
 
 impl<T> Serialize for SerdeVec<T> where T: PackSized + Serialize {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        use self::ser::SerializeTuple;
+        use serde::ser::SerializeTuple;
 
         let &SerdeVec(ref data) = self;
         let mut tuple = serializer.serialize_tuple(1 + data.len())?;
@@ -37,12 +25,12 @@ impl<T> Serialize for SerdeVec<T> where T: PackSized + Serialize {
         } else {
             T::SIZE * data.len()
         };
-        let _ = SerializeTuple::serialize_element(&mut tuple, &(size_in_bytes as u16))?;
+        let _ = tuple.serialize_element(&(size_in_bytes as u16))?;
         for item in data {
-            let _ = SerializeTuple::serialize_element(&mut tuple, item)?;
+            let _ = tuple.serialize_element(item)?;
         }
 
-        SerializeTuple::end(tuple)
+        tuple.end()
     }
 }
 
@@ -67,17 +55,17 @@ impl<'de, T> Deserialize<'de> for SerdeVec<T> where T: PackSized + de::Deseriali
                 let mut seq = seq;
 
                 let mut size = seq.size_hint()
-                    .ok_or(<A::Error as de::Error>::custom(format!("expected size")))?;
+                    .ok_or(de::Error::custom(format!("expected size")))?;
                 let mut data = Vec::new();
                 loop {
                     if size == 0 { break; }
                     let element: T = seq.next_element()?
-                        .ok_or(<A::Error as de::Error>::custom(format!("cannot read T")))?;
+                        .ok_or(de::Error::custom(format!("cannot read T")))?;
                     if size == element.pack_size() {
                         break;
                     } else {
                         if size < element.pack_size() {
-                            return Err(<A::Error as de::Error>::custom(format!("cannot assemble integer amount of T")))
+                            return Err(de::Error::custom(format!("cannot assemble integer amount of T")))
                         }
                     }
                     size -= element.pack_size();
@@ -120,14 +108,19 @@ pub struct UncompressedData<T>(pub SerdeVec<T>) where T: PackSized;
 
 impl<T> Serialize for UncompressedData<T> where T: PackSized + Serialize {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        use flate2::{Compression, read};
+        use serde::ser;
+        use super::BinarySD;
+        use std::io::Read;
+
         let mut bytes = Vec::<u8>::new();
         let &UncompressedData(ref data) = self;
         BinarySD::serialize(&mut bytes, data)
-            .map_err(|e| <S::Error as ser::Error>::custom(format!("serialize error: {:?}", e)))?;
+            .map_err(|e| ser::Error::custom(format!("serialize error: {:?}", e)))?;
         let mut encoder = read::ZlibEncoder::new(bytes.as_slice(), Compression::fast());
         let mut compressed_bytes = Vec::<u8>::new();
         let _ = Read::read_to_end(&mut encoder, &mut compressed_bytes)
-            .map_err(|e| <S::Error as ser::Error>::custom(format!("compression error: {:?}", e)))?;
+            .map_err(|e| ser::Error::custom(format!("compression error: {:?}", e)))?;
         serializer.serialize_bytes(compressed_bytes.as_slice())
     }
 }
@@ -149,6 +142,10 @@ impl<'de, T> Deserialize<'de> for UncompressedData<T> where T: PackSized + de::D
             }
 
             fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E> where E: de::Error, {
+                use flate2::read;
+                use super::BinarySD;
+                use std::io::Read;
+
                 let mut decoder = read::ZlibDecoder::new(v);
                 let mut decompressed_bytes = Vec::<u8>::new();
                 let _ = Read::read_to_end(&mut decoder, &mut decompressed_bytes)

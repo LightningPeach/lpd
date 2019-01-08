@@ -6,6 +6,7 @@ use wire::NodeAlias;
 use wire::SignError;
 
 use specs::prelude::*;
+use specs_derive::Component;
 
 use serde_derive::{Serialize, Deserialize};
 

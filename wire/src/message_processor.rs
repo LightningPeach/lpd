@@ -27,7 +27,7 @@ pub trait MessageConsumer {
         Self: Sized,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
 
-    fn try<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>, (Self, S, Message)>
+    fn filter<S>(self, sink: S, message: Message) -> Result<Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>, (Self, S, Message)>
     where
         Self: Sized + 'static,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
@@ -71,7 +71,7 @@ where
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
         let (x, xs) = self;
-        match x.try(sink, message) {
+        match x.filter(sink, message) {
             Ok(f) => Ok(Box::new(f.map(|(x, s)| ((x, xs), s)))),
             Err((x, s, m)) => match xs.process(s, m) {
                 Ok(f) => Ok(Box::new(f.map(|(xs, s)| ((x, xs), s)))),

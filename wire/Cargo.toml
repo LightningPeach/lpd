@@ -1,30 +1,30 @@
 [package]
 name = "wire"
-version = "0.0.0"
+version = "0.1.0"
 description = "The implementation of the Lightning Network wire protocol"
 license = "Apache-2.0"
 authors = ["LightningPeach <contact@lightningpeach.com>"]
+edition = "2018"
 
 [lib]
 name = "wire"
 
 [dependencies]
-serde = "1"
-serde_derive = "1"
-bincode = { path = "../bincode" }
-bitflags = "1"
+serde = "1.0"
+serde_derive = "1.0"
+bitflags = "1.0"
 secp256k1 = "0.12"
-rand = "0.5"
-sha2 = "0.7.1"
-digest = "0.7.*"
-flate2 = "1"
-tokio = "0.1.11"
+sha2 = "0.8"
+digest = "0.8"
+tokio = "0.1"
+hex = "0.3"
+hex-literal = "0.1"
+rand = "0.6"
+
+bincode = { path = "../bincode" }
 common-types = { path = "../common-types" }
 bitcoin-types = { path = "../bitcoin-types" }
 binformat = { path = "../binformat" }
-
-hex = "0.3.2"
-hex-literal = "0.1.1"
 
 [dev-dependencies]
 common-types = { path = "../common-types", features = ["testing"] }

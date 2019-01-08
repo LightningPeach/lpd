@@ -1,5 +1,7 @@
 use std::mem;
 
+use serde_derive::{Serialize, Deserialize};
+
 use rand::thread_rng;
 use rand::Rng;
 use rand::distributions::Standard;

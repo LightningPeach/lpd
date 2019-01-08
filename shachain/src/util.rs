@@ -3,7 +3,7 @@ use hex;
 use std::ops::{Index, IndexMut};
 
 const SHA256_HASH_SIZE: usize = 32;
-const START_INDEX: LeafIndex = LeafIndex((1 << MAX_HEIGHT) - 1);
+const START_INDEX: LeafIndex = LeafIndex(((1u64 << MAX_HEIGHT) - 1) as u64);
 pub const MAX_HEIGHT: usize = 48;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

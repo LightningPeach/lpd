@@ -1,14 +1,7 @@
-use serde::Deserialize;
-use serde::de::DeserializeOwned;
-use serde::Deserializer;
-use serde::Serialize;
-use serde::Serializer;
+use serde::{Serialize, Serializer, Deserialize, Deserializer, de::DeserializeOwned};
+use bincode::{Error, LengthSDOptions, config};
 
 use std::io;
-
-use bincode::Error;
-use bincode::LengthSDOptions;
-use bincode::config;
 
 type MessageSize = u16;
 pub type WireError = Error;

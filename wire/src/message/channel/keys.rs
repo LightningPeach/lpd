@@ -1,6 +1,8 @@
 use super::PublicKey;
 use super::SecretKey;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ChannelKeys {
     funding: PublicKey,
@@ -85,7 +87,7 @@ impl ChannelPrivateKeys {
 }
 
 #[cfg(any(test, feature = "testing"))]
-mod rand {
+mod rand_m {
     use super::ChannelPrivateKeys;
     use rand::distributions::Distribution;
     use rand::distributions::Standard;

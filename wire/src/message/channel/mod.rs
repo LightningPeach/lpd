@@ -33,6 +33,10 @@ pub use self::query_channel_range::*;
 
 use binformat::PackSized;
 
+use bitflags::bitflags;
+
+use serde_derive::{Serialize, Deserialize};
+
 bitflags! {
     #[derive(Serialize, Deserialize)]
     pub struct ChannelFlags: u8 {
@@ -101,7 +105,7 @@ impl From<ShortChannelId> for u64 {
     }
 }
 
-mod serde {
+mod serde_m {
     use super::ShortChannelId;
 
     use serde::Serialize;
@@ -140,7 +144,7 @@ mod serde {
 }
 
 #[cfg(test)]
-mod rand {
+mod rand_m {
     use super::ChannelId;
     use super::ShortChannelId;
 

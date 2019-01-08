@@ -69,12 +69,13 @@ impl SymmetricState {
         use hkdf::Hkdf;
 
         let hkdf = Hkdf::<Sha256>::extract(Some(&self.chaining_key), input);
-        let okm = hkdf.expand(&[], 64);
+        let mut okm = [0; 64];
+        hkdf.expand(&[], &mut okm).unwrap();
 
-        self.chaining_key.copy_from_slice(&okm.as_slice()[..32]);
+        self.chaining_key.copy_from_slice(&okm[..32]);
 
         let mut temp_key = [0; 32];
-        temp_key.copy_from_slice(&okm.as_slice()[32..]);
+        temp_key.copy_from_slice(&okm[32..]);
 
         self.cipher_state = CipherState::new([0; 32], temp_key);
     }
@@ -138,13 +139,14 @@ impl SymmetricState {
         use sha2::Sha256;
 
         let hkdf = hkdf::Hkdf::<Sha256>::extract(Some(&self.chaining_key), &[]);
-        let okm = hkdf.expand(&[], 64);
+        let mut okm = [0; 64];
+        hkdf.expand(&[], &mut okm).unwrap();
 
         let mut send_key: [u8; 32] = [0; 32];
-        send_key.copy_from_slice(&okm.as_slice()[..32]);
+        send_key.copy_from_slice(&okm[..32]);
 
         let mut recv_key: [u8; 32] = [0; 32];
-        recv_key.copy_from_slice(&okm.as_slice()[32..]);
+        recv_key.copy_from_slice(&okm[32..]);
 
         let salt = self.chaining_key;
         (

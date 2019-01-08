@@ -6,5 +6,5 @@ edition = "2018"
 
 [dependencies]
 bincode = { path = "../bincode" }
-flate2 = "1.0.6"
-serde = "1.0.82"
+flate2 = "1.0"
+serde = "1.0"

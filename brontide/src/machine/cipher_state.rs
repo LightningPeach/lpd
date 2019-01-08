@@ -118,10 +118,11 @@ impl CipherState {
         self.nonce += 1;
         if self.nonce == KEY_ROTATION_INTERVAL {
             let hkdf = Hkdf::<Sha256>::extract(Some(&self.salt), &self.secret_key);
-            let okm = hkdf.expand(&[], 64);
+            let mut okm = [0; 64];
+            hkdf.expand(&[], &mut okm).unwrap();
 
-            self.salt.copy_from_slice(&okm.as_slice()[..32]);
-            self.secret_key.copy_from_slice(&okm.as_slice()[32..]);
+            self.salt.copy_from_slice(&okm[..32]);
+            self.secret_key.copy_from_slice(&okm[32..]);
             self.nonce = 0;
         }
     }

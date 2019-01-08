@@ -1,6 +1,8 @@
 use super::Hash256;
 use super::ShortChannelIdEncoding;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct QueryChannelRange {
     chain_hash: Hash256,

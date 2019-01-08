@@ -1,8 +1,9 @@
 mod brontide_stream;
 mod cipher_state;
 mod handshake;
-mod serde;
+mod serde_m;
 mod symmetric_state;
+
 #[cfg(test)]
 mod test_bolt0008;
 

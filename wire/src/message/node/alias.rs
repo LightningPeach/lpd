@@ -17,7 +17,7 @@ impl NodeAlias {
     }
 }
 
-mod serde {
+mod serde_m {
     use super::NodeAlias;
     use super::SIZE;
 

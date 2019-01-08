@@ -3,6 +3,8 @@ use super::Signature;
 use super::PublicKey;
 use super::OutputIndex;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct FundingTxid {
     data: [u8; 32],
