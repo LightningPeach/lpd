@@ -163,6 +163,6 @@ impl Node {
     pub fn find_route(p_self: Arc<RwLock<Self>>, goal: PublicKey) -> Vec<(LightningNode, ChannelEdge)> {
         let start = Node::get_info(p_self.clone());
         // goal is not included, so let's swap start and goal so starting node is not included
-        p_self.read().unwrap().shared_state.clone().0.read().unwrap().path(goal.as_ref().clone(), start.as_ref().clone())
+        p_self.read().unwrap().shared_state.clone().0.read().unwrap().path(goal.into(), start.into())
     }
 }
