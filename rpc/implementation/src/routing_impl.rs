@@ -105,8 +105,16 @@ impl RoutingService for RoutingImpl<SocketAddr> {
     }
 
     fn get_info(&self, o: RequestOptions, p: Void) -> SingleResponse<Info> {
+        use std::string::ToString;
+
         let _ = (o, p);
-        unimplemented!()
+
+        let pk = Node::get_info(self.node.clone());
+
+        let mut response = Info::new();
+        response.set_identity_pubkey(pk.to_string());
+
+        SingleResponse::completed(response)
     }
 
     fn describe_graph(&self, o: RequestOptions, p: ChannelGraphRequest) -> SingleResponse<ChannelGraph> {

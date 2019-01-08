@@ -115,11 +115,8 @@ impl Node {
         A: AbstractAddress + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
-        use secp256k1::Secp256k1;
 
         let secret = p_self.read().unwrap().secret.clone();
-        let pk = PublicKey::from_secret_key(&Secp256k1::new(), &secret);
-        println!("INFO: pk {:?}", hex::encode(&pk.serialize()[..]));
         let server = ConnectionStream::new(address, control, secret)?
             .map_err(|e| println!("{:?}", e))
             .for_each(move |stream| Self::process_connection(p_self.clone(), stream));
@@ -151,5 +148,13 @@ impl Node {
     #[cfg(feature = "rpc")]
     pub fn describe_graph(p_self: Arc<RwLock<Self>>, include_unannounced: bool) -> (Vec<ChannelEdge>, Vec<LightningNode>) {
         p_self.read().unwrap().shared_state.clone().0.read().unwrap().describe(include_unannounced)
+    }
+
+    // TODO: add missing fields
+    #[cfg(feature = "rpc")]
+    pub fn get_info(p_self: Arc<RwLock<Self>>) -> PublicKey {
+        use secp256k1::Secp256k1;
+
+        PublicKey::from_secret_key(&Secp256k1::new(), &p_self.read().unwrap().secret)
     }
 }
