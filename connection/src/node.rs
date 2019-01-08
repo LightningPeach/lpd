@@ -95,6 +95,7 @@ impl Node {
                     db: shared.read().unwrap().db.clone(),
                     public: remote_public,
                 };
+                // TODO: graph should be single and share between peers
                 let graph = State::new(p_self.write().unwrap().db.clone());
                 let processor = (peer, (graph, ()));
 
