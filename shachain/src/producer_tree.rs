@@ -1,6 +1,6 @@
 use sha2::{Sha256, Digest};
 
-use util::{Sha256Hash, LeafIndex, get_nth_bit};
+use super::util::{Sha256Hash, LeafIndex, get_nth_bit};
 
 pub struct ProducerTree {
     seed: Sha256Hash,
@@ -33,8 +33,8 @@ impl ProducerTree {
 mod tests {
     use hex;
 
-    use producer_tree::{ProducerTree, Sha256Hash};
-    use util::LeafIndex;
+    use super::{ProducerTree, Sha256Hash};
+    use super::LeafIndex;
 
     struct TestData<'a> {
         name:   &'a str,

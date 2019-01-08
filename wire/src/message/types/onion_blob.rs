@@ -5,7 +5,7 @@ pub struct OnionBlob {
     data: [u8; ONION_PACKET_SIZE],
 }
 
-mod serde {
+mod serde_m {
     use super::OnionBlob;
     use super::ONION_PACKET_SIZE;
 

@@ -13,6 +13,8 @@ use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::net::Ipv6Addr;
 
+use serde_derive::{Serialize, Deserialize};
+
 pub type AnnouncementNode = Signed<SignedData<AnnouncementNodeData>>;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
@@ -112,7 +114,7 @@ impl PackSized for Address {
     }
 }
 
-mod serde {
+mod serde_m {
     use super::Address;
 
     use serde::ser;

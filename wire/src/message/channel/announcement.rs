@@ -5,6 +5,8 @@ use super::ShortChannelId;
 use super::Signed;
 use super::SignedData;
 
+use serde_derive::{Serialize, Deserialize};
+
 pub type AnnouncementChannel = Signed<Signed<Signed<Signed<SignedData<AnnouncementChannelData>>>>>;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]

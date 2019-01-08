@@ -1,5 +1,7 @@
 use super::Wrapper;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Satoshi {
     raw: u64,

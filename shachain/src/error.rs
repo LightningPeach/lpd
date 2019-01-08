@@ -3,8 +3,8 @@ use std::{
     fmt,
 };
 
-use store_tree::Leaf;
-use util::LeafIndex;
+use super::store_tree::Leaf;
+use super::util::LeafIndex;
 
 #[derive(Debug)]
 pub struct CanNotDeriveTreeElement {

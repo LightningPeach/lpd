@@ -19,7 +19,7 @@ fn ecdh(pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], EcdsaError> {
     pk_cloned.mul_assign(&Secp256k1::new(), &buffer[2..])?;
 
     let mut hasher = Sha256::default();
-    hasher.input(&pk_cloned.serialize());
+    hasher.input(&pk_cloned.serialize()[..]);
     let hash = hasher.result();
 
     let mut array: [u8; 32] = [0; 32];
@@ -272,11 +272,6 @@ impl HandshakeNew {
             base: self,
             remote_ephemeral: remote_ephemeral,
         })
-    }
-
-    #[cfg(test)]
-    pub fn handshake_digest(&self) -> [u8; 32] {
-        self.symmetric_state.handshake_digest()
     }
 }
 
@@ -637,7 +632,7 @@ impl Machine {
                 self.recv_cipher
                     .decrypt(&[], &mut plain.as_mut(), cipher.as_ref(), tag)
                     .map_err(|e| match e {
-                        DecryptError::IoError(e) => WireError::from(e),
+                        DecryptError::IoError(e) => e.into(),
                         DecryptError::TagMismatch => WireError::custom("tag"),
                     })?;
 
@@ -658,7 +653,7 @@ impl Machine {
                         cipher.as_ref(),
                         tag,
                     ).map_err(|e| match e {
-                        DecryptError::IoError(e) => WireError::from(e),
+                        DecryptError::IoError(e) => e.into(),
                         DecryptError::TagMismatch => WireError::custom("tag"),
                     })?;
 

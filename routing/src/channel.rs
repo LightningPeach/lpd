@@ -4,6 +4,7 @@ use wire::{
 };
 
 use specs::prelude::*;
+use specs_derive::Component;
 
 use rocksdb::Error as DBError;
 use state::{DB, DBValue};
@@ -19,9 +20,12 @@ pub struct Peer {
     id: PublicKey,
 }
 
-#[derive(Component, Default)]
-#[storage(NullStorage)]
+#[derive(Default)]
 pub struct Blacklisted;
+
+impl specs::Component for Blacklisted {
+    type Storage = NullStorage<Self>;
+}
 
 #[derive(Clone, Debug)]
 pub struct ChannelRef(pub Entity);
@@ -209,7 +213,7 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
 
             // try link
             let mut links = ChannelLinks::default();
-            for (entity, node, mut node_links) in (entities, &node, &mut node_links).join() {
+            for (entity, node, node_links) in (entities, &node, &mut node_links).join() {
                 if node.id() == this_parties.lightning.0.clone() {
                     links.0 = Some(NodeRef(entity));
                 }

@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 mod serde_facade;
 mod compression_facade;
 

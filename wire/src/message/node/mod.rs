@@ -10,6 +10,8 @@ use super::SignedData;
 
 use std::ops::Range;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct NodePort(pub u16);
 

@@ -1,7 +1,7 @@
 use sha2::{Sha256, Digest};
 
-use util::{Sha256Hash, LeafIndex, get_nth_bit, count_trailing_zeroes, MAX_HEIGHT};
-use error::{CanNotDeriveTreeElement, InvalidLeaf, CanNotFindElementByIndex, AddLeafError, LookupError};
+use super::util::{Sha256Hash, LeafIndex, get_nth_bit, count_trailing_zeroes, MAX_HEIGHT};
+use super::error::{CanNotDeriveTreeElement, InvalidLeaf, CanNotFindElementByIndex, AddLeafError, LookupError};
 
 fn can_derive(from_index: LeafIndex, to_index: LeafIndex) -> bool {
     for bit in (count_trailing_zeroes(from_index.into())..63).rev() {
@@ -70,7 +70,7 @@ impl StoreTree {
 
     pub fn add_leaf(&mut self, hash: Sha256Hash) -> Result<(), AddLeafError> {
         {
-            let next_index = self.next_index.into();
+            let next_index = self.next_index;
             self.receive_value(next_index, hash)?;
         }
         self.next_index.incr();
@@ -103,8 +103,8 @@ impl StoreTree {
 
 #[cfg(test)]
 mod tests {
-    use store_tree::StoreTree;
-    use util::{LeafIndex, Sha256Hash};
+    use super::StoreTree;
+    use super::{LeafIndex, Sha256Hash};
 
     struct TestInsert<'a> {
         index:      LeafIndex,

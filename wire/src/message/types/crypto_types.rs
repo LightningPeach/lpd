@@ -45,7 +45,7 @@ impl AsRef<Secp256k1Signature> for Signature {
 impl PackSized for Signature {
 }
 
-mod serde {
+mod serde_m {
     use super::Signature;
     use super::SIGNATURE_SIZE;
     use super::Secp256k1Signature;
@@ -243,7 +243,7 @@ mod debug {
     }
 }
 
-mod secp256k1 {
+mod secp256k1_m {
     use super::PublicKey as LpdPublicKey;
     use super::SecretKey as LpdPrivateKey;
     use super::Signature as LpdSignature;
@@ -298,7 +298,7 @@ mod secp256k1 {
 }
 
 #[cfg(any(test, feature = "testing"))]
-mod rand {
+mod rand_m {
     use super::PublicKey;
     use super::SecretKey;
     use super::Signature;

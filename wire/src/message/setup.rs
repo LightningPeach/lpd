@@ -1,6 +1,8 @@
 use super::types::RawFeatureVector;
 use super::channel::ChannelId;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Init {
     global_features: RawFeatureVector,

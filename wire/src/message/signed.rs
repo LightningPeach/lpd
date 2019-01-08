@@ -8,6 +8,8 @@ use super::types::SecretKey;
 use super::types::PublicKey;
 use super::types::Signature;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Signed<T> where T: DataToSign {
     pub signature: Signature,
@@ -44,9 +46,9 @@ impl<T> DataToSign for SignedData<T> where T: Serialize {
         let data = self.as_ref_data();
         BinarySD::serialize(&mut v, data).map_err(WireError)?;
         let mut first = Sha256::default();
-        first.process(v.as_slice());
+        first.input(v.as_slice());
         let mut second = Sha256::default();
-        second.process(first.fixed_result().as_slice());
+        second.input(first.fixed_result().as_slice());
 
         Secp256k1Message::from_slice(second.fixed_result().as_slice())
             .map_err(Secp256k1Error)
@@ -80,7 +82,7 @@ impl<T> Signed<T> where T: DataToSign {
         let msg = value.hash()?;
         let s = Secp256k1::new().sign(&msg, key.as_ref());
         Ok(Signed {
-            signature: Signature::from(s),
+            signature: s.into(),
             value: value,
         })
     }

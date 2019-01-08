@@ -2,7 +2,8 @@
 name = "shachain"
 version = "0.1.0"
 authors = ["evgeniy.scherbina <evgeniy.scherbina@bitfury.com>"]
+edition = "2018"
 
 [dependencies]
-sha2 = "0.7.1"
-hex = "0.3.2"
+sha2 = "0.8"
+hex = "0.3"

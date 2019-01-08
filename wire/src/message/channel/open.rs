@@ -11,6 +11,8 @@ use super::ChannelKeys;
 #[cfg(test)]
 use super::ChannelPrivateKeys;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct OpenChannel {
     pub chain_hash: Hash256,

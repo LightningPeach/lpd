@@ -1,3 +1,5 @@
+use serde_derive::{Serialize, Deserialize};
+use hex_literal::*;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
 pub struct Hash256 {
@@ -39,24 +41,22 @@ mod debug {
     }
 }
 
-mod secp256k1 {
+mod secp256k1_m {
     use super::Hash256;
     use secp256k1::Message;
-    use secp256k1::constants;
 
     impl From<Hash256> for Message {
         fn from(v: Hash256) -> Self {
-            <Message as From<[u8; constants::MESSAGE_SIZE]>>::from(v.data)
+            Message::from_slice(&v.data[..]).unwrap()
         }
     }
 }
 
 #[cfg(any(test, feature = "testing"))]
-mod rand {
+mod rand_m {
     use super::Hash256;
 
-    use rand::distributions::Distribution;
-    use rand::distributions::Standard;
+    use rand::distributions::{Distribution, Standard};
     use rand::Rng;
 
     impl Distribution<Hash256> for Standard {

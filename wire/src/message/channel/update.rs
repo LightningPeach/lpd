@@ -4,6 +4,9 @@ use super::Hash256;
 use super::ShortChannelId;
 use super::MilliSatoshi;
 
+use bitflags::bitflags;
+use serde_derive::{Serialize, Deserialize};
+
 pub type UpdateChannel = Signed<SignedData<UpdateChannelData>>;
 
 bitflags! {
