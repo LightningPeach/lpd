@@ -108,7 +108,7 @@ impl State {
     }
 
     #[cfg(feature = "rpc")]
-    pub fn path(&mut self, start: PublicKey, goal: PublicKey) -> Vec<(LightningNode, ChannelEdge)> {
+    pub fn path(&self, start: PublicKey, goal: PublicKey) -> Vec<(LightningNode, ChannelEdge)> {
         let entities = &self.world.entities();
         let nodes = &self.world.read_storage::<Node>();
         let (mut start_ref, mut goal_ref) = (None, None);
@@ -190,6 +190,7 @@ impl<'a> System<'a> for GenericSystem<NodeRef, Vec<(NodeRef, ChannelRef)>> {
     }
 }
 
+#[derive(Debug)]
 pub enum TopologyMessage {
     Init(Init),
     AnnouncementNode(AnnouncementNode),
@@ -209,23 +210,30 @@ impl MessageFiltered for TopologyMessage {
     }
 }
 
-impl MessageConsumer for State {
+#[derive(Clone)]
+pub struct SharedState(pub Arc<RwLock<State>>);
+
+impl MessageConsumer for SharedState {
     type Message = TopologyMessage;
 
-    fn consume<S>(mut self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
+    fn consume<S>(self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
     where
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
         use tokio::prelude::IntoFuture;
-        use self::TopologyMessage::*;
+        use wire::{Init, RawFeatureVector, FeatureBit::*};
 
         match message {
-            Init(_) => (),
-            AnnouncementNode(v) => self.run(v),
-            AnnouncementChannel(v) => self.run(v),
-            UpdateChannel(v) => self.run(v),
+            TopologyMessage::Init(_) => {
+                let local = RawFeatureVector::new().set_bit(InitialRoutingSync);
+                let init = Message::Init(Init::new(RawFeatureVector::new(), local));
+                return Box::new(sink.send(init).map(|s| (self, s)));
+            },
+            TopologyMessage::AnnouncementNode(v) => self.0.write().unwrap().run(v),
+            TopologyMessage::AnnouncementChannel(v) => self.0.write().unwrap().run(v),
+            TopologyMessage::UpdateChannel(v) => self.0.write().unwrap().run(v),
         };
-        self.world.maintain();
+        self.0.write().unwrap().world.maintain();
         Box::new(Ok((self, sink)).into_future())
     }
 }

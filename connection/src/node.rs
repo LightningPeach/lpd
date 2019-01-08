@@ -12,12 +12,17 @@ use super::address::{AbstractAddress, ConnectionStream, Command};
 use state::DB;
 use brontide::BrontideStream;
 
-use routing::State;
+use routing::{State, SharedState};
 
 use std::path::Path;
+use either::Either;
+
+#[cfg(feature = "rpc")]
+use interface::routing::{LightningNode, ChannelEdge};
 
 pub struct Node {
     peers: Vec<PublicKey>,
+    shared_state: SharedState,
     db: Arc<RwLock<DB>>,
     secret: SecretKey,
 }
@@ -54,17 +59,21 @@ impl Node {
 
         Node {
             peers: Vec::new(),
+            shared_state: SharedState(Arc::new(RwLock::new(State::new(p_db.clone())))),
             db: p_db,
             secret: SecretKey::from_slice(&secret[..]).unwrap(),
         }
     }
 
-    fn add(&mut self, remote_public: PublicKey) -> Option<PublicKey> {
+    fn add(&mut self, remote_public: PublicKey) -> Either<PublicKey, Remote> {
         if self.peers.contains(&remote_public) {
-            Some(remote_public)
+            Either::Left(remote_public)
         } else {
-            self.peers.push(remote_public);
-            None
+            self.peers.push(remote_public.clone());
+            Either::Right(Remote {
+                db: self.db.clone(),
+                public: remote_public,
+            })
         }
     }
 
@@ -78,27 +87,17 @@ impl Node {
         let remote_public = stream.remote_key().clone();
         let (sink, stream) = stream.framed().split();
 
-        // nll will fix it,
-        // p_self is borrowed, but it is not used in match's `None` arm
-        // however, the compiler still complains, so let's clone the pointer here
-        let shared = p_self.clone();
+        let p_graph = p_self.read().unwrap().shared_state.clone();
         match p_self.write().unwrap().add(remote_public) {
-            Some(k) => {
+            Either::Left(k) => {
                 use futures::future::ok;
                 println!("WARNING: {} is connected, ignoring", k);
                 tokio::spawn(ok(()))
             },
-            None => {
-                println!("INFO: new peer {:?}", hex::encode(&remote_public.serialize()[..]));
+            Either::Right(peer) => {
+                println!("INFO: new peer {}", peer.public);
 
-                let peer = Remote {
-                    db: shared.read().unwrap().db.clone(),
-                    public: remote_public,
-                };
-                // TODO: graph should be single and share between peers
-                let graph = State::new(p_self.write().unwrap().db.clone());
-                let processor = (peer, (graph, ()));
-
+                let processor = (p_graph, (peer, ()));
                 let connection = stream
                     .fold((processor, sink), |(processor, sink), message| {
                         processor.process(sink, message).ok().unwrap()
@@ -116,7 +115,7 @@ impl Node {
         A: AbstractAddress + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
-        use secp256k1::Secp256k1;;
+        use secp256k1::Secp256k1;
 
         let secret = p_self.read().unwrap().secret.clone();
         let pk = PublicKey::from_secret_key(&Secp256k1::new(), &secret);
@@ -144,11 +143,13 @@ impl Node {
     //    pub sat_recv: ::protobuf::SingularPtrField<super::common::Satoshi>,
     //    pub inbound: bool,
     //    pub ping_time: i64,
+    #[cfg(feature = "rpc")]
     pub fn list_peers(p_self: Arc<RwLock<Self>>) -> Vec<PublicKey> {
         p_self.read().unwrap().peers.clone()
     }
 
-    pub fn describe_graph(_p_self: Arc<RwLock<Self>>) -> (Vec<()>, Vec<()>) {
-        unimplemented!()
+    #[cfg(feature = "rpc")]
+    pub fn describe_graph(p_self: Arc<RwLock<Self>>, include_unannounced: bool) -> (Vec<ChannelEdge>, Vec<LightningNode>) {
+        p_self.read().unwrap().shared_state.clone().0.read().unwrap().describe(include_unannounced)
     }
 }

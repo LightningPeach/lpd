@@ -110,17 +110,16 @@ impl RoutingService for RoutingImpl<SocketAddr> {
     }
 
     fn describe_graph(&self, o: RequestOptions, p: ChannelGraphRequest) -> SingleResponse<ChannelGraph> {
-        /*let state = self.state.read().unwrap();
         let _ = o;
 
-        let (e, n) = state.describe(p.get_include_unannounced());
+        let include_unannounced = p.get_include_unannounced();
+        let (edges, nodes) = Node::describe_graph(self.node.clone(), include_unannounced);
 
-        let mut r = ChannelGraph::new();
-        r.set_edges(e.into());
-        r.set_nodes(n.into());
-        SingleResponse::completed(r)*/
-        let _ = (o, p);
-        unimplemented!()
+        let mut graph = ChannelGraph::new();
+        graph.set_edges(edges.into());
+        graph.set_nodes(nodes.into());
+
+        SingleResponse::completed(graph)
     }
 
     fn query_routes(&self, o: RequestOptions, p: QueryRoutesRequest) -> SingleResponse<RouteList> {
