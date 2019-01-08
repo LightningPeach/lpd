@@ -131,7 +131,45 @@ impl RoutingService for RoutingImpl<SocketAddr> {
     }
 
     fn query_routes(&self, o: RequestOptions, p: QueryRoutesRequest) -> SingleResponse<RouteList> {
-        let _ = (o, p);
-        unimplemented!()
+        use futures::future::err;
+        use std::string::ToString;
+        use secp256k1::PublicKey;
+
+        let _ = o;
+
+        fn parse_input(request: QueryRoutesRequest) -> Result<PublicKey, Error> {
+            let mut request = request;
+            let pk = request.take_pub_key();
+            let pk = hex::decode(pk.as_bytes()).map_err(error)?;
+            PublicKey::from_slice(pk.as_slice()).map_err(error)
+        }
+
+        match parse_input(p) {
+            Ok(goal) => {
+                use interface::common::{Route, Hop};
+
+                let v = Node::find_route(self.node.clone(), goal);
+
+                let hops = v.into_iter()
+                    .map(|(mut node, mut channel)| {
+                        let mut hop = Hop::new();
+                        hop.set_chan_id(channel.get_channel_id());
+                        hop.set_chan_capacity(channel.get_capacity());
+                        hop.set_fee_msat(channel.get_node1_policy().get_fee_base_msat());
+                        hop.set_pub_key(node.take_pub_key());
+                        hop
+                    }).collect();
+
+                let mut route = Route::new();
+                route.set_hops(hops);
+
+                let list = vec![route].into;
+                let mut response = RouteList::new();
+                response.set_routes(list);
+
+                SingleResponse::completed(response)
+            },
+            Err(e) => SingleResponse::no_metadata(err(e)),
+        }
     }
 }
