@@ -77,37 +77,27 @@ impl Node {
         }
     }
 
-    fn process_connection<S>(p_self: Arc<RwLock<Self>>, stream: BrontideStream<S>) -> Spawn
+    fn process_connection<S>(&self, peer: Remote, stream: BrontideStream<S>) -> Spawn
     where
         S: AsyncRead + AsyncWrite + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
         use wire::MessageConsumerChain;
 
-        let remote_public = stream.remote_key().clone();
         let (sink, stream) = stream.framed().split();
 
-        let p_graph = p_self.read().unwrap().shared_state.clone();
-        match p_self.write().unwrap().add(remote_public) {
-            Either::Left(k) => {
-                use futures::future::ok;
-                println!("WARNING: {} is connected, ignoring", k);
-                tokio::spawn(ok(()))
-            },
-            Either::Right(peer) => {
-                println!("INFO: new peer {}", peer.public);
+        println!("INFO: new peer {}", peer.public);
 
-                let processor = (p_graph, (peer, ()));
-                let connection = stream
-                    .fold((processor, sink), |(processor, sink), message| {
-                        processor.process(sink, message).ok().unwrap()
-                    })
-                    .map_err(|e| panic!("{:?}", e))
-                    .map(|_| ());
+        let p_graph = self.shared_state.clone();
+        let processor = (p_graph, (peer, ()));
+        let connection = stream
+            .fold((processor, sink), |(processor, sink), message| {
+                processor.process(sink, message).ok().unwrap()
+            })
+            .map_err(|e| panic!("{:?}", e))
+            .map(|_| ());
 
-                tokio::spawn(connection)
-            }
-        }
+        tokio::spawn(connection)
     }
 
     pub fn listen<A>(p_self: Arc<RwLock<Self>>, address: &A, control: Receiver<Command<A>>) -> Result<(), A::Error>
@@ -115,20 +105,31 @@ impl Node {
         A: AbstractAddress + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
+        use futures::future::ok;
 
         let secret = p_self.read().unwrap().secret.clone();
         let server = ConnectionStream::new(address, control, secret)?
             .map_err(|e| println!("{:?}", e))
-            .for_each(move |stream| Self::process_connection(p_self.clone(), stream));
+            .for_each(move |stream| {
+                let remote_public = stream.remote_key().clone();
+                let maybe_peer = p_self.write().unwrap().add(remote_public);
+                match maybe_peer {
+                    Either::Left(pk) => {
+                        println!("WARNING: {} is connected, ignoring", pk);
+                        tokio::spawn(ok(()))
+                    },
+                    Either::Right(peer) => p_self.read().unwrap().process_connection(peer, stream),
+                }
+            });
         tokio::run(server);
         Ok(())
     }
 
-    pub fn sign_message(p_self: Arc<RwLock<Self>>, message: Vec<u8>) -> Result<Signature, SignError> {
+    pub fn sign_message(&self, message: Vec<u8>) -> Result<Signature, SignError> {
         use wire::{Signed, SignedData};
         use binformat::SerdeRawVec;
 
-        let secret_key = From::from(p_self.read().unwrap().secret.clone());
+        let secret_key = From::from(self.secret.clone());
         Signed::sign(SignedData(SerdeRawVec(message)), &secret_key).map(|s| s.signature)
     }
 
@@ -141,28 +142,28 @@ impl Node {
     //    pub inbound: bool,
     //    pub ping_time: i64,
     #[cfg(feature = "rpc")]
-    pub fn list_peers(p_self: Arc<RwLock<Self>>) -> Vec<PublicKey> {
-        p_self.read().unwrap().peers.clone()
+    pub fn list_peers(&self) -> Vec<PublicKey> {
+        self.peers.clone()
     }
 
     #[cfg(feature = "rpc")]
-    pub fn describe_graph(p_self: Arc<RwLock<Self>>, include_unannounced: bool) -> (Vec<ChannelEdge>, Vec<LightningNode>) {
-        p_self.read().unwrap().shared_state.clone().0.read().unwrap().describe(include_unannounced)
+    pub fn describe_graph(&self, include_unannounced: bool) -> (Vec<ChannelEdge>, Vec<LightningNode>) {
+        self.shared_state.0.read().unwrap().describe(include_unannounced)
     }
 
     // TODO: add missing fields
     #[cfg(feature = "rpc")]
-    pub fn get_info(p_self: Arc<RwLock<Self>>) -> PublicKey {
+    pub fn get_info(&self) -> PublicKey {
         use secp256k1::Secp256k1;
 
-        PublicKey::from_secret_key(&Secp256k1::new(), &p_self.read().unwrap().secret)
+        PublicKey::from_secret_key(&Secp256k1::new(), &self.secret)
     }
 
     // TODO: add missing fields
     #[cfg(feature = "rpc")]
-    pub fn find_route(p_self: Arc<RwLock<Self>>, goal: PublicKey) -> Vec<(LightningNode, ChannelEdge)> {
-        let start = Node::get_info(p_self.clone());
+    pub fn find_route(&self, goal: PublicKey) -> Vec<(LightningNode, ChannelEdge)> {
+        let start = self.get_info();
         // goal is not included, so let's swap start and goal so starting node is not included
-        p_self.read().unwrap().shared_state.clone().0.read().unwrap().path(goal.into(), start.into())
+        self.shared_state.0.read().unwrap().path(goal.into(), start.into())
     }
 }
