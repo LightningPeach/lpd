@@ -40,7 +40,7 @@ impl RoutingService for RoutingImpl<SocketAddr> {
 
         let _ = o;
 
-        match Node::sign_message(self.node.clone(), p.message).map_err(error) {
+        match self.node.read().unwrap().sign_message(p.message).map_err(error) {
             Ok(data) => {
                 let mut response = SignMessageResponse::new();
                 response.signature = data.to_string();
@@ -89,7 +89,7 @@ impl RoutingService for RoutingImpl<SocketAddr> {
 
         let _ = (o, p);
 
-        let peers = Node::list_peers(self.node.clone())
+        let peers = self.node.read().unwrap().list_peers()
             .iter()
             .map(ToString::to_string)
             .map(|pub_key| {
@@ -109,7 +109,7 @@ impl RoutingService for RoutingImpl<SocketAddr> {
 
         let _ = (o, p);
 
-        let pk = Node::get_info(self.node.clone());
+        let pk = self.node.read().unwrap().get_info();
 
         let mut response = Info::new();
         response.set_identity_pubkey(pk.to_string());
@@ -121,7 +121,7 @@ impl RoutingService for RoutingImpl<SocketAddr> {
         let _ = o;
 
         let include_unannounced = p.get_include_unannounced();
-        let (edges, nodes) = Node::describe_graph(self.node.clone(), include_unannounced);
+        let (edges, nodes) = self.node.read().unwrap().describe_graph(include_unannounced);
 
         let mut graph = ChannelGraph::new();
         graph.set_edges(edges.into());
@@ -147,7 +147,7 @@ impl RoutingService for RoutingImpl<SocketAddr> {
             Ok(goal) => {
                 use interface::common::{Route, Hop};
 
-                let v = Node::find_route(self.node.clone(), goal);
+                let v = self.node.read().unwrap().find_route(goal);
 
                 let hops = v.into_iter()
                     .map(|(mut node, channel)| {

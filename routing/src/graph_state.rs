@@ -150,7 +150,7 @@ impl Graph for State {
     type Context = World;
 
     fn neighbors(&self, node: Self::Node) -> Vec<(Self::Node, Self::Edge)> {
-        let mut system = GenericSystem::<NodeRef, Vec<(NodeRef, ChannelRef)>>::from(node);
+        let mut system: GenericSystem<NodeRef, Vec<(NodeRef, ChannelRef)>> = node.into();
         system.run((self.world.read_storage(), self.world.read_storage()));
         system.output()
     }
