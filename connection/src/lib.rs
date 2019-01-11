@@ -4,4 +4,4 @@ mod node;
 mod address;
 
 pub use self::node::Node;
-pub use self::address::{AbstractAddress, Command, ConnectionStream};
+pub use self::address::{AbstractAddress, Command, ConnectionStream, Connection};
