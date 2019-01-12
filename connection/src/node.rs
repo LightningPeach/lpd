@@ -7,10 +7,9 @@ use futures::sync::mpsc::Receiver;
 use wire::{Message, Signature, SignError, MessageConsumer};
 use binformat::WireError;
 
-use super::address::{AbstractAddress, ConnectionStream, Command};
+use super::address::{AbstractAddress, ConnectionStream, Command, Connection};
 
 use state::DB;
-use brontide::BrontideStream;
 
 use routing::{State, SharedState};
 
@@ -77,14 +76,14 @@ impl Node {
         }
     }
 
-    fn process_connection<S>(&self, peer: Remote, stream: BrontideStream<S>) -> Spawn
+    fn process_connection<S>(&self, peer: Remote, connection: Connection<S>) -> Spawn
     where
         S: AsyncRead + AsyncWrite + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
         use wire::MessageConsumerChain;
 
-        let (sink, stream) = stream.framed().split();
+        let (sink, stream) = connection.split();
 
         println!("INFO: new peer {}", peer.public);
 
@@ -92,7 +91,13 @@ impl Node {
         let processor = (p_graph, (peer, ()));
         let connection = stream
             .fold((processor, sink), |(processor, sink), message| {
-                processor.process(sink, message).ok().unwrap()
+                use futures::IntoFuture;
+                match message {
+                    Either::Left(message) => processor.process(sink, message).ok().unwrap(),
+                    // TODO: use it
+                    Either::Right(_command) => Box::new(Ok((processor, sink)).into_future()),
+                }
+
             })
             .map_err(|e| panic!("{:?}", e))
             .map(|_| ());
@@ -108,17 +113,17 @@ impl Node {
         use futures::future::ok;
 
         let secret = p_self.read().unwrap().secret.clone();
-        let server = ConnectionStream::new(address, control, secret)?
+        let server = ConnectionStream::listen(address, control, secret)?
             .map_err(|e| println!("{:?}", e))
-            .for_each(move |stream| {
-                let remote_public = stream.remote_key().clone();
+            .for_each(move |connection| {
+                let remote_public = connection.remote_key();
                 let maybe_peer = p_self.write().unwrap().add(remote_public);
                 match maybe_peer {
                     Either::Left(pk) => {
                         println!("WARNING: {} is connected, ignoring", pk);
                         tokio::spawn(ok(()))
                     },
-                    Either::Right(peer) => p_self.read().unwrap().process_connection(peer, stream),
+                    Either::Right(peer) => p_self.read().unwrap().process_connection(peer, connection),
                 }
             });
         tokio::run(server);

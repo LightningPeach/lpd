@@ -92,8 +92,8 @@ where
             })
     }
 
-    pub fn remote_key(&self) -> &PublicKey {
-        &self.noise.remote_static()
+    pub fn remote_key(&self) -> PublicKey {
+        self.noise.remote_static()
     }
 
     pub fn framed(self) -> Framed<T, Machine> {

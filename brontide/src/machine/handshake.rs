@@ -566,8 +566,8 @@ static ERR_MAX_MESSAGE_LENGTH_EXCEEDED: &'static str =
     "the generated payload exceeds the max allowed message length of (2^16)-1";
 
 impl Machine {
-    pub fn remote_static(&self) -> &PublicKey {
-        &self.remote_static
+    pub fn remote_static(&self) -> PublicKey {
+        self.remote_static.clone()
     }
 
     pub fn write<T>(&mut self, item: T, dst: &mut BytesMut) -> Result<(), WireError>
