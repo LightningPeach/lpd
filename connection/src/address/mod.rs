@@ -8,6 +8,9 @@ use tokio::{
     prelude::stream::{SplitSink, SplitStream},
 };
 use brontide::{BrontideStream, HandshakeError, Machine};
+use futures::sync::{oneshot, mpsc};
+use either::Either;
+use std::collections::BTreeMap;
 
 pub trait AbstractAddress {
     type Error;
@@ -24,55 +27,67 @@ where
     S: AsyncRead + AsyncWrite,
 {
     sink: SplitSink<Framed<S, Machine>>,
-    stream: MessageStream<SplitStream<Framed<S, Machine>>, Box<dyn Future<Item=(), Error=()> + Send + 'static>>,
+    stream: MessageStream<SplitStream<Framed<S, Machine>>>,
     identity: PublicKey,
 }
 
 impl<S> Connection<S>
 where
-    S: Stream + AsyncRead + AsyncWrite,
+    S: AsyncRead + AsyncWrite,
 {
-    pub fn new<T>(brontide_stream: BrontideStream<S>, termination: T) -> Self
-    where
-        T: Future<Item=(), Error=()> + Send + 'static,
-    {
-        let identity = brontide_stream.remote_key().clone();
+    fn new(brontide_stream: BrontideStream<S>, termination: oneshot::Receiver<()>, control: mpsc::UnboundedReceiver<DirectCommand>) -> Self {
+        let identity = brontide_stream.remote_key();
         let (sink, stream) = brontide_stream.framed().split();
         Connection {
             sink: sink,
             stream: MessageStream {
                 inner: stream,
-                control: Box::new(termination),
+                termination: termination,
+                control: control,
             },
             identity: identity,
         }
     }
+
+    pub fn remote_key(&self) -> PublicKey {
+        self.identity.clone()
+    }
+
+    pub fn split(self) -> (SplitSink<Framed<S, Machine>>, MessageStream<SplitStream<Framed<S, Machine>>>) {
+        (self.sink, self.stream)
+    }
 }
 
 /// Controlled stream
-pub struct MessageStream<S, C>
+pub struct MessageStream<S>
 where
     S: Stream,
 {
     inner: S,
-    control: C,
+    termination: oneshot::Receiver<()>,
+    control: mpsc::UnboundedReceiver<DirectCommand>
 }
 
-impl<S, C> Stream for MessageStream<S, C>
+impl<S> Stream for MessageStream<S>
 where
     S: Stream,
-    C: Stream<Item=(), Error=()>,
 {
-    type Item = S::Item;
+    type Item = Either<S::Item, DirectCommand>;
     type Error = S::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         use tokio::prelude::Async::*;
 
-        match self.control.poll().unwrap() {
+        match self.termination.poll().unwrap() {
             Ready(_) => Ok(Ready(None)),
             NotReady => {
-                self.inner.poll()
+                match self.control.poll().unwrap() {
+                    Ready(Some(command)) => Ok(Ready(Some(Either::Right(command)))),
+                    Ready(None) | NotReady => self.inner.poll()
+                        .map(|a|
+                            a.map(|maybe| maybe.map(Either::Left))
+                        ),
+                }
             }
         }
     }
@@ -105,6 +120,7 @@ where
     outgoing: Vec<A::Outgoing>,
     control: C,
     local_secret: SecretKey,
+    pipes: BTreeMap<PublicKey, (oneshot::Sender<()>, mpsc::UnboundedSender<DirectCommand>)>,
 }
 
 impl<A, C> ConnectionStream<A, C>
@@ -112,12 +128,13 @@ where
     A: AbstractAddress,
     C: Stream<Item=Command<A>, Error=()>,
 {
-    pub fn new(address: &A, control: C, local_secret: SecretKey) -> Result<Self, A::Error> {
+    pub fn listen(address: &A, control: C, local_secret: SecretKey) -> Result<Self, A::Error> {
         Ok(ConnectionStream {
             incoming: address.listen(local_secret.clone())?,
             outgoing: Vec::new(),
             control: control,
             local_secret: local_secret,
+            pipes: BTreeMap::new(),
         })
     }
 }
@@ -128,7 +145,7 @@ where
     A: AbstractAddress,
     C: Stream<Item=Command<A>, Error=()>,
 {
-    type Item = BrontideStream<A::Stream>;
+    type Item = Connection<A::Stream>;
     type Error = HandshakeError;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -146,26 +163,53 @@ where
                     self.poll()
                 },
                 Command::DirectCommand {
-                    destination: _,
-                    command: _,
-                } => Ok(NotReady),
-                Command::Terminate => Ok(Ready(None)),
-            },
-            NotReady => {
-                let incoming = self.incoming.poll()?;
-                if let Ready(t) = incoming {
-                    Ok(Ready(t))
-                } else {
-                    for (index, r) in self.outgoing.iter_mut().enumerate() {
-                        match r.poll() {
-                            Ok(NotReady) => (),
-                            t @ _ => {
-                                self.outgoing.remove(index);
-                                return t.map(|a| a.map(Some))
-                            }
-                        }
+                    destination: destination,
+                    command: command,
+                } => {
+                    // TODO: handle errors
+                    if let Some((_, ref ctx)) = self.pipes.get(&destination) {
+                        ctx.unbounded_send(command).unwrap();
+                    } else {
+                        // destination is not found
                     }
                     Ok(NotReady)
+                },
+                Command::Terminate => {
+                    use std::mem;
+
+                    let mut empty = BTreeMap::new();
+                    mem::swap(&mut empty, &mut self.pipes);
+                    // TODO: handle errors
+                    empty.into_iter().for_each(|(_, (ttx, _))| ttx.send(()).unwrap());
+                    Ok(Ready(None))
+                },
+            },
+            NotReady => {
+                match self.incoming.poll()? {
+                    Ready(None) => Ok(Ready(None)),
+                    Ready(Some(brontide_stream)) => {
+                        let (ttx, trx) = oneshot::channel();
+                        let (ctx, crx) = mpsc::unbounded();
+                        self.pipes.insert(brontide_stream.remote_key(), (ttx, ctx));
+                        Ok(Ready(Some(Connection::new(brontide_stream, trx, crx))))
+                    },
+                    NotReady => {
+                        for (index, r) in self.outgoing.iter_mut().enumerate() {
+                            match r.poll() {
+                                Ok(NotReady) => (),
+                                t @ _ => {
+                                    self.outgoing.remove(index);
+                                    return t.map(|a| a.map(|brontide_stream| {
+                                        let (ttx, trx) = oneshot::channel();
+                                        let (ctx, crx) = mpsc::unbounded();
+                                        self.pipes.insert(brontide_stream.remote_key(), (ttx, ctx));
+                                        Some(Connection::new(brontide_stream, trx, crx))
+                                    }))
+                                }
+                            }
+                        }
+                        Ok(NotReady)
+                    }
                 }
             }
         }
