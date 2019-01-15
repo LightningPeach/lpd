@@ -33,7 +33,7 @@ pub trait MessageConsumer {
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
         match Self::Message::filter(message) {
-            Ok(message) => Ok(Box::new(self.consume(sink, message))),
+            Ok(message) => Ok(self.consume(sink, message)),
             Err(message) => Err((self, sink, message)),
         }
     }
