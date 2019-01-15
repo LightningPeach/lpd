@@ -33,8 +33,9 @@ pub struct Remote {
 
 impl MessageConsumer for Remote {
     type Message = Message;
+    type Relevant = ();
 
-    fn consume<S>(self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
+    fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
     where
         Self: Sized,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
@@ -91,16 +92,7 @@ impl Node {
         let processor = (p_graph, (peer, ()));
         let connection = stream
             .fold((processor, sink), |(processor, sink), message| {
-                use futures::IntoFuture;
-                match message {
-                    Either::Left(message) => processor.process(sink, message).ok().unwrap(),
-                    Either::Right(_command) => {
-                        // TODO: use it
-                        println!("{:?}", _command);
-                        Box::new(Ok((processor, sink)).into_future())
-                    },
-                }
-
+                processor.process(sink, message)
             })
             .map_err(|e| panic!("{:?}", e))
             .map(|_| ());

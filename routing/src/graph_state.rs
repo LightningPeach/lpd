@@ -9,6 +9,8 @@ use super::tools::GenericSystem;
 
 use dijkstras_search::Graph;
 
+use either::Either;
+
 #[cfg(feature = "rpc")]
 use wire::PublicKey;
 
@@ -215,15 +217,16 @@ pub struct SharedState(pub Arc<RwLock<State>>);
 
 impl MessageConsumer for SharedState {
     type Message = TopologyMessage;
+    type Relevant = ();
 
-    fn consume<S>(self, sink: S, message: Self::Message) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
+    fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
     where
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
         use tokio::prelude::IntoFuture;
         use wire::{Init, RawFeatureVector, FeatureBit::*};
 
-        match message {
+        match message.left().unwrap() {
             TopologyMessage::Init(_) => {
                 let local = RawFeatureVector::new().set_bit(InitialRoutingSync);
                 let init = Message::Init(Init::new(RawFeatureVector::new(), local));
