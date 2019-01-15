@@ -11,6 +11,7 @@ use brontide::{BrontideStream, HandshakeError, Machine};
 use futures::sync::{oneshot, mpsc};
 use either::Either;
 use std::collections::BTreeMap;
+use wire::{Event, DirectCommand};
 
 pub trait AbstractAddress {
     type Error;
@@ -35,7 +36,7 @@ impl<S> Connection<S>
 where
     S: AsyncRead + AsyncWrite,
 {
-    fn new(brontide_stream: BrontideStream<S>, termination: oneshot::Receiver<()>, control: mpsc::UnboundedReceiver<PeerCommand>) -> Self {
+    fn new(brontide_stream: BrontideStream<S>, termination: oneshot::Receiver<()>, control: mpsc::UnboundedReceiver<Event>) -> Self {
         let identity = brontide_stream.remote_key();
         let (sink, stream) = brontide_stream.framed().split();
         Connection {
@@ -65,14 +66,14 @@ where
 {
     inner: S,
     termination: oneshot::Receiver<()>,
-    control: mpsc::UnboundedReceiver<PeerCommand>
+    control: mpsc::UnboundedReceiver<Event>
 }
 
 impl<S> Stream for MessageStream<S>
 where
     S: Stream,
 {
-    type Item = Either<S::Item, PeerCommand>;
+    type Item = Either<S::Item, Event>;
     type Error = S::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -109,17 +110,6 @@ where
     Terminate,
 }
 
-#[derive(Debug)]
-pub enum PeerCommand {
-    DirectCommand(DirectCommand),
-    TimerTick,
-}
-
-#[derive(Debug)]
-pub enum DirectCommand {
-    _Nothing,
-}
-
 pub struct ConnectionStream<A, C>
 where
     A: AbstractAddress,
@@ -128,7 +118,7 @@ where
     outgoing: Vec<A::Outgoing>,
     control: C,
     local_secret: SecretKey,
-    pipes: BTreeMap<PublicKey, (oneshot::Sender<()>, mpsc::UnboundedSender<PeerCommand>)>,
+    pipes: BTreeMap<PublicKey, (oneshot::Sender<()>, mpsc::UnboundedSender<Event>)>,
 }
 
 impl<A, C> ConnectionStream<A, C>
@@ -177,14 +167,14 @@ where
                     // TODO: handle errors
                     self.pipes.get(&destination)
                         .map(|(_, ref ctx)|
-                            ctx.unbounded_send(PeerCommand::DirectCommand(command)).unwrap()
+                            ctx.unbounded_send(Event::DirectCommand(command)).unwrap()
                         );
                     Ok(NotReady)
                 },
                 Command::BroadcastTick => {
                     self.pipes.values()
                         .for_each(|(_, ref ctx)|
-                            ctx.unbounded_send(PeerCommand::TimerTick).unwrap()
+                            ctx.unbounded_send(Event::TimerTick).unwrap()
                         );
                     Ok(NotReady)
                 },
