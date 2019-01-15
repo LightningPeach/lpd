@@ -35,7 +35,7 @@ impl<S> Connection<S>
 where
     S: AsyncRead + AsyncWrite,
 {
-    fn new(brontide_stream: BrontideStream<S>, termination: oneshot::Receiver<()>, control: mpsc::UnboundedReceiver<DirectCommand>) -> Self {
+    fn new(brontide_stream: BrontideStream<S>, termination: oneshot::Receiver<()>, control: mpsc::UnboundedReceiver<PeerCommand>) -> Self {
         let identity = brontide_stream.remote_key();
         let (sink, stream) = brontide_stream.framed().split();
         Connection {
@@ -65,14 +65,14 @@ where
 {
     inner: S,
     termination: oneshot::Receiver<()>,
-    control: mpsc::UnboundedReceiver<DirectCommand>
+    control: mpsc::UnboundedReceiver<PeerCommand>
 }
 
 impl<S> Stream for MessageStream<S>
 where
     S: Stream,
 {
-    type Item = Either<S::Item, DirectCommand>;
+    type Item = Either<S::Item, PeerCommand>;
     type Error = S::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -105,9 +105,17 @@ where
         destination: PublicKey,
         command: DirectCommand,
     },
+    BroadcastTick,
     Terminate,
 }
 
+#[derive(Debug)]
+pub enum PeerCommand {
+    DirectCommand(DirectCommand),
+    TimerTick,
+}
+
+#[derive(Debug)]
 pub enum DirectCommand {
     _Nothing,
 }
@@ -120,7 +128,7 @@ where
     outgoing: Vec<A::Outgoing>,
     control: C,
     local_secret: SecretKey,
-    pipes: BTreeMap<PublicKey, (oneshot::Sender<()>, mpsc::UnboundedSender<DirectCommand>)>,
+    pipes: BTreeMap<PublicKey, (oneshot::Sender<()>, mpsc::UnboundedSender<PeerCommand>)>,
 }
 
 impl<A, C> ConnectionStream<A, C>
@@ -167,11 +175,17 @@ where
                     command: command,
                 } => {
                     // TODO: handle errors
-                    if let Some((_, ref ctx)) = self.pipes.get(&destination) {
-                        ctx.unbounded_send(command).unwrap();
-                    } else {
-                        // destination is not found
-                    }
+                    self.pipes.get(&destination)
+                        .map(|(_, ref ctx)|
+                            ctx.unbounded_send(PeerCommand::DirectCommand(command)).unwrap()
+                        );
+                    Ok(NotReady)
+                },
+                Command::BroadcastTick => {
+                    self.pipes.values()
+                        .for_each(|(_, ref ctx)|
+                            ctx.unbounded_send(PeerCommand::TimerTick).unwrap()
+                        );
                     Ok(NotReady)
                 },
                 Command::Terminate => {

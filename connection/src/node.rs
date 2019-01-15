@@ -94,8 +94,11 @@ impl Node {
                 use futures::IntoFuture;
                 match message {
                     Either::Left(message) => processor.process(sink, message).ok().unwrap(),
-                    // TODO: use it
-                    Either::Right(_command) => Box::new(Ok((processor, sink)).into_future()),
+                    Either::Right(_command) => {
+                        // TODO: use it
+                        println!("{:?}", _command);
+                        Box::new(Ok((processor, sink)).into_future())
+                    },
                 }
 
             })
