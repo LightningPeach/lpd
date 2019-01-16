@@ -183,8 +183,13 @@ where
 
                     let mut empty = BTreeMap::new();
                     mem::swap(&mut empty, &mut self.pipes);
-                    // TODO: handle errors
-                    empty.into_iter().for_each(|(_, (ttx, _))| ttx.send(()).unwrap());
+                    empty.into_iter()
+                        .for_each(|(_, (ttx, _))| match ttx.send(()) {
+                            Ok(()) => (),
+                            // error means that remote client is shutdown before the lpd
+                            // need not to handle
+                            Err(()) => (),
+                        });
                     Ok(Ready(None))
                 },
             },
