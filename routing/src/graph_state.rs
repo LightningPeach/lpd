@@ -15,7 +15,7 @@ use either::Either;
 use wire::PublicKey;
 
 use wire::{Message, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel};
-use processor::{MessageFiltered, MessageConsumer};
+use processor::{MessageFiltered, MessageConsumer, ConsumingFuture};
 
 use binformat::WireError;
 
@@ -217,24 +217,24 @@ impl MessageConsumer for SharedState {
     type Message = TopologyMessage;
     type Relevant = ();
 
-    fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
+    fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> ConsumingFuture<Self, S>
     where
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
-        use tokio::prelude::IntoFuture;
         use wire::{Init, RawFeatureVector, FeatureBit::*};
 
         match message.left().unwrap() {
             TopologyMessage::Init(_) => {
                 let local = RawFeatureVector::new().set_bit(InitialRoutingSync);
                 let init = Message::Init(Init::new(RawFeatureVector::new(), local));
-                return Box::new(sink.send(init).map(|s| (self, s)));
+                return ConsumingFuture::from_send(self, sink.send(init));
             },
             TopologyMessage::AnnouncementNode(v) => self.0.write().unwrap().run(v),
             TopologyMessage::AnnouncementChannel(v) => self.0.write().unwrap().run(v),
             TopologyMessage::UpdateChannel(v) => self.0.write().unwrap().run(v),
         };
         self.0.write().unwrap().world.maintain();
-        Box::new(Ok((self, sink)).into_future())
+
+        ConsumingFuture::ok(self, sink)
     }
 }

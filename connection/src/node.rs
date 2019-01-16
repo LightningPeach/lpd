@@ -5,10 +5,11 @@ use tokio::prelude::{Future, AsyncRead, AsyncWrite, Sink};
 use tokio::executor::Spawn;
 use futures::sync::mpsc::Receiver;
 use wire::{Message, Signature, SignError};
-use processor::MessageConsumer;
+use processor::{MessageConsumer, ConsumingFuture};
 use binformat::WireError;
 
 use super::address::{AbstractAddress, ConnectionStream, Command, Connection};
+use super::ping::PingContext;
 
 use state::DB;
 
@@ -36,18 +37,16 @@ impl MessageConsumer for Remote {
     type Message = Message;
     type Relevant = ();
 
-    fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> Box<dyn Future<Item=(Self, S), Error=WireError> + Send + 'static>
+    fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> ConsumingFuture<Self, S>
     where
         Self: Sized,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
-        use tokio::prelude::future::IntoFuture;
-
         // TODO: process the message using db and public
         let _ = (&self.db, &self.public);
         let _ = message;
 
-        Box::new(Ok((self, sink)).into_future())
+        ConsumingFuture::ok(self, sink)
     }
 }
 
@@ -90,7 +89,7 @@ impl Node {
         println!("INFO: new peer {}", peer.public);
 
         let p_graph = self.shared_state.clone();
-        let processor = (p_graph, (peer, ()));
+        let processor = (p_graph, (PingContext::default(), (peer, ())));
         let connection = stream
             .fold((processor, sink), |(processor, sink), message| {
                 processor.process(sink, message)
