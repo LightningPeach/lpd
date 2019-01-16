@@ -97,10 +97,10 @@ pub fn reorder_tx(tx: &mut Transaction) -> TransactionReordering {
 
 #[cfg(test)]
 mod tests {
-    use bip69::{is_permutation, TransactionReordering, reorder_tx};
+    use super::{is_permutation, TransactionReordering, reorder_tx};
     use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
     use bitcoin::blockdata::script::Script;
-    use tools::{s2script, s2dh256};
+    use super::super::tools::{s2script, s2dh256};
 
     fn get_bip69_ex1() -> Transaction {
         let tx = Transaction {

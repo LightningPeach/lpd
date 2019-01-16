@@ -9,7 +9,7 @@ use bitcoin::blockdata::opcodes::All::*;
 use bitcoin::network::encodable::{ConsensusDecodable};
 use bitcoin::network::serialize::{RawDecoder};
 
-use secp256k1::{Secp256k1, SecretKey, PublicKey, Signature};
+use secp256k1::{SecretKey, PublicKey, Signature};
 
 use crypto::sha2::Sha256;
 use crypto::digest::Digest;
@@ -107,13 +107,13 @@ pub fn s2privkey(s: &str) -> SecretKey {
     if !(b.len() == 32 || (b.len()==33 && b[32]==1)) {
         panic!("incorrect string size");
     }
-    let k = SecretKey::from_slice(&Secp256k1::new(), &b[0..32]).unwrap();
+    let k = SecretKey::from_slice(&b[0..32]).unwrap();
     return k;
 }
 
 pub fn s2pubkey(s: &str) -> PublicKey {
     let b = hex::decode(s).unwrap();
-    let pk = PublicKey::from_slice(&Secp256k1::new(), &b).unwrap();
+    let pk = PublicKey::from_slice(&b).unwrap();
     return pk;
 }
 
@@ -124,9 +124,8 @@ pub fn s2tx(s: &str) -> Transaction {
 }
 
 pub fn s2sig(s: &str) -> Signature {
-    let ctx = Secp256k1::new();
     let sig_bytes = hex::decode(s).unwrap();
-    let sig = Signature::from_der(&ctx, &sig_bytes).unwrap();
+    let sig = Signature::from_der(&sig_bytes).unwrap();
     sig
 }
 
@@ -325,17 +324,15 @@ pub fn assert_tx_eq(tx1: &Transaction, tx2: &Transaction, ignore_witness: bool) 
 // Creates spending witness for 2x2 multisig
 // Assumes tha signatures are SIGHASH_ALL
 pub fn spending_witness_2x2_multisig(pk1: &PublicKey, pk2: &PublicKey, sig1: &Signature, sig2: &Signature) -> Vec<Vec<u8>> {
-    let ctx = Secp256k1::new();
-
     // signatures should be ordered in the same order as public keys
     let mut witness = vec![];
     // Empy element due to a bug(now a consensus feature) of OP_CHECKMULTISIG
     witness.push(vec![]);
 
     // We need to add SIGHASH_ALL to signatures
-    let mut sig1_ser = sig1.serialize_der(&ctx);
+    let mut sig1_ser = sig1.serialize_der();
     sig1_ser.push(1);
-    let mut sig2_ser = sig2.serialize_der(&ctx);
+    let mut sig2_ser = sig2.serialize_der();
     sig2_ser.push(1);
 
     if pk1.serialize()[..] < pk2.serialize()[..] {
@@ -356,8 +353,8 @@ pub fn spending_witness_2x2_multisig(pk1: &PublicKey, pk2: &PublicKey, sig1: &Si
 mod tests {
 
     use hex;
-    use tools::{spending_witness_2x2_multisig, s2sig, sha256, accepted_htlc, offered_htlc, assert_tx_eq, to_local_script, s2script, s2tx, new_2x2_multisig, new_2x2_wsh_lock_script, s2pubkey, v0_p2wpkh, s2dh256, p2pkh, p2pkh_unlock_script, get_obscuring_number, get_locktime, get_sequence};
-    use spec_example::get_example;
+    use super::{spending_witness_2x2_multisig, s2sig, sha256, accepted_htlc, offered_htlc, assert_tx_eq, to_local_script, s2script, s2tx, new_2x2_multisig, new_2x2_wsh_lock_script, s2pubkey, v0_p2wpkh, s2dh256, p2pkh, p2pkh_unlock_script, get_obscuring_number, get_locktime, get_sequence};
+    use super::super::spec_example::get_example;
     use secp256k1::{Secp256k1, SecretKey, PublicKey, Message};
     use bitcoin::util::hash::Hash160;
     use bitcoin::blockdata::script::Script;
@@ -433,10 +430,10 @@ mod tests {
         assert_eq!(privkey_bytes[32], 1);
 
         let sec = Secp256k1::new();
-        let sk = SecretKey::from_slice(&sec, &privkey_bytes[0..32]).unwrap();
+        let sk = SecretKey::from_slice(&privkey_bytes[0..32]).unwrap();
         // Pubkey (in compresses format) should have value: 03535b32d5eb0a6ed0982a0479bbadc9868d9836f6ba94dd5a63be16d875069184
         // This value was extracted from example transaction
-        let pk = PublicKey::from_secret_key(&sec, &sk).unwrap();
+        let pk = PublicKey::from_secret_key(&sec, &sk);
         assert_eq!(hex::encode(&pk.serialize()[..]), "03535b32d5eb0a6ed0982a0479bbadc9868d9836f6ba94dd5a63be16d875069184");
 
         // Hash160 of compressed pubkey should be 3ca33c2e4446f4a305f23c80df8ad1afdcf652f9
@@ -477,8 +474,8 @@ mod tests {
         // We use deterministic signatures so it should be reproducible
         let sig_type = 1_u8; // SIGHASH_ALL
         let tx_sig_hash = tx.signature_hash(0, &p2pkh(&pk), sig_type as u32);
-        let sig = sec.sign(&Message::from(tx_sig_hash.data()), &sk).unwrap();
-        let mut sig_serialised = sig.serialize_der(&sec);
+        let sig = sec.sign(&Message::from_slice(&tx_sig_hash.data()[..]).unwrap(), &sk);
+        let mut sig_serialised = sig.serialize_der();
         assert_eq!(hex::encode(&sig_serialised), "304502210090587b6201e166ad6af0227d3036a9454223d49a1f11839c1a362184340ef0240220577f7cd5cca78719405cbf1de7414ac027f0239ef6e214c90fcaab0454d84b3b");
         // We need to add sigtype to the end of the signature
         sig_serialised.push(sig_type);
@@ -526,7 +523,7 @@ mod tests {
         let obscuring_number = get_obscuring_number(&ex.local_payment_basepoint.serialize(), &ex.remote_payment_basepoint.serialize());
         assert_eq!(obscuring_number, ex.obscuring_factor);
 
-        let remote_funding_pk = PublicKey::from_secret_key(&Secp256k1::new(), &ex.internal.remote_funding_privkey).unwrap();
+        let remote_funding_pk = PublicKey::from_secret_key(&Secp256k1::new(), &ex.internal.remote_funding_privkey);
         assert_eq!(remote_funding_pk, ex.remote_funding_pubkey);
 
         let obscured_commit_number = ex.commitment_number ^ obscuring_number;
@@ -575,13 +572,13 @@ mod tests {
 
         let sec = Secp256k1::new();
         let tx_sig_hash = bip143::SighashComponents::new(&tx).sighash_all(&tx.input[0], &funding_lock_script, ex.funding_amount_satoshi as u64);
-        let sig_local = sec.sign(&Message::from(tx_sig_hash.data()), &ex.local_funding_privkey).unwrap();
-        let mut sig_local_serialised = sig_local.serialize_der(&sec);
+        let sig_local = sec.sign(&Message::from_slice(&tx_sig_hash.data()[..]).unwrap(), &ex.local_funding_privkey);
+        let mut sig_local_serialised = sig_local.serialize_der();
         assert_eq!(hex::encode(&sig_local_serialised), "3044022051b75c73198c6deee1a875871c3961832909acd297c6b908d59e3319e5185a46022055c419379c5051a78d00dbbce11b5b664a0c22815fbcc6fcef6b1937c3836939");
         sig_local_serialised.push(1);
 
-        let sig_remote = sec.sign(&Message::from(tx_sig_hash.data()), &ex.internal.remote_funding_privkey).unwrap();
-        let mut sig_remote_serialised = sig_remote.serialize_der(&sec);
+        let sig_remote = sec.sign(&Message::from_slice(&tx_sig_hash.data()[..]).unwrap(), &ex.internal.remote_funding_privkey);
+        let mut sig_remote_serialised = sig_remote.serialize_der();
         assert_eq!(hex::encode(&sig_remote_serialised), "3045022100f51d2e566a70ba740fc5d8c0f07b9b93d2ed741c3c0860c613173de7d39e7968022041376d520e9c0e1ad52248ddf4b22e12be8763007df977253ef45a4ca3bdb7c0");
         sig_remote_serialised.push(1);
 
@@ -704,13 +701,13 @@ mod tests {
 
         let sec = Secp256k1::new();
         let tx_sig_hash = bip143::SighashComponents::new(&tx).sighash_all(&tx.input[0], &funding_lock_script, ex.funding_amount_satoshi as u64);
-        let sig_local = sec.sign(&Message::from(tx_sig_hash.data()), &ex.local_funding_privkey).unwrap();
-        let mut sig_local_serialised = sig_local.serialize_der(&sec);
+        let sig_local = sec.sign(&Message::from_slice(&tx_sig_hash.data()[..]).unwrap(), &ex.local_funding_privkey);
+        let mut sig_local_serialised = sig_local.serialize_der();
         assert_eq!(hex::encode(&sig_local_serialised), "30440220275b0c325a5e9355650dc30c0eccfbc7efb23987c24b556b9dfdd40effca18d202206caceb2c067836c51f296740c7ae807ffcbfbf1dd3a0d56b6de9a5b247985f06");
         sig_local_serialised.push(1);
 
-        let sig_remote = sec.sign(&Message::from(tx_sig_hash.data()), &ex.internal.remote_funding_privkey).unwrap();
-        let mut sig_remote_serialised = sig_remote.serialize_der(&sec);
+        let sig_remote = sec.sign(&Message::from_slice(&tx_sig_hash.data()[..]).unwrap(), &ex.internal.remote_funding_privkey);
+        let mut sig_remote_serialised = sig_remote.serialize_der();
         assert_eq!(hex::encode(&sig_remote_serialised), "304402204fd4928835db1ccdfc40f5c78ce9bd65249b16348df81f0c44328dcdefc97d630220194d3869c38bc732dd87d13d2958015e2fc16829e74cd4377f84d215c0b70606");
         sig_remote_serialised.push(1);
 
