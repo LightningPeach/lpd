@@ -1,5 +1,7 @@
+#![forbid(unsafe_code)]
+
 use binformat::WireError;
-use super::Message;
+use wire::Message;
 
 use tokio::prelude::Future;
 use tokio::prelude::Sink;
@@ -17,8 +19,8 @@ pub enum DirectCommand {
 }
 
 pub trait MessageFiltered
-where
-    Self: Sized,
+    where
+        Self: Sized,
 {
     fn filter(v: Message) -> Result<Self, Message>;
 }
@@ -30,8 +32,8 @@ impl MessageFiltered for Message {
 }
 
 pub trait RelevantEvent
-where
-    Self: Sized,
+    where
+        Self: Sized,
 {
     fn filter(v: Event) -> Result<Self, Event>;
 }
@@ -68,23 +70,23 @@ pub trait MessageConsumer {
     // consumes message and return future with the sink and maybe modified self
     // works synchronously
     fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> ConsumingFuture<Self, S>
-    where
-        Self: Sized,
-        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
+        where
+            Self: Sized,
+            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
 }
 
 pub trait MessageConsumerChain {
     fn process<S>(self, sink: S, message: Either<Message, Event>) -> ConsumingFuture<Self, S>
-    where
-        Self: Sized,
-        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
+        where
+            Self: Sized,
+            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
 }
 
 impl MessageConsumerChain for () {
     fn process<S>(self, sink: S, message: Either<Message, Event>) -> ConsumingFuture<Self, S>
-    where
-        Self: Sized,
-        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+        where
+            Self: Sized,
+            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
         use tokio::prelude::future::IntoFuture;
 
@@ -94,14 +96,14 @@ impl MessageConsumerChain for () {
 }
 
 impl<X, XS> MessageConsumerChain for (X, XS)
-where
-    X: MessageConsumer + Send + 'static,
-    XS: MessageConsumerChain + Send + 'static,
+    where
+        X: MessageConsumer + Send + 'static,
+        XS: MessageConsumerChain + Send + 'static,
 {
     fn process<S>(self, s: S, message: Either<Message, Event>) -> ConsumingFuture<Self, S>
-    where
-        Self: Sized,
-        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+        where
+            Self: Sized,
+            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
         let m = match message {
             Either::Left(m) => <X::Message as MessageFiltered>::filter(m).map(Either::Left).map_err(Either::Left),

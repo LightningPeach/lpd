@@ -4,7 +4,8 @@ use secp256k1::{SecretKey, PublicKey};
 use tokio::prelude::{Future, AsyncRead, AsyncWrite, Sink};
 use tokio::executor::Spawn;
 use futures::sync::mpsc::Receiver;
-use wire::{Message, Signature, SignError, MessageConsumer};
+use wire::{Message, Signature, SignError};
+use processor::MessageConsumer;
 use binformat::WireError;
 
 use super::address::{AbstractAddress, ConnectionStream, Command, Connection};
@@ -82,7 +83,7 @@ impl Node {
         S: AsyncRead + AsyncWrite + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
-        use wire::MessageConsumerChain;
+        use processor::MessageConsumerChain;
 
         let (sink, stream) = connection.split();
 
