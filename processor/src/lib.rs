@@ -3,8 +3,8 @@
 use binformat::WireError;
 use wire::Message;
 
-use tokio::prelude::Future;
-use tokio::prelude::Sink;
+use tokio::prelude::{Future, Sink, Poll};
+use futures::sink;
 use either::Either;
 
 #[derive(Debug)]
@@ -19,8 +19,8 @@ pub enum DirectCommand {
 }
 
 pub trait MessageFiltered
-    where
-        Self: Sized,
+where
+    Self: Sized,
 {
     fn filter(v: Message) -> Result<Self, Message>;
 }
@@ -32,8 +32,8 @@ impl MessageFiltered for Message {
 }
 
 pub trait RelevantEvent
-    where
-        Self: Sized,
+where
+    Self: Sized,
 {
     fn filter(v: Event) -> Result<Self, Event>;
 }
@@ -50,7 +50,46 @@ pub enum MessageConsumerType {
     MultipleResponse,
 }
 
-pub type ConsumingFuture<C, S> = Box<dyn Future<Item=(C, S), Error=WireError> + Send + 'static>;
+pub struct ConsumingFuture<C, S>(Box<dyn Future<Item=(C, S), Error=WireError> + Send + 'static>)
+where
+    S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+    C: Send + 'static;
+
+impl<C, S> Future for ConsumingFuture<C, S>
+where
+    S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+    C: Send + 'static,
+{
+    type Item = (C, S);
+    type Error = WireError;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        self.0.poll()
+    }
+}
+
+impl<C, S> ConsumingFuture<C, S>
+where
+    S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+    C: Send + 'static,
+{
+    pub fn ok(consumer: C, sink: S) -> Self {
+        use tokio::prelude::future::IntoFuture;
+
+        ConsumingFuture(Box::new(Ok((consumer, sink)).into_future()))
+    }
+
+    pub fn from_send(consumer: C, send: sink::Send<S>) -> Self {
+        ConsumingFuture(Box::new(send.map(|s| (consumer, s))))
+    }
+
+    pub fn new<F>(f: F) -> Self
+    where
+        F: Future<Item=(C, S), Error=WireError> + Send + 'static,
+    {
+        ConsumingFuture(Box::new(f))
+    }
+}
 
 pub trait MessageConsumer {
     type Message: MessageFiltered;
@@ -70,40 +109,38 @@ pub trait MessageConsumer {
     // consumes message and return future with the sink and maybe modified self
     // works synchronously
     fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> ConsumingFuture<Self, S>
-        where
-            Self: Sized,
-            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
+    where
+        Self: Sized + Send + 'static,
+        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
 }
 
 pub trait MessageConsumerChain {
     fn process<S>(self, sink: S, message: Either<Message, Event>) -> ConsumingFuture<Self, S>
-        where
-            Self: Sized,
-            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
+    where
+        Self: Sized + Send + 'static,
+        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static;
 }
 
 impl MessageConsumerChain for () {
     fn process<S>(self, sink: S, message: Either<Message, Event>) -> ConsumingFuture<Self, S>
-        where
-            Self: Sized,
-            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+    where
+        Self: Sized + Send,
+        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
-        use tokio::prelude::future::IntoFuture;
-
         println!("WARNING: skipped message {:?}", message);
-        Box::new(Ok((self, sink)).into_future())
+        ConsumingFuture::ok(self, sink)
     }
 }
 
 impl<X, XS> MessageConsumerChain for (X, XS)
-    where
-        X: MessageConsumer + Send + 'static,
-        XS: MessageConsumerChain + Send + 'static,
+where
+    X: MessageConsumer + Send + 'static,
+    XS: MessageConsumerChain + Send + 'static,
 {
     fn process<S>(self, s: S, message: Either<Message, Event>) -> ConsumingFuture<Self, S>
-        where
-            Self: Sized,
-            S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+    where
+        Self: Sized + Send + 'static,
+        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
         let m = match message {
             Either::Left(m) => <X::Message as MessageFiltered>::filter(m).map(Either::Left).map_err(Either::Left),
@@ -112,8 +149,8 @@ impl<X, XS> MessageConsumerChain for (X, XS)
 
         let (x, xs) = self;
         match m {
-            Ok(m) => Box::new(x.consume(s, m).map(|(x, s)| ((x, xs), s))),
-            Err(m) => Box::new(xs.process(s, m).map(|(xs, s)| ((x, xs), s))),
+            Ok(m) => ConsumingFuture::new(x.consume(s, m).map(|(x, s)| ((x, xs), s))),
+            Err(m) => ConsumingFuture::new(xs.process(s, m).map(|(xs, s)| ((x, xs), s))),
         }
     }
 }

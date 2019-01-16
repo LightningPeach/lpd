@@ -1534,6 +1534,7 @@ version = "0.1.0"
 dependencies = [
  "binformat 0.1.0",
  "either 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "wire 0.1.0",
 ]
