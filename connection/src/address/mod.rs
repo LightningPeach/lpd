@@ -11,7 +11,7 @@ use brontide::{BrontideStream, HandshakeError, Machine};
 use futures::sync::{oneshot, mpsc};
 use either::Either;
 use std::collections::BTreeMap;
-use wire::{Event, DirectCommand};
+use processor::{Event, DirectCommand};
 
 pub trait AbstractAddress {
     type Error;

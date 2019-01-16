@@ -14,10 +14,8 @@ use either::Either;
 #[cfg(feature = "rpc")]
 use wire::PublicKey;
 
-use wire::{
-    Message, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel,
-    MessageFiltered, MessageConsumer,
-};
+use wire::{Message, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel};
+use processor::{MessageFiltered, MessageConsumer};
 
 use binformat::WireError;
 

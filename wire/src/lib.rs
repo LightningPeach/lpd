@@ -3,9 +3,5 @@
 
 mod message;
 
-mod message_processor;
-
 pub use self::message::*;
 pub use self::message::types::*;
-
-pub use self::message_processor::*;
