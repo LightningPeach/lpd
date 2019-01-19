@@ -1,7 +1,6 @@
 use super::ChannelId;
-use super::Signature;
-use super::PublicKey;
 use super::OutputIndex;
+use secp256k1::{Signature, PublicKey};
 
 use serde_derive::{Serialize, Deserialize};
 

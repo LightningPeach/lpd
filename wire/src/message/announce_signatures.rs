@@ -1,6 +1,6 @@
 use super::ChannelId;
 use super::ShortChannelId;
-use super::types::Signature;
+use secp256k1::Signature;
 
 use serde_derive::{Serialize, Deserialize};
 

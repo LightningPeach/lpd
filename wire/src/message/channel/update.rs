@@ -1,13 +1,13 @@
-use super::Signed;
-use super::SignedData;
 use super::Hash256;
 use super::ShortChannelId;
 use super::MilliSatoshi;
 
+use common_types::secp256k1_m::{Signed, Data};
+
 use bitflags::bitflags;
 use serde_derive::{Serialize, Deserialize};
 
-pub type UpdateChannel = Signed<SignedData<UpdateChannelData>>;
+pub type UpdateChannel = Signed<Data<UpdateChannelData>>;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]
