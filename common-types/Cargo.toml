@@ -9,9 +9,11 @@ serde = "1.0"
 serde_derive = "1.0"
 rand = "0.6"
 sha2 = "0.8"
+digest = "0.8"
 hex = "0.3"
 hex-literal = "0.1"
-secp256k1 = "0.12"
+secp256k1 = { version = "0.12", features = ["serde"] }
+binformat = { path = "../binformat" }
 
 [features]
 testing = []
