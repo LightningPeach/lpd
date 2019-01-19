@@ -1,13 +1,12 @@
 use super::RawFeatureVector;
 use super::Hash256;
-use super::PublicKey;
 use super::ShortChannelId;
-use super::Signed;
-use super::SignedData;
+use secp256k1::PublicKey;
+use common_types::secp256k1_m::{Signed, Data};
 
 use serde_derive::{Serialize, Deserialize};
 
-pub type AnnouncementChannel = Signed<Signed<Signed<Signed<SignedData<AnnouncementChannelData>>>>>;
+pub type AnnouncementChannel = Signed<Signed<Signed<Signed<Data<AnnouncementChannelData>>>>>;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct AnnouncementChannelData {
@@ -25,23 +24,6 @@ impl AnnouncementChannelData {
 
     pub fn id(&self) -> &ShortChannelId {
         &self.short_channel_id
-    }
-}
-
-impl AnnouncementChannel {
-    pub fn check_signatures(self) -> Result<AnnouncementChannelData, ()> {
-        Ok(self
-            .verify_owned(|data| &data.node_id.0).map_err(|_| ())?
-            .verify_owned(|data| &data.node_id.1).map_err(|_| ())?
-            .verify_owned(|data| &data.bitcoin_key.0).map_err(|_| ())?
-            .verify_owned(|data| &data.bitcoin_key.1).map_err(|_| ())?
-            .0)
-    }
-
-    pub fn check_features(&self, this: &RawFeatureVector) -> Result<(), ()> {
-        // TODO: check_features
-        let _ = this;
-        Ok(())
     }
 }
 

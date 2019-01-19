@@ -2,10 +2,6 @@ use std::mem;
 
 use serde_derive::{Serialize, Deserialize};
 
-use rand::thread_rng;
-use rand::Rng;
-use rand::distributions::Standard;
-
 use super::MessageSize;
 
 /// Keep alive message. Two purposes:
@@ -21,9 +17,10 @@ pub struct Ping {
 
 impl Ping {
     pub fn new(length: MessageSize, pong_length: MessageSize) -> Result<Self, ()> {
+        use rand::{Rng, thread_rng};
         Ping {
             pong_length: pong_length as _,
-            data: thread_rng().sample_iter(&Standard).take(length as usize).collect(),
+            data: (0..length).map(|_| thread_rng().gen()).collect(),
         }.validate()
     }
 
@@ -68,9 +65,11 @@ pub struct Pong {
 
 impl Pong {
     pub fn new(ping: &Ping) -> Self {
+        use rand::{Rng, thread_rng};
+
         let length = ping.pong_length();
         Pong {
-            data: thread_rng().sample_iter(&Standard).take(length as usize).collect(),
+            data: (0..length).map(|_| thread_rng().gen()).collect(),
         }
     }
 

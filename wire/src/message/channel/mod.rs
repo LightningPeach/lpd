@@ -1,8 +1,4 @@
 use super::types::*;
-use super::Signed;
-use super::SignedData;
-#[cfg(test)]
-use super::DataToSign;
 
 mod funding;
 pub use self::funding::*;

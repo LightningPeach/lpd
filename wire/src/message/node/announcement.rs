@@ -1,9 +1,9 @@
-use super::Signed;
-use super::SignedData;
 use super::RawFeatureVector;
-use super::PublicKey;
 use super::NodeAlias;
 use super::Color;
+
+use secp256k1::PublicKey;
+use common_types::secp256k1_m::{Signed, Data};
 
 use binformat::SerdeVec;
 use binformat::PackSized;
@@ -15,7 +15,7 @@ use std::net::Ipv6Addr;
 
 use serde_derive::{Serialize, Deserialize};
 
-pub type AnnouncementNode = Signed<SignedData<AnnouncementNodeData>>;
+pub type AnnouncementNode = Signed<Data<AnnouncementNodeData>>;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct AnnouncementNodeData {

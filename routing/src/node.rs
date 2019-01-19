@@ -1,9 +1,9 @@
 use wire::AnnouncementNode;
-use wire::PublicKey;
 use wire::Color;
 use wire::Address;
 use wire::NodeAlias;
-use wire::SignError;
+
+use secp256k1::{PublicKey, Error as SignError};
 
 use specs::prelude::*;
 use specs_derive::Component;
@@ -50,6 +50,8 @@ impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
     fn run(&mut self, data: Self::SystemData) {
         use specs::Join;
         use std::iter::Iterator;
+        use secp256k1::Secp256k1;
+        use common_types::ac::Signed;
 
         self.run_func(|announcement_node| {
             let (
@@ -62,7 +64,8 @@ impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
 
             // TODO: check features
 
-            let announcement_node = match announcement_node.verify_owned(|s| &s.node_id) {
+            let context = Secp256k1::verification_only();
+            let announcement_node = match announcement_node.verify_key_inside(&context, |s| &s.node_id) {
                 Ok(s) => s.0,
                 // TODO: fail the connection
                 Err(SignError::IncorrectSignature) => return,

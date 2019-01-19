@@ -2,9 +2,8 @@ use super::ChannelId;
 use super::Hash256;
 use super::MilliSatoshi;
 use super::OnionBlob;
-use super::Signature;
-use super::PublicKey;
 use super::SatoshiPerKiloWeight;
+use secp256k1::{Signature, PublicKey};
 
 use binformat::SerdeVec;
 

@@ -12,7 +12,7 @@ use dijkstras_search::Graph;
 use either::Either;
 
 #[cfg(feature = "rpc")]
-use wire::PublicKey;
+use secp256k1::PublicKey;
 
 use wire::{Message, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel};
 use processor::{MessageFiltered, MessageConsumer, ConsumingFuture};
