@@ -9,6 +9,8 @@ state = { path = "../state" }
 interface = { path = "../rpc/interface", optional = true }
 wire = { path = "../wire" }
 binformat = { path = "../binformat" }
+common-types = { path = "../common-types" }
+processor = { path = "../processor" }
 dijkstras_search = { git = "https://github.com/LightningPeach/dijkstras_search" }
 specs = "0.14"
 specs-derive = "0.4"
@@ -17,7 +19,7 @@ rocksdb = "0.10"
 serde = "1.0"
 serde_derive = "1.0"
 either = "1.5"
-processor = { path = "../processor" }
+secp256k1 = "0.12"
 
 [dev-dependencies]
 hex-literal = "0.1.1"

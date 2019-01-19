@@ -1,7 +1,9 @@
 use wire::{
-    Hash256, ShortChannelId, PublicKey, MilliSatoshi, ChannelUpdateFlags, RawFeatureVector,
-    AnnouncementChannel, DataToSign, UpdateChannel,
+    Hash256, ShortChannelId, MilliSatoshi, ChannelUpdateFlags, RawFeatureVector,
+    AnnouncementChannel, UpdateChannel,
 };
+
+use secp256k1::PublicKey;
 
 use specs::prelude::*;
 use specs_derive::Component;
@@ -119,12 +121,15 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
 
     fn run(&mut self, mut data: Self::SystemData) {
         use specs::Join;
+        use secp256k1::Secp256k1;
+        use common_types::ac::Signed;
+        use common_types::secp256k1_m::Data;
 
         self.run_func(|announcement_channel| {
             let (
                 entities,
                 update,
-                features,
+                _features,
                 mut peer,
                 blacklist_mark,
                 channel_id,
@@ -133,16 +138,26 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
                 mut node_links
             ) = (&*data.0, &*data.1, &*data.2, data.3, &mut data.4, &mut data.5, data.6, data.7, data.8);
 
-            if let Err(()) = announcement_channel.check_features(features) {
-                return;
-            }
+            // TODO:
+            //if let Err(()) = announcement_channel.check_features(features) {
+            //    return;
+            //}
 
-            let announcement_channel = match announcement_channel.check_signatures() {
-                Err(()) => {
+            let context = Secp256k1::verification_only();
+
+            let r = || {
+                announcement_channel
+                    .verify_key_inside(&context, |data| &data.node_id.0)?
+                    .verify_key_inside(&context, |data| &data.node_id.1)?
+                    .verify_key_inside(&context, |data| &data.bitcoin_key.0)?
+                    .verify_key_inside(&context, |data| &data.bitcoin_key.1)
+            };
+            let announcement_channel = match r() {
+                Err(_) => {
                     // TODO: fail the connection
                     return;
                 },
-                Ok(s) => s,
+                Ok(Data(s)) => s,
             };
 
             // TODO: check channel id, check if chain hash known
@@ -240,6 +255,8 @@ impl<'a> System<'a> for GenericSystem<UpdateChannel, ()> {
 
     fn run(&mut self, data: Self::SystemData) {
         use specs::Join;
+        use common_types::ac::{Data, Signed};
+        use secp256k1::Secp256k1;
 
         self.run_func(|update_channel| {
             let (
@@ -250,12 +267,17 @@ impl<'a> System<'a> for GenericSystem<UpdateChannel, ()> {
 
 
             for (id, parties, history) in (&channel_id, &channel_parties, &mut channel_history).join() {
-
-                if update_channel.as_ref_data().id().eq(&id.short_channel_id)
-                    && update_channel.as_ref_data().hash().eq(&id.hash) {
-                    let update_channel = match update_channel.verify_any_of_two(&parties.lightning) {
-                        Ok(d) => d.0,
-                        Err(_) => break,
+                let context = Secp256k1::verification_only();
+                if update_channel.as_ref_content().id().eq(&id.short_channel_id)
+                    && update_channel.as_ref_content().hash().eq(&id.hash) {
+                    let (r0, r1) = (
+                        update_channel.check(&context, &parties.lightning.0),
+                        update_channel.check(&context, &parties.lightning.1),
+                    );
+                    let update_channel = match (r0, r1) {
+                        (Ok(()), _) => update_channel.verify(&context, &parties.lightning.0).unwrap().0,
+                        (_, Ok(())) => update_channel.verify(&context, &parties.lightning.1).unwrap().0,
+                        _ => break,
                     };
                     history.records.push(ChannelPolicy {
                         timestamp: update_channel.timestamp,
