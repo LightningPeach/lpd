@@ -1,6 +1,6 @@
 use super::ChannelId;
 use super::Satoshi;
-use super::Signature;
+use secp256k1::Signature;
 
 use serde_derive::{Serialize, Deserialize};
 

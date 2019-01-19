@@ -4,9 +4,9 @@ use super::MilliSatoshi;
 use super::Satoshi;
 use super::SatoshiPerKiloWeight;
 use super::CsvDelay;
-use super::PublicKey;
 use super::ChannelFlags;
 use super::ChannelKeys;
+use secp256k1::PublicKey;
 
 #[cfg(test)]
 use super::ChannelPrivateKeys;

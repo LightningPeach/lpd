@@ -1,7 +1,6 @@
-use super::PublicKey;
-use super::SecretKey;
-
+use secp256k1::{SecretKey, PublicKey};
 use serde_derive::{Serialize, Deserialize};
+use common_types::ac;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ChannelKeys {
@@ -15,13 +14,15 @@ pub struct ChannelKeys {
 
 impl ChannelKeys {
     pub fn new(private: &ChannelPrivateKeys) -> Self {
+        use secp256k1::Secp256k1;
+        let context = Secp256k1::signing_only();
         ChannelKeys {
-            funding: PublicKey::paired(&private.funding),
-            revocation: PublicKey::paired(&private.revocation),
-            payment: PublicKey::paired(&private.payment),
-            delayed_payment: PublicKey::paired(&private.delayed_payment),
-            htlc: PublicKey::paired(&private.htlc),
-            first_per_commitment: PublicKey::paired(&private.first_per_commitment),
+            funding: ac::SecretKey::paired(&private.funding, &context),
+            revocation: ac::SecretKey::paired(&private.revocation, &context),
+            payment: ac::SecretKey::paired(&private.payment, &context),
+            delayed_payment: ac::SecretKey::paired(&private.delayed_payment, &context),
+            htlc: ac::SecretKey::paired(&private.htlc, &context),
+            first_per_commitment: ac::SecretKey::paired(&private.first_per_commitment, &context),
         }
     }
 
@@ -89,19 +90,20 @@ impl ChannelPrivateKeys {
 #[cfg(any(test, feature = "testing"))]
 mod rand_m {
     use super::ChannelPrivateKeys;
-    use rand::distributions::Distribution;
-    use rand::distributions::Standard;
+    use rand::Rand;
     use rand::Rng;
 
-    impl Distribution<ChannelPrivateKeys> for Standard {
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ChannelPrivateKeys {
+    impl Rand for ChannelPrivateKeys {
+        fn rand<R: Rng>(rng: &mut R) -> Self {
+            use secp256k1::SecretKey;
+
             ChannelPrivateKeys {
-                funding: self.sample(rng),
-                revocation: self.sample(rng),
-                payment: self.sample(rng),
-                delayed_payment: self.sample(rng),
-                htlc: self.sample(rng),
-                first_per_commitment: self.sample(rng),
+                funding: SecretKey::new(rng),
+                revocation: SecretKey::new(rng),
+                payment: SecretKey::new(rng),
+                delayed_payment: SecretKey::new(rng),
+                htlc: SecretKey::new(rng),
+                first_per_commitment: SecretKey::new(rng),
             }
         }
     }

@@ -4,7 +4,8 @@ use secp256k1::{SecretKey, PublicKey};
 use tokio::prelude::{Future, AsyncRead, AsyncWrite, Sink};
 use tokio::executor::Spawn;
 use futures::sync::mpsc::Receiver;
-use wire::{Message, Signature, SignError};
+use secp256k1::Signature;
+use wire::Message;
 use processor::{MessageConsumer, ConsumingFuture};
 use binformat::WireError;
 
@@ -125,12 +126,16 @@ impl Node {
         Ok(())
     }
 
-    pub fn sign_message(&self, message: Vec<u8>) -> Result<Signature, SignError> {
-        use wire::{Signed, SignedData};
+    pub fn sign_message(&self, message: Vec<u8>) -> Signature {
+        use common_types::{secp256k1_m::{Data, Signed}, ac};
+        use secp256k1::Secp256k1;
         use binformat::SerdeRawVec;
 
+        let context = Secp256k1::signing_only();
         let secret_key = From::from(self.secret.clone());
-        Signed::sign(SignedData(SerdeRawVec(message)), &secret_key).map(|s| s.signature)
+        let data = Data(SerdeRawVec(message));
+        let signed: Signed<_> = ac::Signed::sign(data, &context, &secret_key);
+        signed.signature
     }
 
     // TODO: add missing fields:
