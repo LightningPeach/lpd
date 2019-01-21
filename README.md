@@ -5,7 +5,7 @@ The Lightning Peach Daemon (`lpd`) - is a partial implementation of a
 
 Work is still in early stages. Currently near 20% towards usable production ready system.
 
-The goal is to provide a full-featured implementation of Lightning with enhanced security (due to a RUST usage)
+The goal is to provide a full-featured implementation of Lightning with enhanced security (due to a Rust usage)
 which potentially can be run on many platforms including WASM.
 
 As a reference implementation [lnd] (https://github.com/lightningnetwork/lnd) was used. 
@@ -26,8 +26,27 @@ Basic of Lightning Technologies.
 - [not implemented] BOLT 10: DNS Bootstrap and Assisted Node Location
 - [not implemented] BOLT 11: Invoice Protocol for Lightning Payments
 
-Currently there is no command or rpc interface. It is set of libs. Example of channel opening code in src/main.rs.
-To run it insert correct address of other node and `cargo run`. It connects to external node (lnd) and waits for channel opening.
+See `rpc/interface/*.proto` for rpc interface.
+
+The command for running the rpc server is:
+
+`cargo run --package server`
+
+or 
+
+`cargo run --package server --release`
+
+for release configuration. Cli parameters are following:
+
+- `--pkcs12=path/to/p12`
+- `--pkcs12-password=qwerty123`
+- `--rpclisten=0.0.0.0:1234` ip and port to listen RPC on. Default is `127.0.0.1:10009`.
+- `--listen=0.0.0.0:1234` ip and port to listen peers on. Default is `127.0.0.1:9735`.
+- `--db-path=path/to/database` path to database directory. Default is `target/db`.
+
+CLI parameters are passed through `--`, for example
+
+`cargo run --package server -- --db-path=tmp/somedb --listen=1.2.3.4:1234`
 
 We firmly believe in the share early, share often approach. The basic premise of the approach is to announce your plans 
 before you start work, and once you have started working share your work when any progress is made.
