@@ -36,8 +36,8 @@ where
 
         HandshakeOut::new(local_secret, remote_public)
             .map_err(HandshakeError::Crypto)
-            .into_future()
             .and_then(|noise| noise.gen_act_one())
+            .into_future()
             .and_then(|(a, noise)| {
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
