@@ -36,23 +36,23 @@ where
 
         HandshakeInitiator::new(local_secret, remote_public)
             .map_err(HandshakeError::Crypto)
-            .and_then(|noise| noise.gen_act_one())
             .into_future()
-            .and_then(move |(a, noise)| {
+            .and_then(|noise| noise.gen_act_one())
+            .and_then(|(a, noise)| {
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
-                    .map(move |(stream, _)| (noise, stream))
+                    .map(|(stream, _)| (noise, stream))
             }).and_then(|(noise, stream)| {
                 io::read_exact(stream, Default::default())
                     .map_err(HandshakeError::Io)
-                    .and_then(move |(stream, a)| {
+                    .and_then(|(stream, a)| {
                         let noise = noise.recv_act_two(a)?;
                         Ok((stream, noise.gen_act_three()?))
                     })
             }).and_then(|(stream, (a, noise))| {
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
-                    .map(move |(stream, _)| BrontideStream {
+                    .map(|(stream, _)| BrontideStream {
                         noise: noise,
                         stream: stream,
                     })
@@ -71,19 +71,19 @@ where
             .and_then(move |(stream, a)| {
                 HandshakeNew::new(local_secret)
                     .map_err(HandshakeError::Crypto)
-                    .and_then(move |noise| {
+                    .and_then(|noise| {
                         let noise = noise.recv_act_one(a)?;
                         Ok((stream, noise.gen_act_two()?))
                     })
             }).and_then(|(stream, (a, noise))| {
                 io::write_all(stream, a)
                     .map_err(HandshakeError::Io)
-                    .map(move |(stream, _)| (noise, stream))
+                    .map(|(stream, _)| (noise, stream))
             }).and_then(|(noise, stream)| {
                 io::read_exact(stream, Default::default())
                     .timeout(Self::read_timeout())
                     .map_err(HandshakeError::IoTimeout)
-                    .and_then(move |(stream, a)| {
+                    .and_then(|(stream, a)| {
                         Ok(BrontideStream {
                             noise: noise.recv_act_three(a)?,
                             stream: stream,
