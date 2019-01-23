@@ -9,14 +9,9 @@ use super::symmetric_state::{SymmetricState, MAC_SIZE};
 fn ecdh(pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], EcdsaError> {
     use secp256k1::Secp256k1;
     use sha2::{Sha256, Digest};
-    use binformat::BinarySD;
 
     let mut pk_cloned = pk.clone();
-    let mut buffer = Vec::new();
-    BinarySD::serialize(&mut buffer, sk).unwrap();
-    // two bytes is size
-    // WARNING: the format might change in new secp256k1
-    pk_cloned.mul_assign(&Secp256k1::new(), &buffer[2..])?;
+    pk_cloned.mul_assign(&Secp256k1::new(), &sk[..])?;
 
     let mut hasher = Sha256::default();
     hasher.input(&pk_cloned.serialize()[..]);
