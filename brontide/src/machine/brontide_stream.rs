@@ -5,7 +5,7 @@ use tokio::prelude::Future;
 use secp256k1::{PublicKey, SecretKey};
 use std::time::Duration;
 
-use super::handshake::{Machine, HandshakeNew, HandshakeInitiator, HandshakeError};
+use super::handshake::{Machine, HandshakeIn, HandshakeOut, HandshakeError};
 
 pub struct BrontideStream<T>
 where
@@ -34,7 +34,7 @@ where
     ) -> impl Future<Item = Self, Error = HandshakeError> {
         use tokio::prelude::IntoFuture;
 
-        HandshakeInitiator::new(local_secret, remote_public)
+        HandshakeOut::new(local_secret, remote_public)
             .map_err(HandshakeError::Crypto)
             .into_future()
             .and_then(|noise| noise.gen_act_one())
@@ -46,7 +46,7 @@ where
                 io::read_exact(stream, Default::default())
                     .map_err(HandshakeError::Io)
                     .and_then(|(stream, a)| {
-                        let noise = noise.recv_act_two(a)?;
+                        let noise = noise.receive_act_two(a)?;
                         Ok((stream, noise.gen_act_three()?))
                     })
             }).and_then(|(stream, (a, noise))| {
@@ -69,10 +69,10 @@ where
             .timeout(Self::read_timeout())
             .map_err(HandshakeError::IoTimeout)
             .and_then(move |(stream, a)| {
-                HandshakeNew::new(local_secret)
+                HandshakeIn::new(local_secret)
                     .map_err(HandshakeError::Crypto)
                     .and_then(|noise| {
-                        let noise = noise.recv_act_one(a)?;
+                        let noise = noise.receive_act_one(a)?;
                         Ok((stream, noise.gen_act_two()?))
                     })
             }).and_then(|(stream, (a, noise))| {
@@ -85,7 +85,7 @@ where
                     .map_err(HandshakeError::IoTimeout)
                     .and_then(|(stream, a)| {
                         Ok(BrontideStream {
-                            noise: noise.recv_act_three(a)?,
+                            noise: noise.receive_act_three(a)?,
                             stream: stream,
                         })
                     })
