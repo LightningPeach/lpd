@@ -2,7 +2,7 @@ use secp256k1::{Secp256k1, SecretKey, PublicKey};
 use hex;
 use std::error::Error;
 use std::collections::HashMap;
-use super::handshake::{HandshakeNew, HandshakeInitiator};
+use super::handshake::{HandshakeIn, HandshakeOut};
 
 #[test]
 fn test_bolt0008() {
@@ -37,7 +37,7 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
         "036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f7"
     );
 
-    let mut machine = HandshakeInitiator::new(ls_priv, rs_pub)?;
+    let mut machine = HandshakeOut::new(ls_priv, rs_pub)?;
     machine.ephemeral_gen = || SecretKey::from_slice(
         hex::decode("1212121212121212121212121212121212121212121212121212121212121212")
             .unwrap()
@@ -50,26 +50,26 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
 
     let (act_one, machine) = machine.gen_act_one()?;
 
-    assert_eq!(hex::encode(&act_one.bytes[..]), "00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a");
+    assert_eq!(hex::encode(act_one.as_ref()), "00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a");
 
-    let mut responder_machine = HandshakeNew::new(rs_priv)?;
+    let mut responder_machine = HandshakeIn::new(rs_priv)?;
     responder_machine.ephemeral_gen = || SecretKey::from_slice(
         hex::decode("2222222222222222222222222222222222222222222222222222222222222222")
             .unwrap()
             .as_slice(),
         ).unwrap();
 
-    let responder_machine = responder_machine.recv_act_one(act_one)?;
+    let responder_machine = responder_machine.receive_act_one(act_one)?;
 
     let (act_two, responder_machine) = responder_machine.gen_act_two()?;
-    assert_eq!(hex::encode(&act_two.bytes[..]), "0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730ae");
+    assert_eq!(hex::encode(act_two.as_ref()), "0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730ae");
 
-    let machine = machine.recv_act_two(act_two)?;
+    let machine = machine.receive_act_two(act_two)?;
 
     let (act_three, mut machine) = machine.gen_act_three()?;
-    assert_eq!(hex::encode(&act_three.bytes[..]), "00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba");
+    assert_eq!(hex::encode(act_three.as_ref()), "00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba");
 
-    let mut responder_machine = responder_machine.recv_act_three(act_three)?;
+    let mut responder_machine = responder_machine.receive_act_three(act_three)?;
 
     println!("{:?}", responder_machine);
 
@@ -78,7 +78,7 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
     let chain_key = "919219dbb2920afa8db80f9a51787a840bcf111ed8d588caf9ab4be716e42b01";
 
     assert_eq!(hex::encode(&machine.send_cipher_key()[..]), send_key);
-    assert_eq!(hex::encode(&machine.recv_cipher_key()[..]), recv_key);
+    assert_eq!(hex::encode(&machine.receive_cipher_key()[..]), recv_key);
     assert_eq!(hex::encode(&machine.chaining_key()[..]), chain_key);
 
     assert_eq!(
@@ -86,7 +86,7 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
         recv_key
     );
     assert_eq!(
-        hex::encode(&responder_machine.recv_cipher_key()[..]),
+        hex::encode(&responder_machine.receive_cipher_key()[..]),
         send_key
     );
     assert_eq!(
