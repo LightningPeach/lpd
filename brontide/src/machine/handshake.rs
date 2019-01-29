@@ -1,28 +1,8 @@
 use std::{io, fmt, error, sync::{RwLock, Arc}};
 use tokio::timer::timeout;
-use secp256k1::{Secp256k1, Verification, All, SecretKey, PublicKey, Error as EcdsaError};
+use secp256k1::{Secp256k1, SignOnly, VerifyOnly, SecretKey, PublicKey, Error as EcdsaError};
 use super::cipher_state::CipherState;
 use super::symmetric_state::{SymmetricState, MAC_SIZE};
-
-// ecdh performs an ECDH operation between public and private. The returned value is
-// the sha256 of the compressed shared point.
-fn ecdh<C>(context: &Secp256k1<C>, pk: &PublicKey, sk: &SecretKey) -> Result<[u8; 32], EcdsaError>
-where
-    C: Verification,
-{
-    use sha2::{Sha256, Digest};
-
-    let mut pk_cloned = pk.clone();
-    pk_cloned.mul_assign(&context, &sk[..])?;
-
-    let mut hasher = Sha256::default();
-    hasher.input(&pk_cloned.serialize()[..]);
-    let hash = hasher.result();
-
-    let mut array: [u8; 32] = [0; 32];
-    array.copy_from_slice(&hash);
-    Ok(array)
-}
 
 #[derive(Debug)]
 pub enum HandshakeError {
@@ -234,7 +214,7 @@ impl ActThree {
 static PROTOCOL_NAME: &'static str = "Noise_XK_secp256k1_ChaChaPoly_SHA256";
 
 pub struct HandshakeIn {
-    context: Secp256k1<All>,
+    contexts: (Secp256k1<SignOnly>, Secp256k1<VerifyOnly>),
     symmetric_state: SymmetricState,
     local_static: SecretKey,
     pub ephemeral_gen: fn() -> SecretKey,
@@ -242,15 +222,15 @@ pub struct HandshakeIn {
 
 impl HandshakeIn {
     pub fn new(local_secret: SecretKey) -> Result<Self, EcdsaError> {
-        let context = Secp256k1::new();
+        let contexts = (Secp256k1::signing_only(), Secp256k1::verification_only());
 
         let mut symmetric_state = SymmetricState::new(PROTOCOL_NAME);
         symmetric_state.mix_hash("lightning".as_bytes());
-        let local_pub = PublicKey::from_secret_key(&context, &local_secret);
+        let local_pub = PublicKey::from_secret_key(&contexts.0, &local_secret);
         symmetric_state.mix_hash(&local_pub.serialize());
 
         Ok(HandshakeIn {
-            context: context,
+            contexts: contexts,
             symmetric_state: symmetric_state,
             local_static: local_secret,
             ephemeral_gen: || {
@@ -264,7 +244,9 @@ impl HandshakeIn {
     // handshake digest and deriving a new shared secret based on an ECDH with the
     // initiator's ephemeral key and responder's static key.
     pub fn receive_act_one(mut self, act_one: ActOne) -> Result<HandshakeInActOne, HandshakeError> {
-        let context = &self.context;
+        use common_types::ac::SecretKey;
+
+        let contexts = &self.contexts;
 
         // If the handshake version is unknown, then the handshake fails
         // immediately.
@@ -278,8 +260,8 @@ impl HandshakeIn {
         self.symmetric_state.mix_hash(&remote_ephemeral.serialize());
 
         // es
-        let s = ecdh(context, &remote_ephemeral, &self.local_static).map_err(HandshakeError::Crypto)?;
-        self.symmetric_state.mix_key(&s);
+        let s = self.local_static.dh(&contexts.1, &remote_ephemeral).map_err(HandshakeError::Crypto)?;
+        self.symmetric_state.mix_key(&s[..]);
 
         // If the initiator doesn't know our static key, then this operation
         // will fail.
@@ -295,7 +277,7 @@ impl HandshakeIn {
 }
 
 pub struct HandshakeOut {
-    context: Secp256k1<All>,
+    contexts: (Secp256k1<SignOnly>, Secp256k1<VerifyOnly>),
     symmetric_state: SymmetricState,
     local_static: SecretKey,
     remote_static: PublicKey,
@@ -309,7 +291,7 @@ impl HandshakeOut {
         symmetric_state.mix_hash(&remote_public.serialize());
 
         Ok(HandshakeOut {
-            context: Secp256k1::new(),
+            contexts: (Secp256k1::signing_only(), Secp256k1::verification_only()),
             symmetric_state: symmetric_state,
             local_static: local_secret,
             remote_static: remote_public,
@@ -327,18 +309,20 @@ impl HandshakeOut {
     //
     //    -> e, es
     pub fn gen_act_one(mut self) -> Result<(ActOne, HandshakeOutActOne), HandshakeError> {
-        let context = &self.context;
+        use common_types::ac::SecretKey;
+
+        let contexts = &self.contexts;
 
         // e
         let local_ephemeral = (self.ephemeral_gen)();
 
-        let local_ephemeral_pub = PublicKey::from_secret_key(context, &local_ephemeral);
+        let local_ephemeral_pub = PublicKey::from_secret_key(&contexts.0, &local_ephemeral);
         let ephemeral = local_ephemeral_pub.serialize();
         self.symmetric_state.mix_hash(&ephemeral);
 
         // es
-        let s = ecdh(context, &self.remote_static, &local_ephemeral).map_err(HandshakeError::Crypto)?;
-        self.symmetric_state.mix_key(&s);
+        let s = local_ephemeral.dh(&contexts.1, &self.remote_static).map_err(HandshakeError::Crypto)?;
+        self.symmetric_state.mix_key(&s[..]);
 
         let auth_payload = self
             .symmetric_state
@@ -372,18 +356,20 @@ impl HandshakeInActOne {
     //
     //    <- e, ee
     pub fn gen_act_two(mut self) -> Result<(ActTwo, HandshakeInActTwo), HandshakeError> {
-        let context = &self.base.context;
+        use common_types::ac::SecretKey;
+
+        let contexts = &self.base.contexts;
 
         // e
         let local_ephemeral = (self.base.ephemeral_gen)();
 
-        let local_ephemeral_pub = PublicKey::from_secret_key(context, &local_ephemeral);
+        let local_ephemeral_pub = PublicKey::from_secret_key(&contexts.0, &local_ephemeral);
         let ephemeral = local_ephemeral_pub.serialize();
         self.base.symmetric_state.mix_hash(&ephemeral);
 
         // ee
-        let s = ecdh(context, &self.remote_ephemeral, &local_ephemeral).map_err(HandshakeError::Crypto)?;
-        self.base.symmetric_state.mix_key(&s);
+        let s = local_ephemeral.dh(&contexts.1, &self.remote_ephemeral).map_err(HandshakeError::Crypto)?;
+        self.base.symmetric_state.mix_key(&s[..]);
 
         let auth_payload = self
             .base
@@ -410,7 +396,9 @@ impl HandshakeOutActOne {
     // the initiator. A successful processing of this packet authenticates the
     // initiator to the responder.
     pub fn receive_act_two(mut self, act_two: ActTwo) -> Result<HandshakeOutActTwo, HandshakeError> {
-        let context = &self.base.context;
+        use common_types::ac::SecretKey;
+
+        let contexts = &self.base.contexts;
 
         let ActTwo(inner) = act_two;
 
@@ -428,8 +416,8 @@ impl HandshakeOutActOne {
             .mix_hash(&remote_ephemeral.serialize());
 
         // ee
-        let s = ecdh(context, &remote_ephemeral, &self.local_ephemeral).map_err(HandshakeError::Crypto)?;
-        self.base.symmetric_state.mix_key(&s);
+        let s = self.local_ephemeral.dh(&contexts.1, &remote_ephemeral).map_err(HandshakeError::Crypto)?;
+        self.base.symmetric_state.mix_key(&s[..]);
 
         self.base
             .symmetric_state
@@ -454,7 +442,9 @@ impl HandshakeInActTwo {
     // initiator's static public key. Decryption of the static key serves to
     // authenticate the initiator to the responder.
     pub fn receive_act_three(mut self, act_three: ActThree) -> Result<Machine, HandshakeError> {
-        let context = &self.base.context;
+        use common_types::ac::SecretKey;
+
+        let contexts = &self.base.contexts;
 
         // If the handshake version is unknown, then the handshake fails
         // immediately.
@@ -476,9 +466,9 @@ impl HandshakeInActTwo {
             .map_err(HandshakeError::Crypto)?;
 
         // se
-        let se = ecdh(context, &remote_static, &self.local_ephemeral)
+        let se = self.local_ephemeral.dh(&contexts.1, &remote_static)
             .map_err(HandshakeError::Crypto)?;
-        self.base.symmetric_state.mix_key(&se);
+        self.base.symmetric_state.mix_key(&se[..]);
 
         self.base
             .symmetric_state
@@ -517,10 +507,11 @@ impl HandshakeOutActTwo {
     //    -> s, se
     pub fn gen_act_three(mut self) -> Result<(ActThree, Machine), HandshakeError> {
         use secp256k1::constants::PUBLIC_KEY_SIZE;
+        use common_types::ac::SecretKey;
 
-        let context = &self.base.context;
+        let contexts = &self.base.contexts;
 
-        let local_static_pub = PublicKey::from_secret_key(context, &self.base.local_static);
+        let local_static_pub = PublicKey::from_secret_key(&contexts.0, &self.base.local_static);
         let our_pubkey = local_static_pub.serialize();
         let mut cipher_text = Vec::with_capacity(PUBLIC_KEY_SIZE);
         let tag = self
@@ -529,9 +520,9 @@ impl HandshakeOutActTwo {
             .encrypt_and_hash(&our_pubkey, &mut cipher_text)
             .map_err(HandshakeError::Io)?;
 
-        let s = ecdh(context, &self.remote_ephemeral, &self.base.local_static)
+        let s = self.base.local_static.dh(&contexts.1, &self.remote_ephemeral)
             .map_err(HandshakeError::Crypto)?;
-        self.base.symmetric_state.mix_key(&s);
+        self.base.symmetric_state.mix_key(&s[..]);
 
         let auth_payload = self
             .base

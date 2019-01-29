@@ -19,6 +19,7 @@ bytes = "0.4"
 
 wire = { path = "../wire" }
 binformat = { path = "../binformat" }
+common-types = { path = "../common-types" }
 
 [features]
 testing = []
