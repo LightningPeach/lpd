@@ -3,19 +3,25 @@ where
     Self: Sized + Eq,
 {}
 
-pub trait SecretKey
+pub trait SecretKey<H>
 where
     Self: Sized + Eq,
 {
+    type Error;
+
     type PublicKey: PublicKey;
 
-    type Context;
+    type SigningContext;
+
+    type VerificationContext;
 
     fn from_raw<T>(v: T) -> Self
     where
         T: AsRef<[u8]>;
 
-    fn paired(&self, context: &Self::Context) -> Self::PublicKey;
+    fn paired(&self, context: &Self::SigningContext) -> Self::PublicKey;
+
+    fn dh(&self, context: &Self::VerificationContext, pk: &Self::PublicKey) -> Result<H, Self::Error>;
 }
 
 pub trait Data<H> {
@@ -30,29 +36,23 @@ pub trait SignError {
 }
 
 /// Resource Acquisition Is Initialization and... Validation
-pub trait Signed
+pub trait Signed<H>
 where
     Self: Sized,
 {
-    type SecretKey: SecretKey;
-
     type Error: SignError;
 
-    type Hash;
+    type SecretKey: SecretKey<H>;
 
-    type Data: Data<Self::Hash>;
+    type Data: Data<H>;
 
-    type SigningContext;
+    fn sign(data: Self::Data, context: &<Self::SecretKey as SecretKey<H>>::SigningContext, secret_key: &Self::SecretKey) -> Self;
 
-    type VerificationContext;
+    fn check(&self, context: &<Self::SecretKey as SecretKey<H>>::VerificationContext, public_key: &<Self::SecretKey as SecretKey<H>>::PublicKey) -> Result<(), Self::Error>;
 
-    fn sign(data: Self::Data, context: &Self::SigningContext, secret_key: &Self::SecretKey) -> Self;
+    fn verify(self, context: &<Self::SecretKey as SecretKey<H>>::VerificationContext, public_key: &<Self::SecretKey as SecretKey<H>>::PublicKey) -> Result<Self::Data, Self::Error>;
 
-    fn check(&self, context: &Self::VerificationContext, public_key: &<Self::SecretKey as SecretKey>::PublicKey) -> Result<(), Self::Error>;
-
-    fn verify(self, context: &Self::VerificationContext, public_key: &<Self::SecretKey as SecretKey>::PublicKey) -> Result<Self::Data, Self::Error>;
-
-    fn verify_key_inside<F>(self, context: &Self::VerificationContext, get_public_key: F) -> Result<Self::Data, Self::Error>
+    fn verify_key_inside<F>(self, context: &<Self::SecretKey as SecretKey<H>>::VerificationContext, get_public_key: F) -> Result<Self::Data, Self::Error>
     where
-        F: FnOnce(&<Self::Data as Data<Self::Hash>>::ContentToHash) -> &<Self::SecretKey as SecretKey>::PublicKey;
+        F: FnOnce(&<Self::Data as Data<H>>::ContentToHash) -> &<Self::SecretKey as SecretKey<H>>::PublicKey;
 }
