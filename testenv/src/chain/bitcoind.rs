@@ -3,6 +3,7 @@ use super::{BitcoinConfig, BitcoinInstance};
 
 use std::process::{Command, Child};
 use std::{io, fs};
+use bitcoin_rpc_client::BitcoinCoreClient;
 
 pub struct Bitcoind {
     home: Home,
@@ -47,7 +48,7 @@ impl BitcoinConfig for Bitcoind {
     }
 
     fn run(self) -> Result<Self::Instance, io::Error> {
-        self.run_internal(None)
+        self.run_internal()
     }
 
     fn params(&self) -> Vec<String> {
@@ -66,7 +67,7 @@ impl BitcoinConfig for Bitcoind {
 }
 
 impl Bitcoind {
-    fn run_internal(self, mining_address: Option<String>) -> Result<BitcoindRunning, io::Error> {
+    fn run_internal(self) -> Result<BitcoindRunning, io::Error> {
         fs::create_dir(self.home.ext_path("data")).or_else(|e|
             if e.kind() == io::ErrorKind::AlreadyExists {
                 Ok(())
@@ -81,14 +82,9 @@ impl Bitcoind {
                 Err(e)
             }
         )?;
-        let mut args = vec![
+        let args = vec![
             format!("-datadir={}", self.home.ext_path("data").to_str().unwrap()),
-            format!("-logdir={}", self.home.ext_path("logs").to_str().unwrap()),
         ];
-
-        if let Some(mining_address) = mining_address {
-            args.push(format!("-miningaddr={}", mining_address));
-        }
 
         Command::new("bitcoind")
             .args(&[
@@ -106,13 +102,8 @@ impl Bitcoind {
 }
 
 impl BitcoinInstance for BitcoindRunning {
-    fn set_mining_address(self, address: String) -> Result<Self, io::Error> {
-        use std::mem;
-
-        let mut s = self;
-        let daemon = Bitcoind::new("fake")?;
-        mem::replace(&mut s.daemon, daemon)
-            .run_internal(Some(address))
+    fn set_mining_address(self, _address: String) -> Result<Self, io::Error> {
+        unimplemented!()
     }
 
     fn generate(&mut self, count: usize) -> Result<(), io::Error> {
@@ -130,5 +121,9 @@ impl BitcoinInstance for BitcoindRunning {
                     panic!()
                 }
             )
+    }
+
+    fn rpc_client(&self) -> BitcoinCoreClient {
+        BitcoinCoreClient::new("tcp://localhost:18443", "devuser", "devpass")
     }
 }

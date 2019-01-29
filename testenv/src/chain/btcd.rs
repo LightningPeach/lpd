@@ -3,6 +3,7 @@ use super::{BitcoinConfig, BitcoinInstance};
 
 use std::process::{Command, Child};
 use std::{io, fs};
+use bitcoin_rpc_client::BitcoinCoreClient;
 
 pub struct Btcd {
     home: Home,
@@ -126,5 +127,9 @@ impl BitcoinInstance for BtcdRunning {
                     panic!()
                 }
             )
+    }
+
+    fn rpc_client(&self) -> BitcoinCoreClient {
+        BitcoinCoreClient::new("tcp://localhost:18556", "devuser", "devpass")
     }
 }
