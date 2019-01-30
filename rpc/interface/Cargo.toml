@@ -4,8 +4,8 @@ version = "0.0.0"
 authors = ["LightningPeach <contact@lightningpeach.com>"]
 
 [dependencies]
-grpc = "0.6.*"
-protobuf = "2.2.*"
+grpc = "0.6"
+protobuf = "2.3"
 
 [build-dependencies]
-protoc-rust-grpc = "0.6.*"
+protoc-rust-grpc = "0.6"

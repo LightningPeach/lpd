@@ -107,11 +107,10 @@ impl LnRunning {
     }
 
     fn new_client(&self) -> Result<LightningClient, grpc::Error> {
-        use std::net::SocketAddr;
-        use std::net::Ipv4Addr;
-        use std::net::IpAddr;
+        use std::{net::{SocketAddr, Ipv4Addr, IpAddr}, sync::Arc};
         use std::str::FromStr;
         use lnd_rust::tls_certificate::TLSCertificate;
+        use grpc::ClientStub;
 
         let daemon = &self.daemon;
 
@@ -124,7 +123,7 @@ impl LnRunning {
         let socket_address = SocketAddr::new(localhost_ip, daemon.rpc_port);
         let conf = Default::default();
         let inner = grpc::Client::new_expl(&socket_address, localhost, tls, conf)?;
-        Ok(LightningClient::with_client(inner))
+        Ok(LightningClient::with_client(Arc::new(inner)))
     }
 
     fn obtain_info(&self) -> impl Future<Item=GetInfoResponse, Error=grpc::Error> {
@@ -159,7 +158,7 @@ impl LnRunning {
         use grpc::RequestOptions;
 
         let mut request = rpc::NewAddressRequest::new();
-        request.set_field_type(rpc::NewAddressRequest_AddressType::WITNESS_PUBKEY_HASH);
+        request.set_field_type(rpc::AddressType::WITNESS_PUBKEY_HASH);
         self.client()
             .new_address(RequestOptions::new(), request)
             .drop_metadata()

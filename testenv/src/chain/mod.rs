@@ -27,3 +27,7 @@ where
 
     fn rpc_client(&self) -> BitcoinCoreClient;
 }
+
+pub trait BitcoinTools {
+
+}
