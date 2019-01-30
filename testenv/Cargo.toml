@@ -7,8 +7,8 @@ edition = "2018"
 [dependencies]
 wire = { path = "../wire" }
 brontide = { path = "../brontide" }
-lnd-rust = "0.3"
-grpc = "0.5"
+lnd-rust = "0.4"
+grpc = "0.6"
 futures = "0.1"
 lazycell = "1.2"
 hex = "0.3"
