@@ -104,31 +104,6 @@ impl Btcd {
 }
 
 impl BitcoinInstance for BtcdRunning {
-    fn set_mining_address(self, address: String) -> Result<Self, io::Error> {
-        use std::mem;
-
-        let mut s = self;
-        let daemon = Btcd::new("fake")?;
-        mem::replace(&mut s.daemon, daemon)
-            .run_internal(Some(address))
-    }
-
-    fn generate(&mut self, count: usize) -> Result<(), io::Error> {
-        Command::new("btcctl")
-            .args(&["--simnet", "--rpcuser=devuser", "--rpcpass=devpass"])
-            .arg(format!("--rpccert={}", self.daemon.home.public_key_path().to_str().unwrap()))
-            .args(&["generate"])
-            .args(&[format!("{}", count)])
-            .output()
-            .and_then(|output|
-                if output.status.success() {
-                    Ok(())
-                } else {
-                    panic!()
-                }
-            )
-    }
-
     fn rpc_client(&self) -> BitcoinCoreClient {
         BitcoinCoreClient::new("tcp://localhost:18556", "devuser", "devpass")
     }
