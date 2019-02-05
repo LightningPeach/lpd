@@ -15,7 +15,7 @@ where
 
     fn new(name: &str) -> Result<Self, io::Error>;
     fn run(self) -> Result<Self::Instance, io::Error>;
-    fn params(&self) -> Vec<String>;
+    fn lnd_params(&self) -> Vec<String>;
 }
 
 pub trait BitcoinInstance

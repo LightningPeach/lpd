@@ -10,19 +10,19 @@ pub struct Btcd {
 }
 
 pub struct BtcdRunning {
-    daemon: Btcd,
+    config: Btcd,
     instance: Child,
 }
 
 impl AsMut<Btcd> for BtcdRunning {
     fn as_mut(&mut self) -> &mut Btcd {
-        &mut self.daemon
+        &mut self.config
     }
 }
 
 impl AsRef<Btcd> for BtcdRunning {
     fn as_ref(&self) -> &Btcd {
-        &self.daemon
+        &self.config
     }
 }
 
@@ -51,7 +51,7 @@ impl BitcoinConfig for Btcd {
         self.run_internal(None)
     }
 
-    fn params(&self) -> Vec<String> {
+    fn lnd_params(&self) -> Vec<String> {
         vec![
             "--bitcoin.active".to_owned(),
             "--bitcoin.simnet".to_owned(),
@@ -97,7 +97,7 @@ impl Btcd {
             .args(args)
             .spawn()
             .map(|instance| BtcdRunning {
-                daemon: self,
+                config: self,
                 instance: instance,
             })
     }
