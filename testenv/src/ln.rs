@@ -211,6 +211,11 @@ impl LnRunning {
 
 impl Drop for LnRunning {
     fn drop(&mut self) {
-        self.instance.kill().unwrap()
+        self.instance.kill()
+            .or_else(|e| match e.kind() {
+                io::ErrorKind::InvalidInput => Ok(()),
+                _ => Err(e),
+            })
+            .unwrap()
     }
 }
