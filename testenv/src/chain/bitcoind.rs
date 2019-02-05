@@ -64,7 +64,7 @@ impl BitcoinConfig for Bitcoind {
             "--bitcoind.rpcuser=devuser".to_owned(),
             "--bitcoind.rpcpass=devpass".to_owned(),
             "--bitcoind.zmqpubrawblock=tcp://127.0.0.1:18501".to_owned(),
-            "--bitcoind.zmqpubrawtx=tcp://127.0.0.1:18501".to_owned(),
+            "--bitcoind.zmqpubrawtx=tcp://127.0.0.1:18502".to_owned(),
             "--bitcoind.rpchost=localhost:18443".to_owned(),
             format!("--bitcoind.dir={}", self.home.path().to_str().unwrap())
         ]
@@ -88,7 +88,7 @@ impl Bitcoind {
             .args(&[
                 "-regtest", "-server", "-txindex", "-rpcuser=devuser", "-rpcpassword=devpass",
                 "-rpcport=18443",
-                "-zmqpubrawblock=tcp://127.0.0.1:18501", "-zmqpubrawtx=tcp://127.0.0.1:18501",
+                "-zmqpubrawblock=tcp://127.0.0.1:18501", "-zmqpubrawtx=tcp://127.0.0.1:18502",
             ])
             .args(args)
             .spawn()
