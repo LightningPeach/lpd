@@ -10,19 +10,19 @@ pub struct Bitcoind {
 }
 
 pub struct BitcoindRunning {
-    daemon: Bitcoind,
+    config: Bitcoind,
     instance: Child,
 }
 
 impl AsMut<Bitcoind> for BitcoindRunning {
     fn as_mut(&mut self) -> &mut Bitcoind {
-        &mut self.daemon
+        &mut self.config
     }
 }
 
 impl AsRef<Bitcoind> for BitcoindRunning {
     fn as_ref(&self) -> &Bitcoind {
-        &self.daemon
+        &self.config
     }
 }
 
@@ -51,7 +51,7 @@ impl BitcoinConfig for Bitcoind {
         self.run_internal()
     }
 
-    fn params(&self) -> Vec<String> {
+    fn lnd_params(&self) -> Vec<String> {
         vec![
             "--bitcoin.active".to_owned(),
             "--bitcoin.regtest".to_owned(),
@@ -88,7 +88,7 @@ impl Bitcoind {
             .args(args)
             .spawn()
             .map(|instance| BitcoindRunning {
-                daemon: self,
+                config: self,
                 instance: instance,
             })
     }

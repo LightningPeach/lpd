@@ -73,7 +73,7 @@ impl LnDaemon {
                 format!("--rpclisten=localhost:{}", self.rpc_port),
                 format!("--restlisten=localhost:{}", self.rest_port),
             ])
-            .args(b.params())
+            .args(b.lnd_params())
             .spawn()
             .map(|instance| {
                 LnRunning {
