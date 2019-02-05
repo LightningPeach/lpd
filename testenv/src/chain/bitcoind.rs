@@ -75,13 +75,6 @@ impl Bitcoind {
                 Err(e)
             }
         )?;
-        fs::create_dir(self.home.ext_path("logs")).or_else(|e|
-            if e.kind() == io::ErrorKind::AlreadyExists {
-                Ok(())
-            } else {
-                Err(e)
-            }
-        )?;
         let args = vec![
             format!("-datadir={}", self.home.ext_path("data").to_str().unwrap()),
         ];
@@ -102,27 +95,6 @@ impl Bitcoind {
 }
 
 impl BitcoinInstance for BitcoindRunning {
-    fn set_mining_address(self, _address: String) -> Result<Self, io::Error> {
-        unimplemented!()
-    }
-
-    fn generate(&mut self, count: usize) -> Result<(), io::Error> {
-        Command::new("bitcoin-cli")
-            .args(&["-regtest", "-rpcuser=devuser", "-rpcpassword=devpass"])
-            .arg(format!("-datadir={}", self.daemon.home.ext_path("data").to_str().unwrap()))
-            .arg(format!("-rpccert={}", self.daemon.home.public_key_path().to_str().unwrap()))
-            .args(&["generate"])
-            .args(&[format!("{}", count)])
-            .output()
-            .and_then(|output|
-                if output.status.success() {
-                    Ok(())
-                } else {
-                    panic!()
-                }
-            )
-    }
-
     fn rpc_client(&self) -> BitcoinCoreClient {
         BitcoinCoreClient::new("tcp://localhost:18443", "devuser", "devpass")
     }

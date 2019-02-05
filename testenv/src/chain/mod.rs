@@ -22,12 +22,5 @@ pub trait BitcoinInstance
 where
     Self: Sized,
 {
-    fn set_mining_address(self, address: String) -> Result<Self, io::Error>;
-    fn generate(&mut self, count: usize) -> Result<(), io::Error>;
-
     fn rpc_client(&self) -> BitcoinCoreClient;
-}
-
-pub trait BitcoinTools {
-
 }
