@@ -7,6 +7,8 @@ use bitcoin_rpc_client::BitcoinCoreClient;
 
 pub struct Bitcoind {
     home: Home,
+    // Listen for connections on <port> (default: 8333 or testnet: 18333)
+    port: u16,
 }
 
 pub struct BitcoindRunning {
@@ -49,6 +51,7 @@ impl BitcoinConfig for Bitcoind {
                 } else {
                     Err(e)
                 })?,
+            port: 18333,
         })
     }
 
@@ -72,6 +75,10 @@ impl BitcoinConfig for Bitcoind {
 }
 
 impl Bitcoind {
+    pub fn set_peer_port(&mut self, port: u16) {
+        self.port = port;
+    }
+
     fn run_internal(self) -> Result<BitcoindRunning, io::Error> {
         fs::create_dir(self.home.ext_path("data")).or_else(|e|
             if e.kind() == io::ErrorKind::AlreadyExists {
@@ -82,6 +89,7 @@ impl Bitcoind {
         )?;
         let args = vec![
             format!("-datadir={}", self.home.ext_path("data").to_str().unwrap()),
+            format!("-port={}", self.port),
         ];
 
         Command::new("bitcoind")
