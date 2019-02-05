@@ -28,7 +28,12 @@ impl AsRef<Bitcoind> for BitcoindRunning {
 
 impl Drop for BitcoindRunning {
     fn drop(&mut self) {
-        self.instance.kill().unwrap()
+        self.instance.kill()
+            .or_else(|e| match e.kind() {
+                io::ErrorKind::InvalidInput => Ok(()),
+                _ => Err(e),
+            })
+            .unwrap()
     }
 }
 
