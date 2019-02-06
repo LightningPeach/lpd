@@ -2,8 +2,12 @@
 name = "client"
 version = "0.0.0"
 authors = ["LightningPeach <contact@lightningpeach.com>"]
+edition = "2018"
 
 [[bin]]
+name = "client"
+
+[lib]
 name = "client"
 
 [dependencies]

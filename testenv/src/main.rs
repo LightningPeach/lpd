@@ -10,6 +10,9 @@ pub use self::chain::*;
 mod ln;
 pub use self::ln::{LnDaemon, LnRunning};
 
+mod lp;
+pub use self::lp::{LpServer, LpRunning};
+
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn cleanup(process: &str) {
     use std::process::Command;

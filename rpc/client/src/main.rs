@@ -1,12 +1,3 @@
-extern crate grpc;
-extern crate tls_api;
-extern crate tls_api_native_tls;
-extern crate tls_api_stub;
-extern crate httpbis;
-extern crate futures;
-
-extern crate interface;
-
 use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;
 
