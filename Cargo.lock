@@ -2434,6 +2434,7 @@ dependencies = [
  "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "interface 0.0.0",
  "lazycell 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lnd-rust 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "wire 0.1.0",

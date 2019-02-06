@@ -4,6 +4,7 @@ use super::chain::BitcoinConfig;
 use client::LightningPeach;
 use std::{process::Child, io};
 use lazycell::LazyCell;
+use futures::Future;
 
 pub struct LpServer {
     peer_port: u16,
@@ -71,6 +72,25 @@ impl LpRunning {
             self.client.fill(LightningPeach::local(self.config.rpc_port).unwrap()).ok().unwrap();
             self.client()
         })
+    }
+
+    pub fn connect_peer(&self, host: String, pubkey: String) -> impl Future<Item = ()> {
+        use interface::{
+            routing_grpc::RoutingService,
+            routing::{ConnectPeerRequest, LightningAddress}
+        };
+
+        let mut address = LightningAddress::new();
+        address.set_host(host);
+        address.set_pubkey(pubkey);
+
+        let mut request = ConnectPeerRequest::new();
+        request.set_address(address);
+
+        self.client().routing()
+            .connect_peer(Default::default(), request)
+            .drop_metadata()
+            .map(|_| ())
     }
 }
 
