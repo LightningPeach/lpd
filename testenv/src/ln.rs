@@ -26,7 +26,7 @@ pub struct LnDaemon {
 }
 
 pub struct LnRunning {
-    daemon: LnDaemon,
+    config: LnDaemon,
     instance: Child,
     client: LazyCell<LightningClient>,
     info: LazyCell<GetInfoResponse>,
@@ -77,7 +77,7 @@ impl LnDaemon {
             .spawn()
             .map(|instance| {
                 LnRunning {
-                    daemon: self,
+                    config: self,
                     instance: instance,
                     client: LazyCell::new(),
                     info: LazyCell::new(),
@@ -112,7 +112,7 @@ impl LnRunning {
         use lnd_rust::tls_certificate::TLSCertificate;
         use grpc::ClientStub;
 
-        let daemon = &self.daemon;
+        let daemon = &self.config;
 
         let certificate = TLSCertificate::from_path(daemon.home.public_key_path())
             .map_err(grpc::Error::Io)?;
@@ -167,7 +167,7 @@ impl LnRunning {
 
     pub fn address(&self) -> LightningAddress {
         let mut address = LightningAddress::new();
-        address.set_host(format!("127.0.0.1:{}", self.daemon.peer_port));
+        address.set_host(format!("127.0.0.1:{}", self.config.peer_port));
         address.set_pubkey(self.info().get_identity_pubkey().to_owned());
         address
     }
