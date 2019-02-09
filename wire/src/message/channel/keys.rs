@@ -1,15 +1,16 @@
 use secp256k1::{SecretKey, PublicKey};
 use serde_derive::{Serialize, Deserialize};
 use common_types::ac;
+use super::super::types::RawPublicKey;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ChannelKeys {
-    funding: PublicKey,
-    revocation: PublicKey,
-    payment: PublicKey,
-    delayed_payment: PublicKey,
-    htlc: PublicKey,
-    first_per_commitment: PublicKey,
+    funding: RawPublicKey,
+    revocation: RawPublicKey,
+    payment: RawPublicKey,
+    delayed_payment: RawPublicKey,
+    htlc: RawPublicKey,
+    first_per_commitment: RawPublicKey,
 }
 
 impl ChannelKeys {
@@ -17,37 +18,37 @@ impl ChannelKeys {
         use secp256k1::Secp256k1;
         let context = Secp256k1::signing_only();
         ChannelKeys {
-            funding: ac::SecretKey::paired(&private.funding, &context),
-            revocation: ac::SecretKey::paired(&private.revocation, &context),
-            payment: ac::SecretKey::paired(&private.payment, &context),
-            delayed_payment: ac::SecretKey::paired(&private.delayed_payment, &context),
-            htlc: ac::SecretKey::paired(&private.htlc, &context),
-            first_per_commitment: ac::SecretKey::paired(&private.first_per_commitment, &context),
+            funding: ac::SecretKey::paired(&private.funding, &context).into(),
+            revocation: ac::SecretKey::paired(&private.revocation, &context).into(),
+            payment: ac::SecretKey::paired(&private.payment, &context).into(),
+            delayed_payment: ac::SecretKey::paired(&private.delayed_payment, &context).into(),
+            htlc: ac::SecretKey::paired(&private.htlc, &context).into(),
+            first_per_commitment: ac::SecretKey::paired(&private.first_per_commitment, &context).into(),
         }
     }
 
     pub fn funding(&self) -> &PublicKey {
-        &self.funding
+        &self.funding.as_ref()
     }
 
     pub fn revocation(&self) -> &PublicKey {
-        &self.revocation
+        &self.revocation.as_ref()
     }
 
     pub fn payment(&self) -> &PublicKey {
-        &self.payment
+        &self.payment.as_ref()
     }
 
     pub fn delayed_payment(&self) -> &PublicKey {
-        &self.delayed_payment
+        &self.delayed_payment.as_ref()
     }
 
     pub fn htlc(&self) -> &PublicKey {
-        &self.htlc
+        &self.htlc.as_ref()
     }
 
     pub fn first_per_commitment(&self) -> &PublicKey {
-        &self.first_per_commitment
+        &self.first_per_commitment.as_ref()
     }
 }
 
@@ -107,5 +108,4 @@ mod rand_m {
             }
         }
     }
-
 }

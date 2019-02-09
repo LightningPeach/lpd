@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct GossipTimestampRange {
     chain_hash: Hash256,
     first_timestamp: u32,

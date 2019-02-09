@@ -130,12 +130,13 @@ impl Node {
         use common_types::{secp256k1_m::{Data, Signed}, ac};
         use secp256k1::Secp256k1;
         use binformat::SerdeRawVec;
+        use wire::types::RawSignature;
 
         let context = Secp256k1::signing_only();
         let secret_key = From::from(self.secret.clone());
         let data = Data(SerdeRawVec(message));
-        let signed: Signed<_> = ac::Signed::sign(data, &context, &secret_key);
-        signed.signature
+        let signed: Signed<_, RawSignature> = ac::Signed::sign(data, &context, &secret_key);
+        signed.signature.0
     }
 
     // TODO: add missing fields:

@@ -155,7 +155,6 @@ mod test {
 
     use rand::thread_rng;
     use rand::Rng;
-    use rand::distributions::Standard;
 
     #[test]
     fn serde() {
@@ -168,7 +167,7 @@ mod test {
         BinarySD::serialize(&mut data, &feature_vector).unwrap();
 
         println!("{:?}", data);
-        data.append(&mut thread_rng().sample_iter(&Standard).take(10).collect());
+        data.append(&mut thread_rng().gen_iter().take(10).collect());
         println!("{:?} added additional bytes", data);
         let new_feature_vector = BinarySD::deserialize(&data[..]).unwrap();
 

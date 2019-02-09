@@ -1,8 +1,8 @@
 use super::RawFeatureVector;
 use super::NodeAlias;
 use super::Color;
+use super::super::types::{RawSignature, RawPublicKey};
 
-use secp256k1::PublicKey;
 use common_types::secp256k1_m::{Signed, Data};
 
 use binformat::SerdeVec;
@@ -15,13 +15,13 @@ use std::net::Ipv6Addr;
 
 use serde_derive::{Serialize, Deserialize};
 
-pub type AnnouncementNode = Signed<Data<AnnouncementNodeData>>;
+pub type AnnouncementNode = Signed<Data<AnnouncementNodeData>, RawSignature>;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct AnnouncementNodeData {
     features: RawFeatureVector,
     pub timestamp: u32,
-    pub node_id: PublicKey,
+    pub node_id: RawPublicKey,
     pub color: Color,
     pub alias: NodeAlias,
     pub address: SerdeVec<Address>,

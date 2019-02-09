@@ -6,7 +6,7 @@ use super::SatoshiPerKiloWeight;
 use super::CsvDelay;
 use super::ChannelFlags;
 use super::ChannelKeys;
-use secp256k1::PublicKey;
+use super::super::types::RawPublicKey;
 
 #[cfg(test)]
 use super::ChannelPrivateKeys;
@@ -30,12 +30,12 @@ pub struct OpenChannel {
     pub flags: ChannelFlags,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct OpenChannelShutdownScript {
     shutdown_script_pubkey: Vec<()>,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AcceptChannel {
     pub temporary_channel_id: ChannelId,
     pub dust_limit: Satoshi,
@@ -64,13 +64,13 @@ impl AcceptChannel {
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ReestablishChannel {
     channel_id: ChannelId,
     next_local_commitment_number: u64,
     next_remote_revocation_number: u64,
     last_remote_commit_secret: [u8; 32],
-    local_unrevoked_commit_point: PublicKey,
+    local_unrevoked_commit_point: RawPublicKey,
 }
 
 #[cfg(test)]
@@ -88,7 +88,7 @@ mod test {
         let private: ChannelPrivateKeys = rng.gen();
         let mut vec = vec![];
         let msg = OpenChannel {
-            chain_hash: rng.gen(),
+            chain_hash: Hash256::BITCOIN_CHAIN_HASH,//rng.gen(),
             temporary_channel_id: rng.gen(),
             funding: Satoshi::default(),
             push: MilliSatoshi::default(),

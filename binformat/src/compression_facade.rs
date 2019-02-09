@@ -10,7 +10,7 @@ pub trait PackSized: Sized {
 }
 
 /// write size in byte rather then length of the vector
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SerdeVec<T>(pub Vec<T>) where T: PackSized;
 
 impl<T> Serialize for SerdeVec<T> where T: PackSized + Serialize {
@@ -103,7 +103,7 @@ impl<T> Serialize for SerdeRawVec<T> where T: Serialize {
 /// the underlying data is uncompressed and deserialized into rust type,
 /// but serialization / deserialization will read / write zlib compressed data
 /// this is exactly desired by lnd specification
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct UncompressedData<T>(pub SerdeVec<T>) where T: PackSized;
 
 impl<T> Serialize for UncompressedData<T> where T: PackSized + Serialize {

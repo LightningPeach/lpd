@@ -40,7 +40,7 @@ bitflags! {
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Default, Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
 pub struct ChannelId {
     data: [u8; 32],
 }
@@ -144,24 +144,20 @@ mod rand_m {
     use super::ChannelId;
     use super::ShortChannelId;
 
-    use rand::distributions::Distribution;
-    use rand::distributions::Standard;
-    use rand::Rng;
+    use rand::{Rng, Rand};
 
-    impl Distribution<ChannelId> for Standard {
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ChannelId {
-            let mut rng = rng;
-            let rnd_bytes: Vec<u8> = self.sample_iter(&mut rng).take(32).collect();
+    impl Rand for ChannelId {
+        fn rand<R: Rng>(rng: &mut R) -> Self {
+            let rnd_bytes: Vec<u8> = rng.gen_iter().take(32).collect();
             let mut this = ChannelId { data: [0u8; 32], };
             this.data.copy_from_slice(rnd_bytes.as_slice());
             this
         }
     }
 
-    impl Distribution<ShortChannelId> for Standard {
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ShortChannelId {
-            let mut rng = rng;
-            From::<u64>::from(self.sample(&mut rng))
+    impl Rand for ShortChannelId {
+        fn rand<R: Rng>(rng: &mut R) -> Self {
+            From::<u64>::from(rng.gen())
         }
     }
 }

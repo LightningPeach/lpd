@@ -1,13 +1,13 @@
 use super::ChannelId;
 use super::ShortChannelId;
-use secp256k1::Signature;
+use super::types::RawSignature;
 
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AnnounceSignatures {
     channel_id: ChannelId,
     short_channel_id: ShortChannelId,
-    node_signature: Signature,
-    bitcoin_signature: Signature,
+    node_signature: RawSignature,
+    bitcoin_signature: RawSignature,
 }

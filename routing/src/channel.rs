@@ -147,10 +147,10 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
 
             let r = || {
                 announcement_channel
-                    .verify_key_inside(&context, |data| &data.node_id.0)?
-                    .verify_key_inside(&context, |data| &data.node_id.1)?
-                    .verify_key_inside(&context, |data| &data.bitcoin_key.0)?
-                    .verify_key_inside(&context, |data| &data.bitcoin_key.1)
+                    .verify_key_inside(&context, |data| &data.node_id.0.as_ref())?
+                    .verify_key_inside(&context, |data| &data.node_id.1.as_ref())?
+                    .verify_key_inside(&context, |data| &data.bitcoin_key.0.as_ref())?
+                    .verify_key_inside(&context, |data| &data.bitcoin_key.1.as_ref())
             };
             let announcement_channel = match r() {
                 Err(_) => {
@@ -165,7 +165,7 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
             // check if nodes is not blacklisted
             for (_, peer) in (blacklist_mark, &peer).join() {
                 let (ref left, ref right) = announcement_channel.node_id;
-                if left.eq(&peer.id) || right.eq(&peer.id) {
+                if left.as_ref().eq(&peer.id) || right.as_ref().eq(&peer.id) {
                     // fail the connection
                     return;
                 }
@@ -176,9 +176,14 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
                 short_channel_id: announcement_channel.id().clone(),
             };
 
+            let n_id_left = announcement_channel.node_id.0.as_ref().clone();
+            let n_id_right = announcement_channel.node_id.1.as_ref().clone();
+            let b_id_left = announcement_channel.bitcoin_key.0.as_ref().clone();
+            let b_id_right = announcement_channel.bitcoin_key.1.as_ref().clone();
+
             let this_parties = ChannelParties {
-                lightning: announcement_channel.node_id.clone(),
-                origin: announcement_channel.bitcoin_key.clone(),
+                lightning: (n_id_left, n_id_right),
+                origin: (b_id_left, b_id_right),
             };
 
             // check if nodes should be blacklisted

@@ -1,13 +1,14 @@
 use super::Hash256;
 use super::ShortChannelId;
 use super::MilliSatoshi;
+use super::super::types::RawSignature;
 
 use common_types::secp256k1_m::{Signed, Data};
 
 use bitflags::bitflags;
 use serde_derive::{Serialize, Deserialize};
 
-pub type UpdateChannel = Signed<Data<UpdateChannelData>>;
+pub type UpdateChannel = Signed<Data<UpdateChannelData>, RawSignature>;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]
@@ -17,7 +18,7 @@ bitflags! {
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateChannelData {
     hash: Hash256,
     short_channel_id: ShortChannelId,

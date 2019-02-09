@@ -3,7 +3,7 @@ use super::channel::ChannelId;
 
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct Init {
     global_features: RawFeatureVector,
     local_features: RawFeatureVector,
@@ -18,7 +18,7 @@ impl Init {
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct Error {
     channel_id: ChannelId,
     data: Vec<u8>,

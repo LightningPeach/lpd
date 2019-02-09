@@ -1,20 +1,21 @@
 use super::RawFeatureVector;
 use super::Hash256;
 use super::ShortChannelId;
-use secp256k1::PublicKey;
+use super::super::types::{RawSignature, RawPublicKey};
 use common_types::secp256k1_m::{Signed, Data};
 
 use serde_derive::{Serialize, Deserialize};
 
-pub type AnnouncementChannel = Signed<Signed<Signed<Signed<Data<AnnouncementChannelData>>>>>;
+pub type SignedRaw<T> = Signed<T, RawSignature>;
+pub type AnnouncementChannel = SignedRaw<SignedRaw<SignedRaw<SignedRaw<Data<AnnouncementChannelData>>>>>;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AnnouncementChannelData {
     features: RawFeatureVector,
     chain_hash: Hash256,
     short_channel_id: ShortChannelId,
-    pub node_id: (PublicKey, PublicKey),
-    pub bitcoin_key: (PublicKey, PublicKey),
+    pub node_id: (RawPublicKey, RawPublicKey),
+    pub bitcoin_key: (RawPublicKey, RawPublicKey),
 }
 
 impl AnnouncementChannelData {
@@ -31,11 +32,13 @@ impl AnnouncementChannelData {
 #[allow(unused_imports)]
 mod test {
     use super::*;
-    use super::super::DataToSign;
+    use common_types::ac::{Signed, Data};
     use binformat::BinarySD;
 
     #[test]
     fn announcement_channel() {
+        use secp256k1::Secp256k1;
+
         let v = vec! [
             169u8, 177, 196, 25, 57, 80, 208, 176, 113, 192, 129, 194, 129, 60, 75, 12,
             21, 77, 188, 167, 162, 88, 249, 147, 231, 18, 208, 195, 174, 189, 240, 95,
@@ -70,13 +73,15 @@ mod test {
             2, 44, 199, 59, 73, 153, 4, 138, 110, 45, 6, 200, 74, 184, 2, 205, 187, 124, 135, 83, 223, 253, 42, 27, 173, 32, 91, 76, 212, 219, 161, 117, 40,
         ];
 
+        let context = Secp256k1::verification_only();
+
         let t: AnnouncementChannel = BinarySD::deserialize(&v[..]).unwrap();
         let t = t
-            .verify_owned(|data| &data.node_id.0).ok().unwrap()
-            .verify_owned(|data| &data.node_id.1).ok().unwrap()
-            .verify_owned(|data| &data.bitcoin_key.0).ok().unwrap()
-            .verify_owned(|data| &data.bitcoin_key.1).ok().unwrap();
+            .verify_key_inside(&context, |data| &data.node_id.0.as_ref()).ok().unwrap()
+            .verify_key_inside(&context, |data| &data.node_id.1.as_ref()).ok().unwrap()
+            .verify_key_inside(&context, |data| &data.bitcoin_key.0.as_ref()).ok().unwrap()
+            .verify_key_inside(&context, |data| &data.bitcoin_key.1.as_ref()).ok().unwrap();
 
-        println!("{:?}", t.as_ref_data());
+        println!("{:?}", t.as_ref_content());
     }
 }

@@ -65,7 +65,7 @@ impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
             // TODO: check features
 
             let context = Secp256k1::verification_only();
-            let announcement_node = match announcement_node.verify_key_inside(&context, |s| &s.node_id) {
+            let announcement_node = match announcement_node.verify_key_inside(&context, |s| &s.node_id.as_ref()) {
                 Ok(s) => s.0,
                 // TODO: fail the connection
                 Err(SignError::IncorrectSignature) => return,
@@ -74,7 +74,7 @@ impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
 
             let node = Node {
                 timestamp: announcement_node.timestamp,
-                node_id: announcement_node.node_id,
+                node_id: announcement_node.node_id.0,
                 color: announcement_node.color,
                 alias: announcement_node.alias,
                 address: announcement_node.address.0,

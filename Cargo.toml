@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "../lpd", "bincode", "wire", "brontide", "shachain", "chainntfs", "channel", "wallet",
+    "../lpd", "bincode", "wire", "brontide", "shachain", "hdkeychain", "chainntfs", "channel", "wallet",
     "routing", "bitcoin-types", "common-types",
     "testenv", "rpc/interface", "rpc/implementation", "rpc/server", "rpc/client", "connection", "state", "binformat",
     "processor"
@@ -26,11 +26,11 @@ name = "wasm-runner"
 [[example]]
 name = "run-lnd"
 
-
 [dependencies]
 wire = { path = "wire", features = ["testing"] }
 brontide = { path = "brontide" }
 shachain = { path = "shachain" }
+hdkeychain = { path = "hdkeychain" }
 chainntfs = { path = "chainntfs" }
 channel = { path = "channel" }
 wallet = { path = "wallet" }
@@ -45,6 +45,8 @@ futures = "0.1.25"
 
 bitcoin = "0.13.2"
 rust-crypto = "0.2.36"
+
+serde = "1.0"
 
 [dev-dependencies]
 serde_derive = "1.0.70"
