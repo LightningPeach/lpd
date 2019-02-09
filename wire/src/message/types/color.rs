@@ -2,9 +2,27 @@ use super::common::Module;
 
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Clone, Default, Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Clone, Default, Eq, PartialEq, Debug)]
 pub struct Color {
-    data: [u8; 3],
+    data: [u8; 4],
+}
+
+impl serde::Serialize for Color {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use binformat::SerdeRawVec;
+        (self.data[0], self.data[1], self.data[2]).serialize(s)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Color {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Color, D::Error> {
+        use serde::de::Error;
+
+        let v: (u8, u8, u8) = serde::Deserialize::deserialize(d)?;
+        Ok(Color {
+            data: [v.0, v.1, v.2, 0],
+        })
+    }
 }
 
 // basis constructors
@@ -12,19 +30,24 @@ pub trait ColorBasis {
     fn r() -> Self;
     fn g() -> Self;
     fn b() -> Self;
+    fn a() -> Self;
 }
 
 impl ColorBasis for Color {
     fn r() -> Self {
-        Color { data: [0xff, 0x00, 0x00], }
+        Color { data: [0xff, 0x00, 0x00, 0x00], }
     }
 
     fn g() -> Self {
-        Color { data: [0x00, 0xff, 0x00], }
+        Color { data: [0x00, 0xff, 0x00, 0x00], }
     }
 
     fn b() -> Self {
-        Color { data: [0x00, 0x00, 0xff], }
+        Color { data: [0x00, 0x00, 0xff, 0x00], }
+    }
+
+    fn a() -> Self {
+        Color { data: [0x00, 0x00, 0x00, 0xff], }
     }
 }
 
@@ -72,7 +95,7 @@ mod module {
                 if temp > 255 { 255u8 } else { temp as _ }
             };
 
-            Color::from_iter((0..3).map(|i| add_check(self.data[i], rhs.data[i])))
+            Color::from_iter((0..4).map(|i| add_check(self.data[i], rhs.data[i])))
         }
     }
 
@@ -85,7 +108,7 @@ mod module {
                 if temp < 0 { 0u8 } else { temp as _ }
             };
 
-            Color::from_iter((0..3).map(|i| sub_check(self.data[i], rhs.data[i])))
+            Color::from_iter((0..4).map(|i| sub_check(self.data[i], rhs.data[i])))
         }
     }
 
@@ -98,13 +121,13 @@ mod module {
                 if temp < 0.0 { 0u8 } else { if temp > 255.0 { 255u8 } else { temp as _ } }
             };
 
-            Color::from_iter((0..3).map(|i| mul_check(self.data[i], rhs)))
+            Color::from_iter((0..4).map(|i| mul_check(self.data[i], rhs)))
         }
     }
 
     impl Module<f32> for Color {
         fn dot(self, rhs: Self) -> f32 {
-            (0..3).fold(0.0, |acc, i|
+            (0..4).fold(0.0, |acc, i|
                 acc + ((self.data[i] * rhs.data[i]) as f32) / (255.0 * 255.0)
             )
         }

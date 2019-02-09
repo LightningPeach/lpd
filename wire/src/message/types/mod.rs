@@ -26,3 +26,4 @@ pub use self::units::CsvDelay;
 pub use self::units::SatoshiPerVByte;
 pub use self::onion_blob::OnionBlob;
 pub use self::color::Color;
+pub use self::crypto_types::{RawSignature, RawPublicKey};

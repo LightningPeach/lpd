@@ -5,19 +5,19 @@ use binformat::SerdeVec;
 
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ShortChannelIdEncoding {
     StoredPlain(SerdeVec<ShortChannelId>),
     StoredZlib(UncompressedData<ShortChannelId>),
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct QueryShortChannelIds {
     chain_hash: Hash256,
     ids: ShortChannelIdEncoding,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ReplyShortChannelIdsEnd {
     chain_hash: Hash256,
     complete: bool,

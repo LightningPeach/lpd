@@ -3,7 +3,7 @@ use super::ShortChannelIdEncoding;
 
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct QueryChannelRange {
     chain_hash: Hash256,
     first_block_height: u32,
@@ -20,7 +20,7 @@ impl QueryChannelRange {
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ReplyChannelRange {
     chain_hash: Hash256,
     first_block_height: u32,

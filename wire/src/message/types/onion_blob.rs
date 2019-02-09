@@ -1,6 +1,7 @@
 
 pub const ONION_PACKET_SIZE: usize = 1366;
 
+#[derive(Clone)]
 pub struct OnionBlob {
     data: [u8; ONION_PACKET_SIZE],
 }

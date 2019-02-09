@@ -10,7 +10,7 @@ use std::ops::Range;
 
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct NodePort(pub u16);
 
 impl NodePort {

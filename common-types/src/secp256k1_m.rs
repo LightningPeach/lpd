@@ -84,17 +84,19 @@ impl ac::SignError for Error {
 }
 
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct Signed<T>
+pub struct Signed<T, S>
 where
     T: ac::Data<Message>,
+    S: From<Signature> + AsRef<Signature>,
 {
-    pub signature: Signature,
+    pub signature: S,
     data: T,
 }
 
-impl<T> ac::Data<Message> for Signed<T>
+impl<T, S> ac::Data<Message> for Signed<T, S>
 where
     T: ac::Data<Message>,
+    S: From<Signature> + AsRef<Signature>,
 {
     type ContentToHash = T::ContentToHash;
 
@@ -107,9 +109,10 @@ where
     }
 }
 
-impl<T> ac::Signed<Message> for Signed<T>
+impl<T, S> ac::Signed<Message> for Signed<T, S>
 where
     T: ac::Data<Message>,
+    S: From<Signature> + AsRef<Signature>,
 {
     type Error = Error;
 
@@ -121,14 +124,14 @@ where
         let message = data.double_hash();
         let signature = context.sign(&message, secret_key);
         Signed {
-            signature: signature,
+            signature: signature.into(),
             data: data,
         }
     }
 
     fn check(&self, context: &<Self::SecretKey as ac::SecretKey<Message>>::VerificationContext, public_key: &<Self::SecretKey as ac::SecretKey<Message>>::PublicKey) -> Result<(), Self::Error> {
         let message = self.data.double_hash();
-        context.verify(&message, &self.signature, public_key)
+        context.verify(&message, &self.signature.as_ref(), public_key)
     }
 
     fn verify(self, context: &<Self::SecretKey as ac::SecretKey<Message>>::VerificationContext, public_key: &<Self::SecretKey as ac::SecretKey<Message>>::PublicKey) -> Result<Self::Data, Self::Error> {

@@ -11,11 +11,13 @@ pub const HTLC_SUCCESS_WEIGHT: i64 = 703;
 pub const BASE_COMMITMENT_WEIGHT: i64 = 724;
 pub const PER_HTLC_COMMITMENT_WEIGHT: i64 = 172;
 
+#[derive(Clone, Debug)]
 pub enum HTLCDirection {
     Accepted,
     Offered,
 }
 
+#[derive(Debug, Clone)]
 pub struct HTLC {
     pub direction: HTLCDirection,
     pub amount_msat: i64,
@@ -23,6 +25,7 @@ pub struct HTLC {
     pub payment_hash: [u8; 32]
 }
 
+#[derive(Clone, Debug)]
 pub struct CommitTx {
     pub funding_amount: i64,
     pub local_funding_pubkey: PublicKey,
