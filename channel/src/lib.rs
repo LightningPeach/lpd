@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 pub mod bip69;
 pub mod tools;
 pub mod commit;
