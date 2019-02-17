@@ -1,5 +1,5 @@
 use secp256k1::{SecretKey, Secp256k1, PublicKey};
-use tools::sha256;
+use super::tools::sha256;
 
 // pubkey = basepoint + SHA256(per_commitment_point || basepoint) * G
 pub fn derive_pubkey(base_point: &PublicKey, per_commitment_point: &PublicKey) -> PublicKey {
@@ -7,21 +7,21 @@ pub fn derive_pubkey(base_point: &PublicKey, per_commitment_point: &PublicKey) -
     let h = sha256(&joined);
     let ctx = Secp256k1::new();
     // TODO(mkl): maybe return error instead of unwrap
-    let sk = SecretKey::from_slice(&ctx, &h).unwrap();
-    let pk = PublicKey::from_secret_key(&ctx, &sk).unwrap();
-    let rez = pk.combine(&ctx, &base_point).unwrap();
+    let sk = SecretKey::from_slice(&h).unwrap();
+    let pk = PublicKey::from_secret_key(&ctx, &sk);
+    let rez = pk.combine(&base_point).unwrap();
     return rez;
 }
 
 // privkey = basepoint_secret + SHA256(per_commitment_point || basepoint)
 pub fn derive_privkey(base_point_secret: &SecretKey, per_commitment_point: &PublicKey) -> SecretKey {
     let ctx = Secp256k1::new();
-    let base_point = PublicKey::from_secret_key(&ctx, base_point_secret).unwrap();
+    let base_point = PublicKey::from_secret_key(&ctx, base_point_secret);
     let joined = [&per_commitment_point.serialize()[..], &base_point.serialize()[..]].concat();
     let h = sha256(&joined);
     // TODO(mkl): maybe return error instead of unwrap
-    let mut sk = SecretKey::from_slice(&ctx, &h).unwrap();
-    sk.add_assign(&ctx, base_point_secret).unwrap();
+    let mut sk = base_point_secret.clone();
+    sk.add_assign(&h[..]).unwrap();
     return sk
 }
 
@@ -35,16 +35,12 @@ pub fn derive_revocation_pubkey(revocation_base_point: &PublicKey, per_commitmen
     let h1 = sha256(&joined1);
     let h2 = sha256(&joined2);
 
-    // TODO(mkl): maybe return error instead of unwrap
-    let sk1 = SecretKey::from_slice(&ctx, &h1).unwrap();
-    let sk2 = SecretKey::from_slice(&ctx, &h2).unwrap();
-
     let mut pk1 = revocation_base_point.clone();
-    pk1.mul_assign(&ctx, &sk1).unwrap();
+    pk1.mul_assign(&ctx, &h1[..]).unwrap();
     let mut pk2 = per_commitment_point.clone();
-    pk2.mul_assign(&ctx, &sk2).unwrap();
+    pk2.mul_assign(&ctx, &h2[..]).unwrap();
 
-    let rez = pk1.combine(&ctx, &pk2).unwrap();
+    let rez = pk1.combine(&pk2).unwrap();
     return rez;
 }
 
@@ -56,12 +52,12 @@ pub fn derive_revocation_privkey(revocation_base_point_secret: &SecretKey, per_c
     let revocation_base_point = PublicKey::from_secret_key(
         &ctx,
         revocation_base_point_secret
-    ).unwrap();
+    );
 
     let per_commitment_point = PublicKey::from_secret_key(
         &ctx,
         per_commitment_point_secret,
-    ).unwrap();
+    );
 
     let joined1 = [&revocation_base_point.serialize()[..], &per_commitment_point.serialize()[..]].concat();
     let joined2 = [&per_commitment_point.serialize()[..], &revocation_base_point.serialize()[..]].concat();
@@ -69,21 +65,21 @@ pub fn derive_revocation_privkey(revocation_base_point_secret: &SecretKey, per_c
     let h2 = sha256(&joined2);
 
     // TODO(mkl): maybe return error instead of unwrap
-    let mut sk1 = SecretKey::from_slice(&ctx, &h1).unwrap();
-    let mut sk2 = SecretKey::from_slice(&ctx, &h2).unwrap();
+    let mut sk1 = revocation_base_point_secret.clone();
+    let mut sk2 = per_commitment_point_secret.clone();
 
-    sk1.mul_assign(&ctx, revocation_base_point_secret).unwrap();
-    sk2.mul_assign(&ctx, per_commitment_point_secret).unwrap();
+    sk1.mul_assign(&h1[..]).unwrap();
+    sk2.mul_assign(&h2[..]).unwrap();
 
-    sk1.add_assign(&ctx, &sk2).unwrap();
+    sk1.add_assign(&sk2[..]).unwrap();
     return sk1;
 }
 
 
 #[cfg(test)]
 mod tests {
-    use tools::{s2pubkey, s2privkey};
-    use derivation::{derive_pubkey, derive_privkey, derive_revocation_pubkey, derive_revocation_privkey};
+    use super::super::tools::{s2pubkey, s2privkey};
+    use super::{derive_pubkey, derive_privkey, derive_revocation_pubkey, derive_revocation_privkey};
 
     #[test]
     fn test_derive_pubkey() {
