@@ -3,8 +3,8 @@ use super::crypto::{HmacData, KeyType};
 use super::packet::{OnionPacket, ValidOnionPacket};
 
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
-use wire::PublicKey as WirePublicKey;
 use common_types::Hash256;
+use wire::RawPublicKey;
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -52,11 +52,11 @@ impl OnionRoute {
 
     /// Generate the packet
     pub fn packet(self) -> Result<ValidOnionPacket, EcdsaError> {
-        use secp256k1::Secp256k1;
-        use wire::BinarySD;
+        use secp256k1::{Secp256k1, All};
+        use binformat::BinarySD;
 
         fn generate_shared_secrets<'a, I>(
-            context: &Secp256k1,
+            context: &Secp256k1<All>,
             payment_path: I,
             session_key: &SecretKey,
         ) -> Result<Vec<Hash256>, EcdsaError>
@@ -69,27 +69,27 @@ impl OnionRoute {
             // `hash_to_sk` obviously casts a sha256 hash into a secret key
             let mul_pk = |x: &PublicKey, sk: &SecretKey| {
                 let mut temp = x.clone();
-                temp.mul_assign(context, sk).map(|()| temp)
+                temp.mul_assign(context, &sk[..]).map(|()| temp)
             };
             let mul_sk = |x: &SecretKey, sk: &SecretKey| {
                 let mut temp: SecretKey = x.clone();
-                temp.mul_assign(context, sk).map(|()| temp)
+                temp.mul_assign(&sk[..]).map(|()| temp)
             };
             let hash = |x: &[u8]| -> Hash256 { Hash256::from(x) };
             let hash_s = |xs: &[&[u8]]| -> Hash256 { Hash256::from(xs) };
-            let hash_to_sk = |hash: &Hash256| SecretKey::from_slice(&context, hash.as_ref());
+            let hash_to_sk = |hash: &Hash256| SecretKey::from_slice(hash.as_ref());
 
             // secp256k1 base point G
             let base_point = {
                 // the string represents valid secp256k1 element, so both unwrap calls are safe
                 let s = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-                PublicKey::from_slice(context, hex::decode(s).unwrap().as_slice()).unwrap()
+                PublicKey::from_slice(hex::decode(s).unwrap().as_slice()).unwrap()
             };
 
             let initial = (
                 Vec::new(),
                 session_key.clone(),
-                PublicKey::from_secret_key(context, session_key)?,
+                PublicKey::from_secret_key(context, session_key),
             );
 
             let mut payment_path = payment_path;
@@ -129,7 +129,7 @@ impl OnionRoute {
         }
 
         let context = Secp256k1::new();
-        let public_key = PublicKey::from_secret_key(&context, &self.session_key)?;
+        let public_key = PublicKey::from_secret_key(&context, &self.session_key);
 
         let (filler, hop_shared_secrets) = {
             let i = self.route.iter().map(|hop| hop.id());
@@ -180,7 +180,7 @@ impl OnionRoute {
 
         Ok(ValidOnionPacket(OnionPacket {
             version: version as _,
-            ephemeral_key: WirePublicKey::from(public_key),
+            ephemeral_key: RawPublicKey(public_key),
             routing_info: hops_bytes,
             hmac: hmac,
         }))

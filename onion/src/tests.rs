@@ -1,6 +1,7 @@
 use super::{OnionPacketVersion, OnionPacket, ValidOnionPacket, OnionRoute, Hop, HopData, BitcoinHopData, Processed};
 use secp256k1::SecretKey;
-use wire::{BinarySD, Wrapper, Satoshi, SecretKey as WireSecretKey};
+use wire::{Wrapper, Satoshi};
+use binformat::BinarySD;
 
 // BOLT4_PUB_KEYS are the public keys of the hops used in the route.
 const BOLT4_PUB_KEYS: [&str; 5] = [
@@ -76,7 +77,7 @@ const BOLT4_FINAL_PACKET_HEX: &'static str = "\
 
 #[test]
 fn test_bolt4_packet() {
-    use secp256k1::{Secp256k1, PublicKey};
+    use secp256k1::PublicKey;
 
     let path = BOLT4_PUB_KEYS
         .iter()
@@ -84,7 +85,7 @@ fn test_bolt4_packet() {
         .map(|(i, &d)| {
             let pk_bytes = hex::decode(d)
                 .expect(format!("unable to decode BOLT 4 hex pubkey #{}", i).as_str());
-            let pk = PublicKey::from_slice(&Secp256k1::new(), &pk_bytes)
+            let pk = PublicKey::from_slice(&pk_bytes)
                 .expect(format!("unable to parse BOLT 4 pubkey #{}", i).as_str());
 
             let next_address = BinarySD::deserialize(&[i as u8; 8][..]).unwrap();
@@ -99,7 +100,7 @@ fn test_bolt4_packet() {
 
     let route = OnionRoute::new(
         OnionPacketVersion::_0,
-        SecretKey::from_slice(&Secp256k1::new(), BOLT4_SESSION_KEY.as_bytes()).unwrap(),
+        SecretKey::from_slice(BOLT4_SESSION_KEY.as_bytes()).unwrap(),
         path,
         BOLT4_ASSOC_DATA.as_bytes().to_vec(),
     );
@@ -113,14 +114,16 @@ fn test_bolt4_packet() {
     assert_eq!(packet, valid_reference_packet);
 }
 
-fn new_test_route(num_hops: usize) -> (Vec<WireSecretKey>, Vec<Hop>, ValidOnionPacket) {
+fn new_test_route(num_hops: usize) -> (Vec<SecretKey>, Vec<Hop>, ValidOnionPacket) {
     use secp256k1::{Secp256k1, PublicKey};
 
     let context = Secp256k1::new();
 
+    let mut rng = rand::thread_rng();
     let keys = (0..num_hops)
-        .map(|_| rand::random())
-        .collect::<Vec<WireSecretKey>>();
+        .map(|_| SecretKey::new(&mut rng))
+        .collect::<Vec<SecretKey>>();
+
     let hops = keys
         .iter()
         .enumerate()
@@ -131,7 +134,7 @@ fn new_test_route(num_hops: usize) -> (Vec<WireSecretKey>, Vec<Hop>, ValidOnionP
                 i as u32,
             ));
             Hop::new(
-                PublicKey::from_secret_key(&context, secret_key.as_ref()).unwrap(),
+                PublicKey::from_secret_key(&context, secret_key),
                 data,
             )
         }).collect::<Vec<_>>();
@@ -141,7 +144,7 @@ fn new_test_route(num_hops: usize) -> (Vec<WireSecretKey>, Vec<Hop>, ValidOnionP
     // adding padding so parsing still works.
     let route = OnionRoute::new(
         OnionPacketVersion::_0,
-        SecretKey::from_slice(&Secp256k1::new(), BOLT4_SESSION_KEY.as_bytes()).unwrap(),
+        SecretKey::from_slice(BOLT4_SESSION_KEY.as_bytes()).unwrap(),
         hops.clone(),
         vec![],
     );
@@ -162,7 +165,7 @@ fn test_sphinx_correctness() {
 
             println!("processing at hop: {}", i);
             let processed = packet
-                .process(vec![], (i as u32) + 1, secret_key.as_ref())
+                .process(vec![], (i as u32) + 1, secret_key)
                 .unwrap();
 
             match processed {
@@ -191,7 +194,7 @@ fn test_sphinx_single_hop() {
     // Simulating a direct single-hop payment, send the sphinx packet to
     // the destination node, making it process the packet fully.
     let processed = fwd_msg
-        .process(vec![], 1, keys[0].as_ref())
+        .process(vec![], 1, &keys[0])
         .expect("unable to process sphinx packet");
 
     // The destination node should detect that the packet is destined for
@@ -207,7 +210,7 @@ fn test_sphinx_assoc_data() {
     let (keys, _, fwd_msg) = new_test_route(5);
 
     let processed = fwd_msg
-        .process("something else".as_bytes().to_vec(), 1, keys[0].as_ref())
+        .process("something else".as_bytes().to_vec(), 1, &keys[0])
         .unwrap();
     match processed {
         Processed::ExitNode => (),
