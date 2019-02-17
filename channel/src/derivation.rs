@@ -71,8 +71,7 @@ pub fn derive_revocation_privkey(revocation_base_point_secret: &SecretKey, per_c
     sk1.mul_assign(&h1[..]).unwrap();
     sk2.mul_assign(&h2[..]).unwrap();
 
-    use std::slice::from_raw_parts;
-    sk1.add_assign(unsafe { from_raw_parts(sk2.as_ptr(), 32) }).unwrap();
+    sk1.add_assign(&sk2[..]).unwrap();
     return sk1;
 }
 
