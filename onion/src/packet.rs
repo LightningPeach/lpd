@@ -1,13 +1,13 @@
 use super::{hop::{HopData, HopBytes}, crypto::{KeyType, HmacData}, route::OnionPacketVersion};
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
-use wire::PublicKey as WirePublicKey;
 use serde_derive::{Serialize, Deserialize};
+use wire::RawPublicKey;
 use common_types::Hash256;
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct OnionPacket {
     pub(crate) version: u8,
-    pub(crate) ephemeral_key: WirePublicKey,
+    pub(crate) ephemeral_key: RawPublicKey,
     pub(crate) routing_info: [HopBytes; OnionPacket::NUM_MAX_HOPS],
     pub(crate) hmac: HmacData,
 }
@@ -21,11 +21,6 @@ impl OnionPacket {
     pub fn validate(self) -> Result<ValidOnionPacket, (Self, String)> {
         if OnionPacketVersion::from(self.version) != OnionPacketVersion::_0 {
             let msg = format!("unknown packet version: {}", self.version);
-            return Err((self, msg));
-        }
-
-        if !self.ephemeral_key.as_ref().is_valid() {
-            let msg = format!("public key is invalid");
             return Err((self, msg));
         }
 
@@ -59,26 +54,26 @@ impl ValidOnionPacket {
         onion_key: &SecretKey,
     ) -> Result<Processed, OnionPacketProcessingError> {
         use secp256k1::Secp256k1;
-        use wire::BinarySD;
+        use binformat::BinarySD;
         use self::OnionPacketProcessingError::*;
 
         let context = Secp256k1::new();
 
         let ValidOnionPacket(s) = self;
 
-        let (version, ephemeral_key, routing_info, hmac) =
+        let (version, RawPublicKey(ephemeral_key), routing_info, hmac) =
             (s.version, s.ephemeral_key, s.routing_info, s.hmac);
 
         // TODO(vlad): reuse this code
         let mul_pk = |x: &PublicKey, sk: &SecretKey| {
             let mut temp = x.clone();
-            temp.mul_assign(&context, sk).map(|()| temp)
+            temp.mul_assign(&context, &sk[..]).map(|()| temp)
         };
         let hash = |x: &[u8]| -> Hash256 { Hash256::from(x) };
         let hash_s = |xs: &[&[u8]]| -> Hash256 { Hash256::from(xs) };
-        let hash_to_sk = |hash: &Hash256| SecretKey::from_slice(&context, hash.as_ref());
+        let hash_to_sk = |hash: &Hash256| SecretKey::from_slice(hash.as_ref());
 
-        let temp = mul_pk(ephemeral_key.as_ref(), onion_key).map_err(EcdsaError)?;
+        let temp = mul_pk(&ephemeral_key, onion_key).map_err(EcdsaError)?;
         let shared_secret = hash(&temp.serialize()[..]);
 
         let mut data = Vec::with_capacity(HopBytes::SIZE * OnionPacket::NUM_MAX_HOPS);
@@ -103,7 +98,7 @@ impl ValidOnionPacket {
                 .iter_mut()
                 .for_each(|x| *x ^= &mut rho_stream);
 
-            let dh_key = ephemeral_key.as_ref();
+            let dh_key = ephemeral_key;
             let blinding = hash_s(&[&dh_key.serialize()[..], shared_secret.as_ref()][..]);
             let next_dh_key =
                 mul_pk(&dh_key, &hash_to_sk(&blinding).map_err(EcdsaError)?).map_err(EcdsaError)?;

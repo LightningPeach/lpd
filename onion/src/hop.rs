@@ -137,7 +137,7 @@ impl HopBytes {
     }
 
     pub fn new(hop: Hop, hmac: HmacData) -> Self {
-        use wire::BinarySD;
+        use binformat::BinarySD;
 
         let mut r = HopBytes {
             data: (0, [0; HopData::SIZE - 1]),
@@ -152,7 +152,7 @@ impl HopBytes {
     }
 
     pub fn destruct(self) -> (HopData, HmacData) {
-        use wire::BinarySD;
+        use binformat::BinarySD;
 
         let (f, d, hmac) = (self.data.0, self.data.1, self.hmac);
         let mut buffer = [0; HopData::SIZE];

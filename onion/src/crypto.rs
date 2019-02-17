@@ -42,7 +42,7 @@ impl KeyType {
 
         let key = self.key(shared_key);
         let mac = Hmac::<Sha256>::new_varkey(&key).unwrap();
-        let mut mac = msg.iter().fold(mac, |mut mac, &x| {
+        let mac = msg.iter().fold(mac, |mut mac, &x| {
             mac.input(x);
             mac
         });
