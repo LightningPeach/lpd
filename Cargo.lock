@@ -364,6 +364,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "channel_machine"
+version = "0.1.0"
+dependencies = [
+ "binformat 0.1.0",
+ "bitcoin 0.13.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "channel 0.0.0",
+ "either 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "processor 0.1.0",
+ "rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "secp256k1 0.12.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wire 0.1.0",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
