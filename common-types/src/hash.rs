@@ -6,12 +6,6 @@ pub struct Hash256 {
     data: [u8; 32],
 }
 
-impl From<Hash256> for [u8; 32] {
-    fn from(h: Hash256) -> Self {
-        return h.data;
-    }
-}
-
 impl Hash256 {
     pub const BITCOIN_CHAIN_HASH: Self = Hash256 {
         data: hex!("6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000"),
@@ -20,6 +14,43 @@ impl Hash256 {
     pub const TEST_HASH: Self = Hash256 {
         data: hex!("38faad210ccb4b018c866049827661643433f1a261a54a8b3faa9e682341158d"),
     };
+}
+
+impl From<[u8; 32]> for Hash256 {
+    fn from(v: [u8; 32]) -> Self {
+        Hash256 {
+            data: v
+        }
+    }
+}
+
+impl AsRef<[u8]> for Hash256 {
+    fn as_ref(&self) -> &[u8] {
+        &self.data[..]
+    }
+}
+
+impl<'a> From<&'a [u8]> for Hash256 {
+    fn from(v: &'a [u8]) -> Self {
+        Self::from(&[v][..])
+    }
+}
+
+impl<'a> From<&'a [&'a [u8]]> for Hash256 {
+    fn from(v: &'a [&'a [u8]]) -> Self {
+        use sha2::{Sha256, Digest};
+
+        let hash = v.iter()
+            .fold(Sha256::default(), |mut hasher, &a| {
+                hasher.input(a);
+                hasher
+            })
+            .result();
+
+        let mut array: [u8; 32] = [0; 32];
+        array.copy_from_slice(&hash);
+        array.into()
+    }
 }
 
 mod debug {
