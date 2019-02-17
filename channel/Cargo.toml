@@ -4,13 +4,14 @@ version = "0.0.0"
 authors = ["Mykola Sakhno <mykola.sakhno@bitfury.com>"]
 description = "The implementation of a Lightning channel"
 license = "Apache-2.0"
+edition = "2018"
 
 [lib]
 name = "channel"
 
 [dependencies]
-rand = "0.5.4"
-secp256k1 = "0.9.2"
-hex = "0.3.2"
-bitcoin = "0.13.2"
-rust-crypto = "0.2.36"
+rand = "0.6"
+secp256k1 = "0.12"
+hex = "0.3"
+bitcoin = "0.13"
+rust-crypto = "0.2"

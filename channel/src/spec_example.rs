@@ -1,8 +1,8 @@
 use secp256k1::{SecretKey, PublicKey};
 use bitcoin::util::hash::{Sha256dHash};
-use commit::{HTLCDirection, HTLC};
+use super::commit::{HTLCDirection, HTLC};
 
-use tools::{sha256, s2dh256, s2byte32, s2pubkey, s2privkey};
+use super::tools::{sha256, s2dh256, s2byte32, s2pubkey, s2privkey};
 
 //+funding_tx_id: 8984484a580b825b9972d7adb15050b3ab624ccd731946b3eeddb92f4e7ef6be
 //+funding_output_index: 0
