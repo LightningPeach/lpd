@@ -1,0 +1,32 @@
+[package]
+name = "channel_machine"
+version = "0.1.0"
+authors = ["LightningPeach <contact@lightningpeach.com>"]
+edition = "2018"
+
+[dependencies.wire]
+path = "../wire"
+
+[dependencies.processor]
+path = "../processor"
+
+[dependencies.binformat]
+path = "../binformat"
+
+[dependencies.tokio]
+version = "0.1"
+
+[dependencies.either]
+version = "1.5"
+
+[dependencies.channel]
+path = "../channel"
+
+[dependencies.bitcoin]
+version = "0.13"
+
+[dependencies.secp256k1]
+version = "0.12"
+
+[dependencies.rand]
+version = "0.4"
