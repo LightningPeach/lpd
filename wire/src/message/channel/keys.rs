@@ -88,7 +88,6 @@ impl ChannelPrivateKeys {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
 mod rand_m {
     use super::ChannelPrivateKeys;
     use rand::Rand;
