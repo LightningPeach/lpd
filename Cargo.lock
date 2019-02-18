@@ -430,6 +430,7 @@ version = "0.1.0"
 dependencies = [
  "binformat 0.1.0",
  "brontide 0.1.0",
+ "channel_machine 0.1.0",
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "common-types 0.0.0",
  "either 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
