@@ -52,10 +52,11 @@ impl LpServer {
         // TODO: pass lightning arguments into the node
         let _ = b;
 
-        Command::new("lpd")
+        Command::new("cargo")
+            .args(&["run", "--package", "server", "--"])
             .args(&[
-                format!("--listen=localhost:{}", self.peer_port),
-                format!("--rpclisten=localhost:{}", self.rpc_port),
+                format!("--listen=127.0.0.1:{}", self.peer_port),
+                format!("--rpclisten=127.0.0.1:{}", self.rpc_port),
             ])
             .spawn()
             .map(|instance| {
