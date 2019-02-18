@@ -1,5 +1,6 @@
 use super::{Home, cleanup};
 use super::chain::BitcoinConfig;
+use super::al::AbstractLightningNode;
 
 use std::process::Command;
 use std::process::Child;
@@ -165,14 +166,10 @@ impl LnRunning {
             .map(|r| r.address)
     }
 
-    pub fn address(&self) -> LightningAddress {
-        let mut address = LightningAddress::new();
-        address.set_host(format!("127.0.0.1:{}", self.config.peer_port));
-        address.set_pubkey(self.info().get_identity_pubkey().to_owned());
-        address
-    }
-
-    pub fn connect_peer(&self, peer: &Self) -> impl Future<Item=ConnectPeerResponse, Error=grpc::Error> {
+    pub fn connect_peer<N>(&self, peer: &N) -> impl Future<Item=ConnectPeerResponse, Error=grpc::Error>
+    where
+        N: AbstractLightningNode,
+    {
         use lnd_rust::rpc;
         use lnd_rust::rpc_grpc::Lightning;
         use grpc::RequestOptions;
@@ -185,15 +182,13 @@ impl LnRunning {
     }
 
     // TODO:
-    pub fn open_channel(&self, peer: &Self) -> impl Stream<Item=OpenStatusUpdate, Error=grpc::Error> {
+    pub fn open_channel(&self, peer_pubkey: &str) -> impl Stream<Item=OpenStatusUpdate, Error=grpc::Error> {
         use lnd_rust::rpc;
         use lnd_rust::rpc_grpc::Lightning;
         use grpc::RequestOptions;
         use hex::FromHex;
 
-        let peer_address = peer.address();
         let mut request = rpc::OpenChannelRequest::new();
-        let peer_pubkey = peer_address.get_pubkey();
         request.set_node_pubkey_string(peer_pubkey.to_owned());
         request.set_node_pubkey(Vec::from_hex(peer_pubkey).unwrap());
         request.set_local_funding_amount(1000000);
@@ -217,5 +212,14 @@ impl Drop for LnRunning {
                 _ => Err(e),
             })
             .unwrap()
+    }
+}
+
+impl AbstractLightningNode for LnRunning {
+    fn address(&self) -> LightningAddress {
+        let mut address = LightningAddress::new();
+        address.set_host(format!("127.0.0.1:{}", self.config.peer_port));
+        address.set_pubkey(self.info().get_identity_pubkey().to_owned());
+        address
     }
 }
