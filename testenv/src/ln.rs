@@ -59,11 +59,14 @@ impl LnDaemon {
     where
         B: BitcoinConfig,
     {
+        println!("self.home.ext_path(\"data\"): {:?}", self.home.ext_path("data"));
         Command::new("lnd")
             .args(&[
-                "--noencryptwallet", "--no-macaroons",
+                "--noseedbackup", "--no-macaroons",
             ])
             .args(&[
+                format!("--lnddir={}", self.home.path().to_str().unwrap()),
+                format!("--configfile={}", self.home.lnd_conf_path().to_str().unwrap()),
                 format!("--datadir={}", self.home.ext_path("data").to_str().unwrap()),
                 format!("--logdir={}", self.home.ext_path("logs").to_str().unwrap()),
                 format!("--tlscertpath={}", self.home.public_key_path().to_str().unwrap()),
