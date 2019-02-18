@@ -12,6 +12,7 @@ processor = { path = "../processor" }
 state = { path = "../state" }
 interface = { path = "../rpc/interface", optional = true }
 routing = { path = "../routing", features = ["rpc"] }
+channel_machine = { path = "../channel_machine" }
 common-types = { path = "../common-types" }
 
 secp256k1 = "0.12"

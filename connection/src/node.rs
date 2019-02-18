@@ -15,6 +15,7 @@ use super::ping::PingContext;
 use state::DB;
 
 use routing::{State, SharedState};
+use channel_machine::ChannelState;
 
 use std::path::Path;
 use either::Either;
@@ -32,22 +33,42 @@ pub struct Node {
 pub struct Remote {
     db: Arc<RwLock<DB>>,
     public: PublicKey,
+    channel: ChannelState,
 }
 
 impl MessageConsumer for Remote {
     type Message = Message;
     type Relevant = ();
 
-    fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> ConsumingFuture<Self, S>
+    fn consume<S>(mut self, sink: S, message: Either<Self::Message, Self::Relevant>) -> ConsumingFuture<Self, S>
     where
         Self: Sized,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
         // TODO: process the message using db and public
         let _ = (&self.db, &self.public);
-        let _ = message;
 
-        ConsumingFuture::ok(self, sink)
+        match message {
+            Either::Left(message) => {
+                match self.channel.next(message) {
+                    (state, Some(response)) => {
+                        let send = sink.send(response);
+                        self.channel = state;
+                        ConsumingFuture::from_send(self, send)
+                    },
+                    (state, None) => {
+                        self.channel = state;
+                        ConsumingFuture::ok(self, sink)
+                    },
+                }
+            },
+            Either::Right(event) => {
+                match event {
+                    // process events here
+                    () => ConsumingFuture::ok(self, sink)
+                }
+            },
+        }
     }
 }
 
@@ -74,6 +95,7 @@ impl Node {
             Either::Right(Remote {
                 db: self.db.clone(),
                 public: remote_public,
+                channel: ChannelState::new(),
             })
         }
     }
