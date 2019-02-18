@@ -261,7 +261,7 @@ impl HandshakeIn {
 
         // es
         let s = self.local_static.dh(&contexts.1, &remote_ephemeral).map_err(HandshakeError::Crypto)?;
-        self.symmetric_state.mix_key(&s[..]);
+        self.symmetric_state.mix_key(&s.serialize()[..]);
 
         // If the initiator doesn't know our static key, then this operation
         // will fail.
@@ -322,7 +322,7 @@ impl HandshakeOut {
 
         // es
         let s = local_ephemeral.dh(&contexts.1, &self.remote_static).map_err(HandshakeError::Crypto)?;
-        self.symmetric_state.mix_key(&s[..]);
+        self.symmetric_state.mix_key(&s.serialize()[..]);
 
         let auth_payload = self
             .symmetric_state
@@ -369,7 +369,7 @@ impl HandshakeInActOne {
 
         // ee
         let s = local_ephemeral.dh(&contexts.1, &self.remote_ephemeral).map_err(HandshakeError::Crypto)?;
-        self.base.symmetric_state.mix_key(&s[..]);
+        self.base.symmetric_state.mix_key(&s.serialize()[..]);
 
         let auth_payload = self
             .base
@@ -417,7 +417,7 @@ impl HandshakeOutActOne {
 
         // ee
         let s = self.local_ephemeral.dh(&contexts.1, &remote_ephemeral).map_err(HandshakeError::Crypto)?;
-        self.base.symmetric_state.mix_key(&s[..]);
+        self.base.symmetric_state.mix_key(&s.serialize()[..]);
 
         self.base
             .symmetric_state
@@ -468,7 +468,7 @@ impl HandshakeInActTwo {
         // se
         let se = self.local_ephemeral.dh(&contexts.1, &remote_static)
             .map_err(HandshakeError::Crypto)?;
-        self.base.symmetric_state.mix_key(&se[..]);
+        self.base.symmetric_state.mix_key(&se.serialize()[..]);
 
         self.base
             .symmetric_state
@@ -522,7 +522,7 @@ impl HandshakeOutActTwo {
 
         let s = self.base.local_static.dh(&contexts.1, &self.remote_ephemeral)
             .map_err(HandshakeError::Crypto)?;
-        self.base.symmetric_state.mix_key(&s[..]);
+        self.base.symmetric_state.mix_key(&s.serialize()[..]);
 
         let auth_payload = self
             .base

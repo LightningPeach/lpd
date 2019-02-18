@@ -5,7 +5,7 @@ use serde_derive::{Serialize, Deserialize};
 
 impl ac::PublicKey for PublicKey {}
 
-impl ac::SecretKey<Message> for SecretKey {
+impl ac::SecretKey for SecretKey {
     type Error = Error;
 
     type PublicKey = PublicKey;
@@ -22,17 +22,10 @@ impl ac::SecretKey<Message> for SecretKey {
         PublicKey::from_secret_key(&context, self)
     }
 
-    fn dh(&self, context: &Self::VerificationContext, pk: &Self::PublicKey) -> Result<Message, Self::Error> {
-        use sha2::{Sha256, Digest};
-
+    fn dh(&self, context: &Self::VerificationContext, pk: &Self::PublicKey) -> Result<Self::PublicKey, Self::Error> {
         let mut pk_cloned = pk.clone();
-        pk_cloned.mul_assign(&context, &self[..])?;
-
-        let mut hasher = Sha256::default();
-        hasher.input(&pk_cloned.serialize()[..]);
-        let hash = hasher.result();
-
-        Message::from_slice(hash.as_slice())
+        pk_cloned.mul_assign(&context, &self[..])
+            .map(|()| pk_cloned)
     }
 }
 
@@ -120,7 +113,7 @@ where
 
     type Data = T;
 
-    fn sign(data: Self::Data, context: &<Self::SecretKey as ac::SecretKey<Message>>::SigningContext, secret_key: &Self::SecretKey) -> Self {
+    fn sign(data: Self::Data, context: &<Self::SecretKey as ac::SecretKey>::SigningContext, secret_key: &Self::SecretKey) -> Self {
         let message = data.double_hash();
         let signature = context.sign(&message, secret_key);
         Signed {
@@ -129,18 +122,18 @@ where
         }
     }
 
-    fn check(&self, context: &<Self::SecretKey as ac::SecretKey<Message>>::VerificationContext, public_key: &<Self::SecretKey as ac::SecretKey<Message>>::PublicKey) -> Result<(), Self::Error> {
+    fn check(&self, context: &<Self::SecretKey as ac::SecretKey>::VerificationContext, public_key: &<Self::SecretKey as ac::SecretKey>::PublicKey) -> Result<(), Self::Error> {
         let message = self.data.double_hash();
         context.verify(&message, &self.signature.as_ref(), public_key)
     }
 
-    fn verify(self, context: &<Self::SecretKey as ac::SecretKey<Message>>::VerificationContext, public_key: &<Self::SecretKey as ac::SecretKey<Message>>::PublicKey) -> Result<Self::Data, Self::Error> {
+    fn verify(self, context: &<Self::SecretKey as ac::SecretKey>::VerificationContext, public_key: &<Self::SecretKey as ac::SecretKey>::PublicKey) -> Result<Self::Data, Self::Error> {
         self.check(context, public_key).map(|()| self.data)
     }
 
-    fn verify_key_inside<F>(self, context: &<Self::SecretKey as ac::SecretKey<Message>>::VerificationContext, get_public_key: F) -> Result<Self::Data, Self::Error>
+    fn verify_key_inside<F>(self, context: &<Self::SecretKey as ac::SecretKey>::VerificationContext, get_public_key: F) -> Result<Self::Data, Self::Error>
     where
-        F: FnOnce(&<Self::Data as ac::Data<Message>>::ContentToHash) -> &<Self::SecretKey as ac::SecretKey<Message>>::PublicKey,
+        F: FnOnce(&<Self::Data as ac::Data<Message>>::ContentToHash) -> &<Self::SecretKey as ac::SecretKey>::PublicKey,
     {
         let public_key = get_public_key(&self.data.as_ref_content()).clone();
         self.verify(context, &public_key)

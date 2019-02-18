@@ -65,10 +65,14 @@ impl SymmetricState {
     // then latter 32 bytes become the temp secret key using within any future AEAD
     // operations until another DH operation is performed.
     pub fn mix_key(&mut self, input: &[u8]) {
-        use sha2::Sha256;
+        use sha2::{Sha256, Digest};
         use hkdf::Hkdf;
 
-        let hkdf = Hkdf::<Sha256>::extract(Some(&self.chaining_key), input);
+        let mut hasher = Sha256::default();
+        hasher.input(input);
+        let hash = hasher.result();
+
+        let hkdf = Hkdf::<Sha256>::extract(Some(&self.chaining_key), hash.as_ref());
         let mut okm = [0; 64];
         hkdf.expand(&[], &mut okm).unwrap();
 
