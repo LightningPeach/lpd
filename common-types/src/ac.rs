@@ -3,7 +3,7 @@ where
     Self: Sized + Eq,
 {}
 
-pub trait SecretKey<H>
+pub trait SecretKey
 where
     Self: Sized + Eq,
 {
@@ -21,7 +21,7 @@ where
 
     fn paired(&self, context: &Self::SigningContext) -> Self::PublicKey;
 
-    fn dh(&self, context: &Self::VerificationContext, pk: &Self::PublicKey) -> Result<H, Self::Error>;
+    fn dh(&self, context: &Self::VerificationContext, pk: &Self::PublicKey) -> Result<Self::PublicKey, Self::Error>;
 }
 
 pub trait Data<H> {
@@ -42,17 +42,17 @@ where
 {
     type Error: SignError;
 
-    type SecretKey: SecretKey<H>;
+    type SecretKey: SecretKey;
 
     type Data: Data<H>;
 
-    fn sign(data: Self::Data, context: &<Self::SecretKey as SecretKey<H>>::SigningContext, secret_key: &Self::SecretKey) -> Self;
+    fn sign(data: Self::Data, context: &<Self::SecretKey as SecretKey>::SigningContext, secret_key: &Self::SecretKey) -> Self;
 
-    fn check(&self, context: &<Self::SecretKey as SecretKey<H>>::VerificationContext, public_key: &<Self::SecretKey as SecretKey<H>>::PublicKey) -> Result<(), Self::Error>;
+    fn check(&self, context: &<Self::SecretKey as SecretKey>::VerificationContext, public_key: &<Self::SecretKey as SecretKey>::PublicKey) -> Result<(), Self::Error>;
 
-    fn verify(self, context: &<Self::SecretKey as SecretKey<H>>::VerificationContext, public_key: &<Self::SecretKey as SecretKey<H>>::PublicKey) -> Result<Self::Data, Self::Error>;
+    fn verify(self, context: &<Self::SecretKey as SecretKey>::VerificationContext, public_key: &<Self::SecretKey as SecretKey>::PublicKey) -> Result<Self::Data, Self::Error>;
 
-    fn verify_key_inside<F>(self, context: &<Self::SecretKey as SecretKey<H>>::VerificationContext, get_public_key: F) -> Result<Self::Data, Self::Error>
+    fn verify_key_inside<F>(self, context: &<Self::SecretKey as SecretKey>::VerificationContext, get_public_key: F) -> Result<Self::Data, Self::Error>
     where
-        F: FnOnce(&<Self::Data as Data<H>>::ContentToHash) -> &<Self::SecretKey as SecretKey<H>>::PublicKey;
+        F: FnOnce(&<Self::Data as Data<H>>::ContentToHash) -> &<Self::SecretKey as SecretKey>::PublicKey;
 }
