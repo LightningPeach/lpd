@@ -1,7 +1,5 @@
 use super::common::Module;
 
-use serde_derive::{Serialize, Deserialize};
-
 #[derive(Clone, Default, Eq, PartialEq, Debug)]
 pub struct Color {
     data: [u8; 4],
@@ -9,15 +7,12 @@ pub struct Color {
 
 impl serde::Serialize for Color {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        use binformat::SerdeRawVec;
         (self.data[0], self.data[1], self.data[2]).serialize(s)
     }
 }
 
 impl<'de> serde::Deserialize<'de> for Color {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Color, D::Error> {
-        use serde::de::Error;
-
         let v: (u8, u8, u8) = serde::Deserialize::deserialize(d)?;
         Ok(Color {
             data: [v.0, v.1, v.2, 0],
