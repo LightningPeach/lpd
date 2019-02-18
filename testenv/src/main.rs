@@ -17,6 +17,8 @@ pub use self::lp::{LpServer, LpRunning};
 mod al;
 use self::al::AbstractLightningNode;
 
+use std::error::Error;
+
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn cleanup(process: &str) {
     use std::process::Command;
@@ -29,7 +31,7 @@ pub fn cleanup(name: &str) {
     panic!("cannot stop other instance of `{}`, stop it manually", name)
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     use std::thread;
     use std::time::Duration;
     use futures::{Future, Stream};
@@ -37,22 +39,27 @@ fn main() {
     use bitcoin::Address;
     use std::str::FromStr;
 
-    let btc_running = Bitcoind::new("b").unwrap().run().unwrap();
+    let btc_running = Bitcoind::new("b")?.run()?;
     thread::sleep(Duration::from_secs(5));
 
     // creating two nodes with base port 10000
     let nodes = LnRunning::batch(3, 9800, btc_running.as_ref());
     thread::sleep(Duration::from_secs(5));
 
-    let mining_address = nodes[0].new_address().wait().unwrap();
-    let mining_address = Address::from_str(mining_address.as_str()).unwrap();
+    let peach_node = LpServer::new(9735, 10009, "peach")?
+        .run(btc_running.as_ref())?;
+
+    let mining_address = nodes[0].new_address().wait()?;
+    let mining_address = Address::from_str(mining_address.as_str())?;
 
     btc_running.rpc_client().generate_to_address(400, &mining_address).unwrap().unwrap();
     thread::sleep(Duration::from_secs(5));
 
-    let _ = nodes[0].connect_peer(&nodes[1]).wait().unwrap();
-    let pk1 = nodes[1].address().pubkey;
-    let update_stream = nodes[0].open_channel(pk1.as_str());
+    //let _ = nodes[0].connect_peer(&nodes[1]).wait()?;
+    //let pk1 = nodes[1].address().pubkey;
+    let _ = nodes[0].connect_peer(&peach_node).wait()?;
+    let pk_our = peach_node.address().pubkey;
+    let update_stream = nodes[0].open_channel(pk_our.as_str());
     thread::sleep(Duration::from_secs(5));
     btc_running.rpc_client().generate_to_address(10, &mining_address).unwrap().unwrap();
 
@@ -74,4 +81,5 @@ fn main() {
     // keep it running until this line
     let _ = nodes;
     let _ = btc_running;
+    Ok(())
 }
