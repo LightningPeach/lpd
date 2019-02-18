@@ -13,6 +13,10 @@ pub use self::ln::{LnDaemon, LnRunning};
 mod lp;
 pub use self::lp::{LpServer, LpRunning};
 
+// abstract lightning node
+mod al;
+use self::al::AbstractLightningNode;
+
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn cleanup(process: &str) {
     use std::process::Command;
@@ -47,7 +51,8 @@ fn main() {
     thread::sleep(Duration::from_secs(5));
 
     let _ = nodes[0].connect_peer(&nodes[1]).wait().unwrap();
-    let update_stream = nodes[0].open_channel(&nodes[1]);
+    let pk1 = nodes[1].address().pubkey;
+    let update_stream = nodes[0].open_channel(pk1.as_str());
     thread::sleep(Duration::from_secs(5));
     btc_running.rpc_client().generate_to_address(10, &mining_address).unwrap().unwrap();
 
