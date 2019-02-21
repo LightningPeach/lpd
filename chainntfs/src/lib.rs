@@ -4,7 +4,7 @@ extern crate futures;
 extern crate tokio_core;
 
 use bitcoin::{
-    network::serialize::deserialize,
+    consensus::deserialize,
     util::hash::Sha256dHash,
     Block, Transaction, BitcoinHash, OutPoint,
 };

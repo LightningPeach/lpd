@@ -3,7 +3,7 @@ use hex;
 
 use std::error::Error;
 
-use utils;
+use crate::utils;
 
 // element represents the entity which contains the hash and index
 // corresponding to it. An element is the output of the shachain PRF. By

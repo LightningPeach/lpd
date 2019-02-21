@@ -1,7 +1,7 @@
 use std::error::Error;
 
-use element::{Element, Index, MAX_HEIGHT, START_INDEX};
-use utils;
+use crate::element::{Element, Index, MAX_HEIGHT, START_INDEX};
+use crate::utils;
 
 // RevocationStore is a concrete implementation of the Store interface. The
 // revocation store is able to efficiently store N derived shachain elements in

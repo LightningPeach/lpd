@@ -1,7 +1,7 @@
 use hex;
 
-use store::RevocationStore;
-use element::Index;
+use crate::store::RevocationStore;
+use crate::element::Index;
 
 struct TestInsert<'a> {
 	index:      Index,

@@ -7,7 +7,7 @@ use wire::{
 
 use secp256k1::PublicKey;
 
-use bitcoin::network::{serialize::RawEncoder, encodable::ConsensusEncodable};
+use bitcoin::consensus::encode::Encodable;
 use bitcoin::util::hash::Sha256dHash;
 
 use channel::derivation::{derive_pubkey, derive_revocation_pubkey};
@@ -339,7 +339,7 @@ impl WaitFundingCreatedData {
         let sig = commit_tx.sign(self.our_info.private_keys.clone().unwrap().funding_sk());
         let tx = commit_tx.get_tx();
         let mut a = vec![];
-        tx.consensus_encode(&mut RawEncoder::new(&mut a)).unwrap();
+        tx.consensus_encode(&mut a).unwrap();
 
         let mut channel_id = <[u8; 32]>::from(msg.funding_txid);
         let ind = u16::from(msg.output_index);
