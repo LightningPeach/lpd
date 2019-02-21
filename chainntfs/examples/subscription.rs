@@ -7,9 +7,12 @@ extern crate chainntfs;
 
 use bitcoin::{
     util::hash::Sha256dHash,
-    OutPoint,
+    OutPoint
 };
-use bitcoin_rpc_client::{BitcoinCoreClient, BitcoinRpcApi};
+use bitcoin_rpc_client::{
+    BitcoinCoreClient, BitcoinRpcApi
+};
+
 use futures::Stream;
 use tokio_core::reactor::Core;
 
@@ -53,7 +56,7 @@ fn main() {
     let txid = client.send_to_address(&addr, 1.0).unwrap().unwrap();
     let num_confs = 1;
     let conf_rx = consumer.register_confirmations_ntfn(
-        txid.into(),
+        Sha256dHash::from(txid),
         num_confs,
     );
 

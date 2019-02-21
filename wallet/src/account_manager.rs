@@ -20,26 +20,26 @@ impl AccountManager {
 
     pub fn next_external_pk(&mut self) -> Result<PublicKey, Box<Error>> {
         let path: &[ChildNumber] = &[
-            ChildNumber::Normal(0),
-            ChildNumber::Normal(self.external_index),
+            ChildNumber::Normal{index: 0},
+            ChildNumber::Normal{index: self.external_index},
         ];
 
         self.external_index += 1;
 
-        let extended_priv_key = ExtendedPrivKey::from_path(&Secp256k1::new(), &self.account_key, path)?;
+        let extended_priv_key = self.account_key.derive_priv(&Secp256k1::new(),  path)?;
         let extended_pub_key = ExtendedPubKey::from_private(&Secp256k1::new(), &extended_priv_key);
         Ok(extended_pub_key.public_key)
     }
 
     pub fn next_internal_pk(&mut self) -> Result<PublicKey, Box<Error>> {
         let path: &[ChildNumber] = &[
-            ChildNumber::Normal(1),
-            ChildNumber::Normal(self.internal_index),
+            ChildNumber::Normal{index: 1},
+            ChildNumber::Normal{index: self.internal_index},
         ];
 
         self.internal_index += 1;
 
-        let extended_priv_key = ExtendedPrivKey::from_path(&Secp256k1::new(), &self.account_key, path)?;
+        let extended_priv_key =self.account_key.derive_priv(&Secp256k1::new(), path)?;
         let extended_pub_key = ExtendedPubKey::from_private(&Secp256k1::new(), &extended_priv_key);
         Ok(extended_pub_key.public_key)
     }

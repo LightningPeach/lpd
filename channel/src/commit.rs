@@ -1,4 +1,5 @@
 use secp256k1::{PublicKey, SecretKey, Signature, Secp256k1, Message};
+use bitcoin::OutPoint;
 use bitcoin::util::hash::{Sha256dHash};
 use bitcoin::blockdata::script::{Script};
 use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
@@ -62,8 +63,10 @@ impl CommitTx {
         let mut tx = Transaction{
             version: 2,
             input: vec![TxIn{
-                prev_hash: self.funding_tx_id,
-                prev_index: self.funding_output_index,
+                previous_output: OutPoint{
+                    txid: self.funding_tx_id,
+                    vout: self.funding_output_index
+                },
                 sequence: sequence as u32,
                 script_sig: Script::new(),
                 witness: vec![]
@@ -159,7 +162,7 @@ impl CommitTx {
             );
         // TODO(mkl): maybe do not use unwrap
         let sig = sec.sign(
-            &Message::from_slice(&tx_sig_hash.data()[..]).unwrap(),
+            &Message::from_slice(&tx_sig_hash.as_bytes()[..]).unwrap(),
             priv_key
         );
         sig

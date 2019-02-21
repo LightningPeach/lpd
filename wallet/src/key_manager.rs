@@ -13,7 +13,7 @@ pub struct KeyManager {
 impl KeyManager {
     pub fn from_seed(seed: &[u8]) -> Result<Self, Box<Error>> {
         Ok(Self {
-            master_key: ExtendedPrivKey::new_master(&Secp256k1::new(), Network::Bitcoin, seed)?,
+            master_key: ExtendedPrivKey::new_master(Network::Bitcoin, seed)?,
         })
     }
 
@@ -23,7 +23,7 @@ impl KeyManager {
             scope.coin,
         ];
 
-        let scoped_key = ExtendedPrivKey::from_path(&Secp256k1::new(), &self.master_key, path)?;
+        let scoped_key = self.master_key.derive_priv(&Secp256k1::new(), path)?;
         Ok(ScopedManager::from_scoped_key(scoped_key))
     }
 

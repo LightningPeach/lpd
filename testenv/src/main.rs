@@ -40,14 +40,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     use std::str::FromStr;
 
     let btc_running = Bitcoind::new("b")?.run()?;
-    thread::sleep(Duration::from_secs(5));
+    // TODO(mkl): add checking state instead of flat wait
+    thread::sleep(Duration::from_secs(10));
+
+    // Generate some blocks to activate segwit
+    btc_running.rpc_client().generate(500).unwrap();
 
     // creating two nodes with base port 10000
-    let nodes = LnRunning::batch(3, 9800, btc_running.as_ref());
-    thread::sleep(Duration::from_secs(5));
+    let nodes = LnRunning::batch(2, 9800, btc_running.as_ref());
+    // TODO(mkl): add checking state instead of flat wait
+    thread::sleep(Duration::from_secs(30));
 
+    println!("Before starting peach");
     let peach_node = LpServer::new(9735, 10009, "peach")?
         .run(btc_running.as_ref())?;
+    println!("After starting peach");
 
     let mining_address = nodes[0].new_address().wait()?;
     let mining_address = Address::from_str(mining_address.as_str())?;
