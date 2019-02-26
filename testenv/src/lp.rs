@@ -33,10 +33,10 @@ impl LpServer {
         Ok(LpServer {
             peer_port: peer_port,
             rpc_port: rpc_port,
-            home: Home::new(name, false)
+            home: Home::new(name, false, true)
                 .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
                     cleanup("lpd");
-                    Home::new(name, true)
+                    Home::new(name, true, true)
                 } else {
                     Err(e)
                 })?,

@@ -26,6 +26,9 @@ name = "wasm-runner"
 [[example]]
 name = "run-lnd"
 
+[[example]]
+name = "e1"
+
 [dependencies]
 wire = { path = "wire", features = ["testing"] }
 brontide = { path = "brontide" }

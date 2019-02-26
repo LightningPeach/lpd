@@ -1,4 +1,4 @@
-#![forbid(unsafe_code)]
+//#![forbid(unsafe_code)]
 #![allow(non_shorthand_field_patterns)]
 
 mod home;
@@ -32,6 +32,7 @@ pub fn cleanup(name: &str) {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    println!("Starting testnev");
     use std::thread;
     use std::time::Duration;
     use futures::{Future, Stream};
@@ -40,6 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     use std::str::FromStr;
 
     let btc_running = Bitcoind::new("b")?.run()?;
+    println!("After starting bitcoind");
     // TODO(mkl): add checking state instead of flat wait
     thread::sleep(Duration::from_secs(10));
 
@@ -50,17 +52,47 @@ fn main() -> Result<(), Box<dyn Error>> {
     let nodes = LnRunning::batch(2, 9800, btc_running.as_ref());
     // TODO(mkl): add checking state instead of flat wait
     thread::sleep(Duration::from_secs(30));
+    println!("nodes.len={}", nodes.len());
 
     println!("Before starting peach");
-    let peach_node = LpServer::new(9735, 10009, "peach")?
-        .run(btc_running.as_ref())?;
+    let peach_node = LpServer::new(9735, 10009, "peach")
+        .map_err(|err|{
+            println!("cannot create LpServer: {:?}", err);
+            err
+        })?
+        .run(btc_running.as_ref())
+        .map_err(|err| {
+            println!("cannot run LpServer: {:?}", err);
+            err
+        })?;
     println!("After starting peach");
 
-    let mining_address = nodes[0].new_address().wait()?;
-    let mining_address = Address::from_str(mining_address.as_str())?;
+
+    nodes[0].obtain_info().wait()
+        .map(|rez|{
+            println!("getinfo: {:?}", rez);
+            rez
+        })
+        .map_err(|err| {
+            println!("ERROR getting getinfo: {:?}", err);
+            err
+        })?;
+
+    let mining_address = nodes[0].new_address().wait()
+        .map_err(|err|{
+            println!("error getting new address: {:?}", err);
+            err
+        })?;
+    let mining_address = Address::from_str(mining_address.as_str())
+        .map_err(|err| {
+            println!("error converting address {:?}", err);
+            err
+        })?;
 
     btc_running.rpc_client().generate_to_address(400, &mining_address).unwrap().unwrap();
+    println!("Before waiting for mining blocks for money for first node");
     thread::sleep(Duration::from_secs(5));
+    println!("After waiting for mining blocks for money for first node");
 
     //let _ = nodes[0].connect_peer(&nodes[1]).wait()?;
     //let pk1 = nodes[1].address().pubkey;
