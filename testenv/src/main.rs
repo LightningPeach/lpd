@@ -42,17 +42,33 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let btc_running = Bitcoind::new("b")?.run()?;
     println!("After starting bitcoind");
+
     // TODO(mkl): add checking state instead of flat wait
-    thread::sleep(Duration::from_secs(10));
+    println!("Start waiting for bitcoind");
+    thread::sleep(Duration::from_secs(2));
+    println!("End waiting for bitcoind");
 
     // Generate some blocks to activate segwit
-    btc_running.rpc_client().generate(500).unwrap();
+    btc_running.rpc_client().generate(500).unwrap_or_else(|err|{
+        println!("cannot mine initial blocks: {:?}", err);
+        panic!(err);
+    });
 
-    // creating two nodes with base port 10000
+    // creating two nodes with base port 9800
     let nodes = LnRunning::batch(2, 9800, btc_running.as_ref());
     // TODO(mkl): add checking state instead of flat wait
-    thread::sleep(Duration::from_secs(30));
+    thread::sleep(Duration::from_secs(15));
     println!("nodes.len={}", nodes.len());
+
+    nodes[0].obtain_info().wait()
+        .map(|rez|{
+            println!("getinfo: {:?}", rez);
+            rez
+        })
+        .map_err(|err| {
+            println!("ERROR getting getinfo: {:?}", err);
+            err
+        })?;
 
     println!("Before starting peach");
     let peach_node = LpServer::new(9735, 10009, "peach")
@@ -66,17 +82,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             err
         })?;
     println!("After starting peach");
+    thread::sleep(Duration::from_secs(2));
+    println!("peach_node info: {:?}", peach_node.info());
 
 
-    nodes[0].obtain_info().wait()
-        .map(|rez|{
-            println!("getinfo: {:?}", rez);
-            rez
-        })
-        .map_err(|err| {
-            println!("ERROR getting getinfo: {:?}", err);
-            err
-        })?;
 
     let mining_address = nodes[0].new_address().wait()
         .map_err(|err|{
@@ -89,14 +98,28 @@ fn main() -> Result<(), Box<dyn Error>> {
             err
         })?;
 
-    btc_running.rpc_client().generate_to_address(400, &mining_address).unwrap().unwrap();
+    btc_running.rpc_client()
+        .generate_to_address(400, &mining_address)
+        .unwrap_or_else(|err|{
+            println!("rpc error mining initial money for the first node: {:?}", err);
+            panic!(err);
+        })
+        .unwrap_or_else(|err|{
+            println!("client error mining money for the first node: {:?}", err);
+            panic!(err);
+        });
     println!("Before waiting for mining blocks for money for first node");
     thread::sleep(Duration::from_secs(5));
     println!("After waiting for mining blocks for money for first node");
 
     //let _ = nodes[0].connect_peer(&nodes[1]).wait()?;
     //let pk1 = nodes[1].address().pubkey;
-    let _ = nodes[0].connect_peer(&peach_node).wait()?;
+    let _ = nodes[0].connect_peer(&peach_node).wait().map_err(|err| {
+        println!("error connecting to peach node: {:?}", err);
+        err
+    })?;
+    println!("After connecting to peach node");
+
     let pk_our = peach_node.address().pubkey;
     let update_stream = nodes[0].open_channel(pk_our.as_str());
     thread::sleep(Duration::from_secs(5));

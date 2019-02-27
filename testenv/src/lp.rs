@@ -91,8 +91,19 @@ impl LpRunning {
 
     /// wait first time, might panic
     pub fn info(&self) -> &Info {
+        // TODO(mkl): do we really need caching here
         self.info.borrow().unwrap_or_else(|| {
-            self.info.fill(self.obtain_info().wait().unwrap()).ok().unwrap();
+            let data = self.obtain_info().wait()
+                .unwrap_or_else(|err| {
+                    println!("cannot getinfo lpd: {:?}", err);
+                    panic!(err);
+                });
+
+            self.info.fill(data)
+                .unwrap_or_else(|err|{
+                    println!("cannot fill LazyCell with getinfo lpd data: {:?}", err);
+                    panic!(err);
+                });
             self.info()
         })
     }

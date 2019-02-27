@@ -48,7 +48,6 @@ impl BitcoinConfig for Bitcoind {
     type Instance = BitcoindRunning;
 
     fn new(name: &str) -> Result<Self, io::Error> {
-//        println!("Home::new(name, false).path(): {:?}", Home::new(name, false));
         Ok(Bitcoind {
             home: Home::new(name, false, true)
                 .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
