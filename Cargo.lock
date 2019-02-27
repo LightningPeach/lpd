@@ -153,6 +153,22 @@ dependencies = [
 [[package]]
 name = "bitcoin_rpc_client"
 version = "0.5.0"
+source = "git+https://github.com/LightningPeach/bitcoinrpc-rust-client#b6d6f588c7fa41ebce2068c487f92a7d793e957a"
+dependencies = [
+ "base64 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bitcoin 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc_client 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "native-tls 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.88 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.38 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "bitcoin_rpc_client"
+version = "0.5.0"
 dependencies = [
  "base64 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitcoin 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2260,7 +2276,7 @@ name = "testenv"
 version = "0.1.0"
 dependencies = [
  "bitcoin 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "bitcoin_rpc_client 0.5.0",
+ "bitcoin_rpc_client 0.5.0 (git+https://github.com/LightningPeach/bitcoinrpc-rust-client)",
  "brontide 0.1.0",
  "client 0.0.0",
  "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2801,6 +2817,7 @@ dependencies = [
 "checksum bindgen 0.43.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6d52d263eacd15d26cbcf215d254b410bd58212aaa2d3c453a04b2d3b3adcf41"
 "checksum bitcoin 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7f9411713f2eec2b76ebb5fc0407e9bcef86130e33e196749be3f9970eb7f7f6"
 "checksum bitcoin-bech32 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f0a5cfe5abcb5040b36d4ea8acba95288fefebd7959b59475f2c4ec705974b4c"
+"checksum bitcoin_rpc_client 0.5.0 (git+https://github.com/LightningPeach/bitcoinrpc-rust-client)" = "<none>"
 "checksum bitflags 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4efd02e230a02e18f92fc2735f44597385ed02ad8f831e7c1c1156ee5e1ab3a5"
 "checksum bitflags 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "228047a76f468627ca71776ecdebd732a3423081fcf5125585bcd7c49886ce12"
 "checksum block-buffer 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "49665c62e0e700857531fa5d3763e91b539ff1abeebd56808d378b495870d60d"
