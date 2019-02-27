@@ -44,8 +44,8 @@ fn main() -> Result<(), Error> {
         // tui
         let (handle, rx, tx) = {
             write!(stdout(), "\
-                the lightning peach node is listening rpc at: {}, listening peers at: {}, has database at: {}\n\
-                enter any to shutdown... \n", argument.address, argument.p2p_address, argument.db_path).map_err(Io)?;
+                the lightning peach node is listening rpc at: {}, listening peers at: {}, has database at: {}\n",
+                   argument.address, argument.p2p_address, argument.db_path).map_err(Io)?;
             stdout().flush().map_err(Io)?;
 
             let (tx, rx) = mpsc::channel(1);
@@ -53,6 +53,8 @@ fn main() -> Result<(), Error> {
             (
                 thread::spawn(move || {
                     let _ = stdin().read(&mut [0]).map_err(Io)?;
+                    // TODO: listen signal or something
+                    loop {}
                     tx_wait.send(Command::Terminate).wait().map_err(SendError)
                 }),
                 rx,
