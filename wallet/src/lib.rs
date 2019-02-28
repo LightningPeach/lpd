@@ -24,11 +24,11 @@ const BIP0084_PURPOSE: u32 = 84;
 const COIN_TYPE_BITCOIN: u32 = 0;
 
 const BIP0084_KEY_SCOPE: KeyScope = KeyScope {
-    purpose: ChildNumber::Hardened(BIP0084_PURPOSE),
-    coin:    ChildNumber::Hardened(COIN_TYPE_BITCOIN),
+    purpose: ChildNumber::Hardened{index: BIP0084_PURPOSE},
+    coin:    ChildNumber::Hardened{index: COIN_TYPE_BITCOIN},
 };
 
-const DEFAULT_ACCOUNT: ChildNumber = ChildNumber::Hardened(0);
+const DEFAULT_ACCOUNT: ChildNumber = ChildNumber::Hardened{index: 0};
 
 struct HDWallet {
     key_manager: KeyManager,
@@ -100,7 +100,7 @@ fn test_bip0084() {
 
     let pk_hex = "0450863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B23522CD470243453A299FA9E77237716103ABC11A1DF38855ED6F2EE187E9C582BA6";
     let pk_bytes = hex::decode(pk_hex).unwrap();
-    let pk = PublicKey::from_slice(&Secp256k1::new(), &pk_bytes).unwrap();
+    let pk = PublicKey::from_slice(&pk_bytes).unwrap();
     let p2wkh_addr= HDWallet::p2wkh_addr_from_public_key(pk);
     assert_eq!(p2wkh_addr, "p2xtZoXeX5X8BP8JfFhQK2nD3emtjch7UeFm");
 

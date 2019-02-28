@@ -9,8 +9,9 @@ name = "server"
 [dependencies]
 grpc = "0.6.*"
 tls-api = "0.1.*"
-tls-api-native-tls = "0.1.*"
+tls-api-native-tls = "0.1.2"
 httpbis = "0.7.*"
+native-tls = "0.2"
 
 futures = "0.1"
 

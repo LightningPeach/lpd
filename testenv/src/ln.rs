@@ -1,10 +1,16 @@
 use super::{Home, cleanup};
 use super::chain::BitcoinConfig;
 use super::al::AbstractLightningNode;
+use crate::home::create_file_for_redirect;
 
-use std::process::Command;
-use std::process::Child;
+use std::process::{Command, Child};
+use std::thread::sleep;
+
 use std::io;
+use std::fmt;
+use std::fs::File;
+use std::path::PathBuf;
+use std::time::Duration;
 
 use lnd_rust::rpc::GetInfoResponse;
 use lnd_rust::rpc::LightningAddress;
@@ -19,6 +25,7 @@ use futures::Stream;
 
 use lazycell::LazyCell;
 
+#[derive(Debug)]
 pub struct LnDaemon {
     peer_port: u16,
     rpc_port: u16,
@@ -31,11 +38,38 @@ pub struct LnRunning {
     instance: Child,
     client: LazyCell<LightningClient>,
     info: LazyCell<GetInfoResponse>,
+    // we should keep file here, because its descriptor is used for redirects
+    // if file is closed then descriptor becomes invalid (I guess)
+    stdout: File,
+    stderr: File
 }
+
+impl fmt::Debug for LnRunning {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "LnRunning{{\nconfig:{:?},\ninstance:{:?}\n}}", self.config, self.instance)
+    }
+}
+
 
 impl LnDaemon {
     pub fn name(&self) -> &str {
         self.home.name()
+    }
+
+    pub fn data_dir_path(&self) -> PathBuf {
+        self.home.ext_path("data")
+    }
+
+    pub fn log_dir_path(&self) -> PathBuf {
+        self.home.ext_path("logs")
+    }
+
+    pub fn stdout_path(&self) -> PathBuf {
+        self.home.ext_path("lnd.stdout")
+    }
+
+    pub fn stderr_path(&self) -> PathBuf {
+        self.home.ext_path("lnd.stderr")
     }
 
     pub fn new(
@@ -45,10 +79,10 @@ impl LnDaemon {
             peer_port: peer_port,
             rpc_port: rpc_port,
             rest_port: rest_port,
-            home: Home::new(name, false)
+            home: Home::new(name, false, true)
                 .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
                     cleanup("lnd");
-                    Home::new(name, true)
+                    Home::new(name, true, true)
                 } else {
                     Err(e)
                 })?,
@@ -59,13 +93,29 @@ impl LnDaemon {
     where
         B: BitcoinConfig,
     {
+        println!("lnd stdout: {:?}", self.stdout_path());
+        println!("lnd stderr: {:?}", self.stderr_path());
+        let (stdout, stdout_file) = create_file_for_redirect(self.stdout_path()).map_err(|err| {
+            println!("cannot create file for redirecting lnd stdout: {:?}", err);
+            err
+        })?;
+
+        let (stderr, stderr_file) = create_file_for_redirect(self.stderr_path()).map_err(|err|{
+            println!("cannot create file for redirecting lnd stderr: {:?}", err);
+            err
+        })?;
+
+
+        println!("self.home.ext_path(\"data\"): {:?}", self.data_dir_path());
         Command::new("lnd")
             .args(&[
-                "--noencryptwallet", "--no-macaroons",
+                "--noseedbackup", "--no-macaroons", "--debuglevel=trace"
             ])
             .args(&[
-                format!("--datadir={}", self.home.ext_path("data").to_str().unwrap()),
-                format!("--logdir={}", self.home.ext_path("logs").to_str().unwrap()),
+                format!("--lnddir={}", self.home.path().to_str().unwrap()),
+                format!("--configfile={}", self.home.lnd_conf_path().to_str().unwrap()),
+                format!("--datadir={}", self.data_dir_path().to_str().unwrap()),
+                format!("--logdir={}", self.log_dir_path().to_str().unwrap()),
                 format!("--tlscertpath={}", self.home.public_key_path().to_str().unwrap()),
                 format!("--tlskeypath={}", self.home.private_key_path().to_str().unwrap()),
             ])
@@ -75,13 +125,21 @@ impl LnDaemon {
                 format!("--restlisten=localhost:{}", self.rest_port),
             ])
             .args(b.lnd_params())
+            .stdout(stdout)
+            .stderr(stderr)
             .spawn()
+            .map_err(|err|{
+                println!("cannot spawn lnd: {:?}", err);
+                err
+            })
             .map(|instance| {
                 LnRunning {
                     config: self,
                     instance: instance,
                     client: LazyCell::new(),
                     info: LazyCell::new(),
+                    stdout: stdout_file,
+                    stderr: stderr_file
                 }
             })
     }
@@ -102,6 +160,9 @@ impl LnRunning {
                 LnDaemon::new(
                     p_peer, p_rpc, p_rest, name.as_str()
                 )?.run(b)
+            })
+            .inspect(|x| {
+                println!("LND start result: {:?}", x);
             })
             .filter_map(Result::ok)
             .collect()
@@ -127,7 +188,7 @@ impl LnRunning {
         Ok(LightningClient::with_client(Arc::new(inner)))
     }
 
-    fn obtain_info(&self) -> impl Future<Item=GetInfoResponse, Error=grpc::Error> {
+    pub fn obtain_info(&self) -> impl Future<Item=GetInfoResponse, Error=grpc::Error> {
         use lnd_rust::rpc::GetInfoRequest;
         use lnd_rust::rpc_grpc::Lightning;
         use grpc::RequestOptions;

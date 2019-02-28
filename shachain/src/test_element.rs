@@ -1,6 +1,6 @@
 use hex;
 
-use element::{Element, Index, ROOT_INDEX};
+use crate::element::{Element, Index, ROOT_INDEX};
 
 struct TestData<'a> {
     name:   &'a str,
