@@ -42,10 +42,10 @@ impl BitcoinConfig for Btcd {
 
     fn new(name: &str) -> Result<Self, io::Error> {
         Ok(Btcd {
-            home: Home::new(name, false)
+            home: Home::new(name, false, true)
                 .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
                     cleanup("btcd");
-                    Home::new(name, true)
+                    Home::new(name, true, true)
                 } else {
                     Err(e)
                 })?,

@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use element::{Element, Index, ROOT_INDEX};
+use crate::element::{Element, Index, ROOT_INDEX};
 
 // RevocationProducer is an implementation of Producer interface using the
 // shachain PRF construct. Starting with a single 32-byte element generated

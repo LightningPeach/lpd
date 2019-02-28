@@ -1,9 +1,12 @@
 use super::super::{Home, cleanup};
 use super::{BitcoinConfig, BitcoinInstance};
+use crate::home::create_file_for_redirect;
 
 use std::process::{Command, Child};
 use std::{io, fs};
 use bitcoin_rpc_client::BitcoinCoreClient;
+use std::fs::File;
+use std::path::PathBuf;
 
 pub struct Bitcoind {
     home: Home,
@@ -14,6 +17,8 @@ pub struct Bitcoind {
 pub struct BitcoindRunning {
     config: Bitcoind,
     instance: Child,
+    stdout: File,
+    stderr: File
 }
 
 impl AsMut<Bitcoind> for BitcoindRunning {
@@ -44,10 +49,11 @@ impl BitcoinConfig for Bitcoind {
 
     fn new(name: &str) -> Result<Self, io::Error> {
         Ok(Bitcoind {
-            home: Home::new(name, false)
+            home: Home::new(name, false, true)
                 .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
+                    // TODO(mkl): this should be fixed to not delete all bitcoind processes
                     cleanup("bitcoind");
-                    Home::new(name, true)
+                    Home::new(name, true, true)
                 } else {
                     Err(e)
                 })?,
@@ -79,18 +85,41 @@ impl Bitcoind {
         self.port = port;
     }
 
+    pub fn stdout_path(&self) -> PathBuf {
+        self.home.ext_path("bitcoind.stdout")
+    }
+
+    pub fn stderr_path(&self) -> PathBuf {
+        self.home.ext_path("bitcoind.stderr")
+    }
+
     fn run_internal(self) -> Result<BitcoindRunning, io::Error> {
-        fs::create_dir(self.home.ext_path("data")).or_else(|e|
+        let data_dir_path= self.home.ext_path("data");
+        fs::create_dir(&data_dir_path).or_else(|e|
             if e.kind() == io::ErrorKind::AlreadyExists {
                 Ok(())
             } else {
                 Err(e)
             }
-        )?;
+        ).map_err(|err| {
+            println!("cannot create data dir for bitcoind: {:?} , error: {:?}", &data_dir_path, err);
+            err
+        })?;
+
         let args = vec![
-            format!("-datadir={}", self.home.ext_path("data").to_str().unwrap()),
+            format!("-datadir={}", data_dir_path.to_str().unwrap()),
             format!("-port={}", self.port),
         ];
+
+        let (stdout, stdout_file) = create_file_for_redirect(self.stdout_path()).map_err(|err|{
+            println!("cannot create file {:?} for bitcoind stdout: {:?}", &self.stdout_path(), err);
+            err
+        })?;
+
+        let (stderr, stderr_file) = create_file_for_redirect(self.stderr_path()).map_err(|err| {
+            println!("cannot create file {:?} for bitcoind stderr: {:?}", &self.stderr_path(), err);
+            err
+        })?;
 
         Command::new("bitcoind")
             .args(&[
@@ -99,10 +128,14 @@ impl Bitcoind {
                 "-zmqpubrawblock=tcp://127.0.0.1:18501", "-zmqpubrawtx=tcp://127.0.0.1:18502",
             ])
             .args(args)
+            .stdout(stdout)
+            .stderr(stderr)
             .spawn()
             .map(|instance| BitcoindRunning {
                 config: self,
                 instance: instance,
+                stdout: stdout_file,
+                stderr: stderr_file
             })
     }
 }

@@ -19,7 +19,7 @@ use std::net::{TcpStream, SocketAddr};
 
 use std::error::Error;
 
-use brontide::tcp_communication::{Stream, NetAddress};
+use brontide::BrontideStream;
 use wire::{Message, BinarySD, SerdeVec, Init, RawFeatureVector, FeatureBit, Ping, Pong, AcceptChannel, OpenChannel, FundingSigned, ChannelId, FundingLocked, UpdateFulfillHtlc, UpdateAddHtlc, RevokeAndAck, CommitmentSigned, Satoshi, MilliSatoshi, CsvDelay, FundingCreated};
 use wire::PublicKey as LpdPublicKey;
 use wire::Signature as LpdSignature;

@@ -33,10 +33,10 @@ impl LpServer {
         Ok(LpServer {
             peer_port: peer_port,
             rpc_port: rpc_port,
-            home: Home::new(name, false)
+            home: Home::new(name, false, true)
                 .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
                     cleanup("lpd");
-                    Home::new(name, true)
+                    Home::new(name, true, true)
                 } else {
                     Err(e)
                 })?,
@@ -91,8 +91,19 @@ impl LpRunning {
 
     /// wait first time, might panic
     pub fn info(&self) -> &Info {
+        // TODO(mkl): do we really need caching here
         self.info.borrow().unwrap_or_else(|| {
-            self.info.fill(self.obtain_info().wait().unwrap()).ok().unwrap();
+            let data = self.obtain_info().wait()
+                .unwrap_or_else(|err| {
+                    println!("cannot getinfo lpd: {:?}", err);
+                    panic!(err);
+                });
+
+            self.info.fill(data)
+                .unwrap_or_else(|err|{
+                    println!("cannot fill LazyCell with getinfo lpd data: {:?}", err);
+                    panic!(err);
+                });
             self.info()
         })
     }
