@@ -5,12 +5,15 @@ authors = ["LightningPeach <contact@lightningpeach.com>"]
 edition = "2018"
 
 [dependencies]
-grpc = "0.6.*"
+grpc = "0.6"
+protobuf = "2.3"
 
 interface = { path = "../interface" }
 wire = { path = "../../wire" }
 connection = { path = "../../connection", features = ["rpc"] }
 state = { path = "../../state" }
+wallet_lib = { package = "wallet", git = "https://github.com/LightningPeach/rust-wallet.git" }
+bitcoin = "0.14.2"
 
 futures = "0.1"
 hex = "0.3"

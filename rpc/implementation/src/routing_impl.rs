@@ -100,14 +100,9 @@ impl RoutingService for RoutingImpl<SocketAddr> {
     }
 
     fn get_info(&self, o: RequestOptions, p: Void) -> SingleResponse<Info> {
-        use std::string::ToString;
-
         let _ = (o, p);
 
-        let pk = self.node.read().unwrap().get_info();
-
-        let mut response = Info::new();
-        response.set_identity_pubkey(pk.to_string());
+        let response = self.node.read().unwrap().get_info();
 
         SingleResponse::completed(response)
     }

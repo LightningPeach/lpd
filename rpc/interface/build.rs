@@ -5,7 +5,7 @@ use protoc_rust_grpc::{Args, Error};
 fn main() -> Result<(), Error> {
     use std::fs;
 
-    let inputs = vec!["common", "payment", "routing", "channel"];
+    let inputs = vec!["common", "payment", "routing", "channel", "wallet"];
     let inputs = inputs.into_iter().filter(|&name| {
         let input = format!("{}.proto", name);
         let output = format!("src/{}.rs", name);
@@ -20,13 +20,13 @@ fn main() -> Result<(), Error> {
             },
             Err(_) => true,
         }
-    }).collect::<Vec<_>>();
+    }).map(|name| format!("{}.proto", name)).collect::<Vec<_>>();
 
     if !inputs.is_empty() {
         protoc_rust_grpc::run(Args {
             out_dir: "src",
             includes: &["."],
-            input: inputs.as_slice(),
+            input: inputs.iter().map(AsRef::as_ref).collect::<Vec<_>>().as_slice(),
             rust_protobuf: true,
         })
     } else {
