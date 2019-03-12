@@ -11,6 +11,7 @@ use binformat::WireError;
 
 use super::address::{AbstractAddress, ConnectionStream, Command, Connection};
 use super::ping::PingContext;
+use super::blockchain::Blockchain;
 
 use state::DB;
 
@@ -21,13 +22,14 @@ use std::path::Path;
 use either::Either;
 
 #[cfg(feature = "rpc")]
-use interface::routing::{LightningNode, ChannelEdge};
+use interface::routing::{LightningNode, ChannelEdge, Info};
 
 pub struct Node {
     peers: Vec<PublicKey>,
     shared_state: SharedState,
     db: Arc<RwLock<DB>>,
     secret: SecretKey,
+    blockchain: Blockchain,
 }
 
 pub struct Remote {
@@ -48,15 +50,20 @@ impl MessageConsumer for Remote {
         // TODO: process the message using db and public
         let _ = (&self.db, &self.public);
 
+        println!("channel state: {:?}", self.channel);
+        println!("received message: {:?}", message);
+
         match message {
             Either::Left(message) => {
                 match self.channel.next(message) {
                     (state, Some(response)) => {
+                        println!("response message: {:?}", response);
                         let send = sink.send(response);
                         self.channel = state;
                         ConsumingFuture::from_send(self, send)
                     },
                     (state, None) => {
+                        println!("response nothing");
                         self.channel = state;
                         ConsumingFuture::ok(self, sink)
                     },
@@ -84,6 +91,7 @@ impl Node {
             shared_state: SharedState(Arc::new(RwLock::new(State::new(p_db.clone())))),
             db: p_db,
             secret: SecretKey::from_slice(&secret[..]).unwrap(),
+            blockchain: Blockchain::bitcoin(),
         }
     }
 
@@ -181,16 +189,26 @@ impl Node {
 
     // TODO: add missing fields
     #[cfg(feature = "rpc")]
-    pub fn get_info(&self) -> PublicKey {
+    pub fn get_info(&self) -> Info {
         use secp256k1::Secp256k1;
+        use std::string::ToString;
 
-        PublicKey::from_secret_key(&Secp256k1::new(), &self.secret)
+        let pk = PublicKey::from_secret_key(&Secp256k1::new(), &self.secret);
+
+        let mut info = Info::new();
+        info.set_identity_pubkey(pk.to_string());
+        info.set_num_peers(self.peers.len() as _);
+        info.set_block_hash(self.blockchain.hash().to_string());
+        info.set_block_height(self.blockchain.height());
+        info
     }
 
     // TODO: add missing fields
     #[cfg(feature = "rpc")]
     pub fn find_route(&self, goal: PublicKey) -> Vec<(LightningNode, ChannelEdge)> {
-        let start = self.get_info();
+        use secp256k1::Secp256k1;
+        let start = PublicKey::from_secret_key(&Secp256k1::new(), &self.secret);
+
         // goal is not included, so let's swap start and goal so starting node is not included
         self.shared_state.0.read().unwrap().path(goal.into(), start.into())
     }
