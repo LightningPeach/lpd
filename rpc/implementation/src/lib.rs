@@ -11,3 +11,4 @@ pub use self::payment_impl::service as payment_service;
 pub use self::wallet_impl::service as wallet_service;
 
 pub use connection::{Node, Command};
+pub use wallet_lib;

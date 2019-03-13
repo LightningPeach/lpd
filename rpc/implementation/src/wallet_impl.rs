@@ -9,7 +9,8 @@ use interface::wallet::{
     OutPoint as RpcOutPoint,
     UnlockCoinsRequest, UnlockCoinsResponse, ShutdownRequest, ShutdownResponse
 };
-use std::sync::{Mutex, mpsc::Sender, Arc};
+use std::sync::{Mutex, Arc};
+use futures::sync::mpsc::Sender;
 use std::fmt::Debug;
 
 use bitcoin::{
@@ -23,7 +24,10 @@ use wallet_lib::{
     interface::Wallet as WalletInterface,
 };
 
-pub fn service(af: Arc<Mutex<Box<WalletInterface + Send>>>, shutdown: Mutex<Sender<ShutdownSignal>>) -> ServerServiceDefinition {
+pub fn service<A>(af: Arc<Mutex<Box<WalletInterface + Send>>>, shutdown: Sender<Command<A>>) -> ServerServiceDefinition
+where
+    A: AbstractAddress + Send + Sync + 'static,
+{
     WalletServer::new_service_def(WalletImpl::new(af, shutdown))
 }
 
@@ -42,15 +46,21 @@ where
         .unwrap_or_else(SingleResponse::err)
 }
 
-pub struct ShutdownSignal;
+use connection::{Command, AbstractAddress};
 
-struct WalletImpl {
+struct WalletImpl<A>
+where
+    A: AbstractAddress,
+{
     af: Arc<Mutex<Box<WalletInterface + Send>>>,
-    shutdown: Mutex<Sender<ShutdownSignal>>,
+    shutdown: Sender<Command<A>>,
 }
 
-impl WalletImpl {
-    fn new(af: Arc<Mutex<Box<WalletInterface + Send>>>, shutdown: Mutex<Sender<ShutdownSignal>>) -> Self {
+impl<A> WalletImpl<A>
+where
+    A: AbstractAddress,
+{
+    fn new(af: Arc<Mutex<Box<WalletInterface + Send>>>, shutdown: Sender<Command<A>>) -> Self {
         WalletImpl {
             af: af,
             shutdown: shutdown,
@@ -117,7 +127,10 @@ impl WalletImpl {
     }
 }
 
-impl Wallet for WalletImpl {
+impl<A> Wallet for WalletImpl<A>
+where
+    A: AbstractAddress,
+{
     fn new_address(&self, o: RequestOptions, p: NewAddressRequest) -> SingleResponse<NewAddressResponse> {
         let _ = o;
         grpc_result(self.new_address_helper(&p))
@@ -190,9 +203,12 @@ impl Wallet for WalletImpl {
     }
 
     fn shutdown(&self, o: RequestOptions, p: ShutdownRequest) -> SingleResponse<ShutdownResponse> {
+        use futures::sink::Sink;
+        use futures::future::Future;
+
         let _ = (o, p);
 
-        self.shutdown.lock().unwrap().send(ShutdownSignal).unwrap();
+        self.shutdown.clone().send(Command::Terminate).wait().unwrap();
         SingleResponse::completed(ShutdownResponse::new())
     }
 }
