@@ -14,6 +14,7 @@ use self::config::{Argument, Error as CommandLineReadError};
 use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;
 use std::io::Error as IoError;
+use implementation::wallet_lib::error::WalletError;
 
 #[derive(Debug)]
 enum Error {
@@ -22,30 +23,32 @@ enum Error {
     CommandLineRead(CommandLineReadError),
     Io(IoError),
     SendError(ctrlc::Error),
+    WalletError(WalletError),
 }
 
 fn main() -> Result<(), Error> {
-    use std::sync::{RwLock, Arc};
+    use std::sync::{Mutex, RwLock, Arc};
     use grpc::ServerBuilder;
-    use implementation::{Node, Command, routing_service, channel_service, payment_service};
-    use futures::sync::mpsc;
-    use futures::Future;
-    use futures::Sink;
+    use implementation::{Node, Command, routing_service, channel_service, payment_service, wallet_service};
+    use implementation::wallet_lib::{
+        electrumx::ElectrumxWallet, default::WalletWithTrustedFullNode,
+        walletlibrary::{WalletConfig, DEFAULT_NETWORK, DEFAULT_SALT, DEFAULT_PASSPHRASE, WalletLibraryMode, KeyGenConfig},
+        interface::Wallet,
+    };
+    use futures::{sync::mpsc, Future, Sink};
     use self::Error::*;
 
     let argument = Argument::from_env().map_err(CommandLineRead)?;
 
-    let (node, rx, tx) = {
+    let (node, tx, rx) = {
         println!("the lightning peach node is listening rpc at: {}, listening peers at: {}, has database at: {}",
                  argument.address, argument.p2p_address, argument.db_path);
 
         let (tx, rx) = mpsc::channel(1);
-        let (repeat_sender, repeat_receiver) = mpsc::channel(8);
 
         let tx_wait = tx.clone();
         ctrlc::set_handler(move || {
             println!("received termination command");
-            repeat_sender.clone().send(()).wait().unwrap();
             tx_wait.clone().send(Command::Terminate).wait().unwrap();
             println!("the command is propagated, terminating...");
         }).map_err(SendError)?;
@@ -57,8 +60,19 @@ fn main() -> Result<(), Error> {
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
         ];
 
-        (Arc::new(RwLock::new(Node::new(secret, argument.db_path))), rx, tx)
+        (Arc::new(RwLock::new(Node::new(secret, argument.db_path.clone()))), tx, rx)
     };
+
+    let config = WalletConfig::new(
+        DEFAULT_NETWORK,
+        DEFAULT_PASSPHRASE.to_owned(),
+        DEFAULT_SALT.to_owned(),
+        format!("{}/wallet_db", argument.db_path),
+    );
+    let (wallet, mnemonic) = ElectrumxWallet::new(config, WalletLibraryMode::Create(KeyGenConfig::default()))
+        .map_err(WalletError)?;
+    println!("{}", mnemonic.to_string());
+    let wallet: Arc<Mutex<Box<dyn Wallet + Send>>> = Arc::new(Mutex::new(Box::new(wallet)));
 
     let server = {
         let mut server = ServerBuilder::new();
@@ -67,6 +81,7 @@ fn main() -> Result<(), Error> {
         }
         server.http.set_addr(argument.address).map_err(Httpbis)?;
         server.http.set_cpu_pool_threads(4);
+        server.add_service(wallet_service(wallet, tx.clone()));
         server.add_service(routing_service(node.clone(), tx));
         server.add_service(channel_service());
         server.add_service(payment_service());
