@@ -24,7 +24,7 @@ use wallet_lib::{
     interface::Wallet as WalletInterface,
 };
 
-pub fn service<A>(af: Arc<Mutex<Box<WalletInterface + Send>>>, shutdown: Sender<Command<A>>) -> ServerServiceDefinition
+pub fn service<A>(af: Arc<Mutex<Box<dyn WalletInterface + Send>>>, shutdown: Sender<Command<A>>) -> ServerServiceDefinition
 where
     A: AbstractAddress + Send + Sync + 'static,
 {

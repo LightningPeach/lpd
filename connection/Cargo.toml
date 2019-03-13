@@ -5,6 +5,7 @@ authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
 edition = "2018"
 
 [dependencies]
+wallet_lib = { package = "wallet", git = "https://github.com/LightningPeach/rust-wallet.git" }
 brontide = { path = "../brontide" }
 binformat = { path = "../binformat" }
 wire = { path = "../wire" }

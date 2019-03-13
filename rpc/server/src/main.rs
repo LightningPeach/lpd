@@ -67,7 +67,7 @@ fn main() -> Result<(), Error> {
         DEFAULT_NETWORK,
         DEFAULT_PASSPHRASE.to_owned(),
         DEFAULT_SALT.to_owned(),
-        format!("{}/wallet_db", argument.db_path),
+        format!("{}/wallet_db", argument.db_path.clone()),
     );
     let (wallet, mnemonic) = ElectrumxWallet::new(config, WalletLibraryMode::Create(KeyGenConfig::default()))
         .map_err(WalletError)?;
@@ -81,14 +81,14 @@ fn main() -> Result<(), Error> {
         }
         server.http.set_addr(argument.address).map_err(Httpbis)?;
         server.http.set_cpu_pool_threads(4);
-        server.add_service(wallet_service(wallet, tx.clone()));
-        server.add_service(routing_service(node.clone(), tx));
+        server.add_service(wallet_service(wallet.clone(), tx.clone()));
+        server.add_service(routing_service(node.clone(), tx.clone()));
         server.add_service(channel_service());
         server.add_service(payment_service());
         server.build().map_err(Grpc)?
     };
 
-    Node::listen(node, &argument.p2p_address, rx).map_err(Io)?;
+    Node::listen(node, wallet.clone(), &argument.p2p_address, rx).map_err(Io)?;
     println!("done");
 
     // TODO: handle double ctrl+c

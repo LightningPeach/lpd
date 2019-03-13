@@ -1,4 +1,6 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Mutex};
+
+use wallet_lib::interface::Wallet;
 
 use secp256k1::{SecretKey, PublicKey};
 use tokio::prelude::{Future, AsyncRead, AsyncWrite, Sink};
@@ -131,13 +133,15 @@ impl Node {
         tokio::spawn(connection)
     }
 
-    pub fn listen<A>(p_self: Arc<RwLock<Self>>, address: &A, control: Receiver<Command<A>>) -> Result<(), A::Error>
+    pub fn listen<A>(p_self: Arc<RwLock<Self>>, wallet: Arc<Mutex<Box<dyn Wallet + Send>>>, address: &A, control: Receiver<Command<A>>) -> Result<(), A::Error>
     where
         A: AbstractAddress + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
         use futures::future::ok;
 
+        // TODO: use wallet
+        let _ = wallet;
         let secret = p_self.read().unwrap().secret.clone();
         let server = ConnectionStream::listen(address, control, secret)?
             .map_err(|e| println!("{:?}", e))
