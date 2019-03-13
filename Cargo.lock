@@ -470,6 +470,7 @@ dependencies = [
  "serde_derive 1.0.89 (registry+https://github.com/rust-lang/crates.io-index)",
  "state 0.1.0",
  "tokio 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wallet 0.1.0 (git+https://github.com/LightningPeach/rust-wallet.git)",
  "wire 0.1.0",
 ]
 
