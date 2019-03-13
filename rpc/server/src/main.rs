@@ -2,6 +2,7 @@ extern crate grpc;
 extern crate tls_api_native_tls;
 extern crate tls_api;
 extern crate httpbis;
+extern crate ctrlc;
 
 extern crate futures;
 
@@ -13,11 +14,6 @@ use self::config::{Argument, Error as CommandLineReadError};
 use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;
 use std::io::Error as IoError;
-use futures::sync::mpsc::SendError;
-
-use implementation::Command;
-use std::net::SocketAddr;
-use std::any::Any;
 
 #[derive(Debug)]
 enum Error {
@@ -25,12 +21,11 @@ enum Error {
     Httpbis(HttpbisError),
     CommandLineRead(CommandLineReadError),
     Io(IoError),
-    SendError(SendError<Command<SocketAddr>>),
-    ThreadError(Box<dyn Any + Send + 'static>),
+    SendError(ctrlc::Error),
 }
 
 fn main() -> Result<(), Error> {
-    use std::{sync::{RwLock, Arc}, io::{Read, stdin, stdout, Write}, thread};
+    use std::sync::{RwLock, Arc};
     use grpc::ServerBuilder;
     use implementation::{Node, Command, routing_service, channel_service, payment_service};
     use futures::sync::mpsc;
@@ -40,27 +35,20 @@ fn main() -> Result<(), Error> {
 
     let argument = Argument::from_env().map_err(CommandLineRead)?;
 
-    let (handle, node, rx, tx) = {
-        // tui
-        let (handle, rx, tx) = {
-            write!(stdout(), "\
-                the lightning peach node is listening rpc at: {}, listening peers at: {}, has database at: {}\n",
-                   argument.address, argument.p2p_address, argument.db_path).map_err(Io)?;
-            stdout().flush().map_err(Io)?;
+    let (node, rx, tx) = {
+        println!("the lightning peach node is listening rpc at: {}, listening peers at: {}, has database at: {}",
+                 argument.address, argument.p2p_address, argument.db_path);
 
-            let (tx, rx) = mpsc::channel(1);
-            let tx_wait = tx.clone();
-            (
-                thread::spawn(move || {
-                    let _ = stdin().read(&mut [0]).map_err(Io)?;
-                    // TODO: listen signal or something
-                    loop {}
-                    tx_wait.send(Command::Terminate).wait().map_err(SendError)
-                }),
-                rx,
-                tx,
-            )
-        };
+        let (tx, rx) = mpsc::channel(1);
+        let (repeat_sender, repeat_receiver) = mpsc::channel(8);
+
+        let tx_wait = tx.clone();
+        ctrlc::set_handler(move || {
+            println!("received termination command");
+            repeat_sender.clone().send(()).wait().unwrap();
+            tx_wait.clone().send(Command::Terminate).wait().unwrap();
+            println!("the command is propagated, terminating...");
+        }).map_err(SendError)?;
 
         let secret = [
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
@@ -69,7 +57,7 @@ fn main() -> Result<(), Error> {
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
         ];
 
-        (handle, Arc::new(RwLock::new(Node::new(secret, argument.db_path))), rx, tx)
+        (Arc::new(RwLock::new(Node::new(secret, argument.db_path))), rx, tx)
     };
 
     let server = {
@@ -86,8 +74,10 @@ fn main() -> Result<(), Error> {
     };
 
     Node::listen(node, &argument.p2p_address, rx).map_err(Io)?;
+    println!("done");
 
-    handle.join().map_err(ThreadError)??;
+    // TODO: handle double ctrl+c
+    //panic!("received termination command during processing termination command, terminate immediately");
 
     let _ = server;
     Ok(())
