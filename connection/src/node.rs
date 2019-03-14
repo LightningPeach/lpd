@@ -32,10 +32,12 @@ pub struct Node {
     db: Arc<RwLock<DB>>,
     secret: SecretKey,
     blockchain: Blockchain,
+    wallet: Arc<Mutex<Box<dyn Wallet + Send>>>,
 }
 
 pub struct Remote {
     db: Arc<RwLock<DB>>,
+    wallet: Arc<Mutex<Box<dyn Wallet + Send>>>,
     public: PublicKey,
     channel: ChannelState,
 }
@@ -49,8 +51,8 @@ impl MessageConsumer for Remote {
         Self: Sized,
         S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
     {
-        // TODO: process the message using db and public
-        let _ = (&self.db, &self.public);
+        // TODO: use them
+        let _ = (&self.db, &self.public, &self.wallet);
 
         println!("channel state: {:?}", self.channel);
         println!("received message: {:?}", message);
@@ -82,7 +84,7 @@ impl MessageConsumer for Remote {
 }
 
 impl Node {
-    pub fn new<P: AsRef<Path>>(secret: [u8; 32], path: P) -> Self {
+    pub fn new<P: AsRef<Path>>(wallet: Arc<Mutex<Box<dyn Wallet + Send>>>, secret: [u8; 32], path: P) -> Self {
         use state::DBBuilder;
 
         let db = DBBuilder::default().user::<State>().build(path).unwrap();
@@ -94,6 +96,7 @@ impl Node {
             db: p_db,
             secret: SecretKey::from_slice(&secret[..]).unwrap(),
             blockchain: Blockchain::bitcoin(),
+            wallet: wallet,
         }
     }
 
@@ -104,6 +107,7 @@ impl Node {
             self.peers.push(remote_public.clone());
             Either::Right(Remote {
                 db: self.db.clone(),
+                wallet: self.wallet.clone(),
                 public: remote_public,
                 channel: ChannelState::new(),
             })
@@ -133,15 +137,13 @@ impl Node {
         tokio::spawn(connection)
     }
 
-    pub fn listen<A>(p_self: Arc<RwLock<Self>>, wallet: Arc<Mutex<Box<dyn Wallet + Send>>>, address: &A, control: Receiver<Command<A>>) -> Result<(), A::Error>
+    pub fn listen<A>(p_self: Arc<RwLock<Self>>, address: &A, control: Receiver<Command<A>>) -> Result<(), A::Error>
     where
         A: AbstractAddress + Send + 'static,
     {
         use tokio::prelude::stream::Stream;
         use futures::future::ok;
 
-        // TODO: use wallet
-        let _ = wallet;
         let secret = p_self.read().unwrap().secret.clone();
         let server = ConnectionStream::listen(address, control, secret)?
             .map_err(|e| println!("{:?}", e))

@@ -70,7 +70,7 @@ fn main() -> Result<(), Error> {
         let mut node_db_path = PathBuf::from(argument.db_path.clone());
         node_db_path.push("node");
 
-        (Arc::new(RwLock::new(Node::new(secret, node_db_path))), tx, rx)
+        (Arc::new(RwLock::new(Node::new(wallet.clone(), secret, node_db_path))), tx, rx)
     };
 
     let server = {
@@ -87,7 +87,7 @@ fn main() -> Result<(), Error> {
         server.build().map_err(Grpc)?
     };
 
-    Node::listen(node, wallet.clone(), &argument.p2p_address, rx).map_err(Io)?;
+    Node::listen(node, &argument.p2p_address, rx).map_err(Io)?;
     println!("done");
 
     // TODO: handle double ctrl+c
