@@ -16,4 +16,6 @@ ctrlc = "3.1"
 
 futures = "0.1"
 
+bitcoin = "0.14"
+
 implementation = { path = "../implementation" }
