@@ -3,6 +3,7 @@ extern crate tls_api_native_tls;
 extern crate tls_api;
 extern crate httpbis;
 extern crate ctrlc;
+extern crate bitcoin;
 
 extern crate futures;
 
@@ -10,6 +11,8 @@ extern crate implementation;
 
 mod config;
 use self::config::{Argument, Error as CommandLineReadError};
+
+mod wallet;
 
 use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;
@@ -27,18 +30,21 @@ enum Error {
 }
 
 fn main() -> Result<(), Error> {
-    use std::sync::{Mutex, RwLock, Arc};
+    use std::{sync::{Mutex, RwLock, Arc}, path::PathBuf};
     use grpc::ServerBuilder;
     use implementation::{Node, Command, routing_service, channel_service, payment_service, wallet_service};
-    use implementation::wallet_lib::{
-        electrumx::ElectrumxWallet, default::WalletWithTrustedFullNode,
-        walletlibrary::{WalletConfig, DEFAULT_NETWORK, DEFAULT_SALT, DEFAULT_PASSPHRASE, WalletLibraryMode, KeyGenConfig},
-        interface::Wallet,
-    };
     use futures::{sync::mpsc, Future, Sink};
     use self::Error::*;
+    use self::wallet::create_wallet;
 
     let argument = Argument::from_env().map_err(CommandLineRead)?;
+
+    let wallet = {
+        let mut wallet_db_path = PathBuf::from(argument.db_path.clone());
+        wallet_db_path.push("wallet");
+        let wallet = create_wallet(&wallet_db_path.as_path()).map_err(WalletError)?;
+        Arc::new(Mutex::new(wallet))
+    };
 
     let (node, tx, rx) = {
         println!("the lightning peach node is listening rpc at: {}, listening peers at: {}, has database at: {}",
@@ -53,6 +59,7 @@ fn main() -> Result<(), Error> {
             println!("the command is propagated, terminating...");
         }).map_err(SendError)?;
 
+        // TODO: get key from wallet
         let secret = [
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
@@ -60,19 +67,11 @@ fn main() -> Result<(), Error> {
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
         ];
 
-        (Arc::new(RwLock::new(Node::new(secret, argument.db_path.clone()))), tx, rx)
-    };
+        let mut node_db_path = PathBuf::from(argument.db_path.clone());
+        node_db_path.push("node");
 
-    let config = WalletConfig::new(
-        DEFAULT_NETWORK,
-        DEFAULT_PASSPHRASE.to_owned(),
-        DEFAULT_SALT.to_owned(),
-        format!("{}/wallet_db", argument.db_path.clone()),
-    );
-    let (wallet, mnemonic) = ElectrumxWallet::new(config, WalletLibraryMode::Create(KeyGenConfig::default()))
-        .map_err(WalletError)?;
-    println!("{}", mnemonic.to_string());
-    let wallet: Arc<Mutex<Box<dyn Wallet + Send>>> = Arc::new(Mutex::new(Box::new(wallet)));
+        (Arc::new(RwLock::new(Node::new(secret, node_db_path))), tx, rx)
+    };
 
     let server = {
         let mut server = ServerBuilder::new();
