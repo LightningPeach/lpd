@@ -12,15 +12,57 @@ use futures::sync::{oneshot, mpsc};
 use either::Either;
 use std::collections::BTreeMap;
 use processor::{Event, DirectCommand};
+use std::fmt::Formatter;
 
-pub trait AbstractAddress {
-    type Error;
+
+pub enum TransportError {
+    IOError {
+        inner: std::io::Error,
+        description: String,
+    },
+    HandshakeError {
+        inner: HandshakeError,
+        description: String,
+    },
+    TransportError {
+        inner: Box<TransportError>,
+        description: String,
+    },
+    Other {
+        description: String
+    }
+}
+
+impl std::fmt::Debug for TransportError {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            TransportError::IOError{inner, description} => write!(f, "IOError({:?}, {:?})", description, inner),
+            TransportError::HandshakeError {inner, description} => write!(f, "HandshakeError({:?}, {:?})", description, inner),
+            TransportError::TransportError {inner, description} => write!(f, "TransportError({:?}, {:?})", description, inner),
+            TransportError::Other {description} => write!(f, "Other({:?})", description),
+        }
+    }
+}
+
+// Represent address to which we can connect
+pub trait AbstractAddress : std::fmt::Debug {
+
+    // Inner stream type used for Brontide streams
     type Stream: AsyncRead + AsyncWrite + Send + 'static;
-    type Outgoing: Future<Item=BrontideStream<Self::Stream>, Error=HandshakeError> + Send + 'static;
-    type Incoming: Stream<Item=BrontideStream<Self::Stream>, Error=HandshakeError> + Send + 'static;
 
-    fn connect(&self, local_secret: SecretKey, remote_public: PublicKey) -> Self::Outgoing;
-    fn listen(&self, local_secret: SecretKey) -> Result<Self::Incoming, Self::Error>;
+    // Represent outgoing connection. When we try to connect to someone
+    type OutgoingConnection: Future<Item=BrontideStream<Self::Stream>, Error=TransportError> + Send + 'static;
+
+    // Represent incoming connections.
+    type IncomingConnectionsStream: Stream<Item=BrontideStream<Self::Stream>, Error=TransportError> + Send + 'static;
+
+    // Connect to remote host
+    // local_secret_key - our secret_key
+    // remote_public_key - remote public key
+    fn connect(&self, local_secret_key: SecretKey, remote_public_key: PublicKey) -> Self::OutgoingConnection;
+
+    // Listen for connections
+    fn listen(&self, local_secret_key: SecretKey) -> Result<Self::IncomingConnectionsStream, TransportError>;
 }
 
 pub struct Connection<S>
@@ -79,9 +121,10 @@ where
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         use tokio::prelude::Async::*;
 
-        match self.termination.poll().unwrap() {
-            Ready(_) => Ok(Ready(None)),
-            NotReady => {
+        match self.termination.poll() {
+            Ok(Ready(_)) => Ok(Ready(None)),
+            Ok(NotReady) => {
+                // TODO(mkl): is unwrap() ok here?
                 match self.control.poll().unwrap() {
                     Ready(Some(command)) => Ok(Ready(Some(Either::Right(command)))),
                     Ready(None) | NotReady => self.inner.poll()
@@ -89,6 +132,12 @@ where
                             a.map(|maybe| maybe.map(Either::Left))
                         ),
                 }
+            }
+            // TODO(mkl): why it is called
+            Err(err) => {
+                // We got here when sender of self.termination is dropped
+                println!("self.termination.poll() is canceled");
+                Ok(Ready(None))
             }
         }
     }
@@ -114,8 +163,8 @@ pub struct ConnectionStream<A, C>
 where
     A: AbstractAddress,
 {
-    incoming: A::Incoming,
-    outgoing: Vec<A::Outgoing>,
+    incoming: A::IncomingConnectionsStream,
+    outgoing: Vec<A::OutgoingConnection>,
     control: C,
     local_secret: SecretKey,
     pipes: BTreeMap<PublicKey, (oneshot::Sender<()>, mpsc::UnboundedSender<Event>)>,
@@ -126,7 +175,7 @@ where
     A: AbstractAddress,
     C: Stream<Item=Command<A>, Error=()>,
 {
-    pub fn listen(address: &A, control: C, local_secret: SecretKey) -> Result<Self, A::Error> {
+    pub fn listen(address: &A, control: C, local_secret: SecretKey) -> Result<Self, TransportError> {
         Ok(ConnectionStream {
             incoming: address.listen(local_secret.clone())?,
             outgoing: Vec::new(),
@@ -144,11 +193,12 @@ where
     C: Stream<Item=Command<A>, Error=()>,
 {
     type Item = Connection<A::Stream>;
-    type Error = HandshakeError;
+    type Error = TransportError;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         use tokio::prelude::Async::*;
 
+        // TODO(mkl): is it ok to unwrap here?
         match self.control.poll().unwrap() {
             Ready(None) => Ok(Ready(None)),
             Ready(Some(command)) => match command {
@@ -180,7 +230,7 @@ where
                 },
                 Command::Terminate => {
                     use std::mem;
-
+                    println!("Terminate connections");
                     let mut empty = BTreeMap::new();
                     mem::swap(&mut empty, &mut self.pipes);
                     empty.into_iter()

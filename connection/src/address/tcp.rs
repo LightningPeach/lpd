@@ -7,14 +7,14 @@ use tokio::{
     net::{TcpStream, TcpListener, tcp::{ConnectFuture, Incoming}},
 };
 use brontide::{BrontideStream, HandshakeError};
+use crate::address::TransportError;
 
 impl AbstractAddress for SocketAddr {
-    type Error = io::Error;
     type Stream = TcpStream;
-    type Outgoing = TcpConnection;
-    type Incoming = TcpConnectionStream;
+    type OutgoingConnection = TcpConnection;
+    type IncomingConnectionsStream = TcpConnectionStream;
 
-    fn connect(&self, local_secret: SecretKey, remote_public: PublicKey) -> Self::Outgoing {
+    fn connect(&self, local_secret: SecretKey, remote_public: PublicKey) -> Self::OutgoingConnection {
         TcpConnection {
             inner: TcpStream::connect(self),
             handshake: None,
@@ -23,9 +23,19 @@ impl AbstractAddress for SocketAddr {
         }
     }
 
-    fn listen(&self, local_secret: SecretKey) -> Result<Self::Incoming, Self::Error> {
+    fn listen(&self, local_secret: SecretKey) -> Result<TcpConnectionStream, TransportError>
+    {
+        // TODO(mkl): refactor this
+        let listener = TcpListener::bind(self)
+            .map_err(|err| {
+                TransportError::IOError {
+                    inner: err,
+                    description: format!("cannot create tcp listener for {:?}", self)
+                }
+            })?;
+        let incoming_connections = listener.incoming();
         Ok(TcpConnectionStream {
-            inner: TcpListener::bind(self).map(TcpListener::incoming)?,
+            inner: Box::new(incoming_connections),
             handshake: None,
             local_secret: local_secret,
         })
@@ -41,64 +51,101 @@ pub struct TcpConnection {
 
 impl Future for TcpConnection {
     type Item = BrontideStream<TcpStream>;
-    type Error = HandshakeError;
+    type Error = TransportError;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         use tokio::prelude::Async::*;
-
+        // TODO(mkl): rewrite this
         match &mut self.handshake {
-            &mut None => match self.inner.poll().map_err(HandshakeError::Io)? {
-                NotReady => Ok(NotReady),
-                Ready(stream) => {
-                    let handshake = BrontideStream::outgoing(
-                        stream,
-                        self.local_secret.clone(),
-                        self.remote_public.clone()
-                    );
-                    self.handshake = Some(Box::new(handshake));
-                    self.poll()
-                },
+            &mut None => {
+                let inner_poll = self.inner
+                    .poll()
+                    .map_err(|err|
+                        TransportError::HandshakeError {
+                            inner: HandshakeError::Io(err,"error polling inside TcpConnection".to_owned()),
+                            description: "error polling inside TcpConnection".to_owned()
+                        }
+                    )?;
+                match inner_poll {
+                    NotReady => Ok(NotReady),
+                    Ready(stream) => {
+                        let handshake = BrontideStream::outgoing(
+                            stream,
+                            self.local_secret.clone(),
+                            self.remote_public.clone()
+                        );
+                        self.handshake = Some(Box::new(handshake));
+                        self.poll()
+                    },
+                }
             },
-            &mut Some(ref mut f) => match f.poll() {
-                Ok(NotReady) => Ok(NotReady),
-                r @ _ => {
-                    self.handshake = None;
-                    r
-                },
+            &mut Some(ref mut f) => {
+                match f.poll() {
+                    Ok(NotReady) => Ok(NotReady),
+                    r @ _ => {
+                        self.handshake = None;
+                        r.map_err(|err|{
+                            TransportError::HandshakeError {
+                                inner: err,
+                                description: "error polling from inner from succesfull TcpConnection poll".to_owned()
+                            }
+                        })
+                    },
+                }
             }
         }
     }
 }
 
-pub struct TcpConnectionStream {
-    inner: Incoming,
+pub struct TcpConnectionStream
+{
+    inner: Box<Stream<Item=TcpStream, Error=io::Error> + Send + Sync>,
     handshake: Option<Box<dyn Future<Item=BrontideStream<TcpStream>, Error=HandshakeError> + Send + 'static>>,
     local_secret: SecretKey,
 }
 
 impl Stream for TcpConnectionStream {
     type Item = BrontideStream<TcpStream>;
-    type Error = HandshakeError;
+    type Error = TransportError;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         use tokio::prelude::Async::*;
-
+        dbg!(self.handshake.is_none());
+        // TODO(mkl): rewrite this
         match &mut self.handshake {
-            &mut None => match self.inner.poll().map_err(HandshakeError::Io)? {
-                NotReady => Ok(NotReady),
-                Ready(None) => Ok(Ready(None)),
-                Ready(Some(stream)) => {
-                    let handshake = BrontideStream::incoming(stream, self.local_secret.clone());
-                    self.handshake = Some(Box::new(handshake));
-                    self.poll()
-                },
+            &mut None => {
+                let inner_poll = self.inner
+                    .poll()
+                    .map_err(|err| TransportError::HandshakeError{
+                        inner: HandshakeError::Io(err, "error polling inside TcpConnectionStream".to_owned()),
+                        description: "error polling inside TcpConnectionStream".to_owned(),
+                    })?;
+                match inner_poll {
+                    NotReady => Ok(NotReady),
+                    Ready(None) => Ok(Ready(None)),
+                    Ready(Some(stream)) => {
+                        dbg!("TcpConnectionStream::poll before handshake init");
+                        let handshake = BrontideStream::incoming(stream, self.local_secret.clone());
+                        self.handshake = Some(Box::new(handshake));
+                        self.poll()
+                    },
+                }
             },
-            &mut Some(ref mut f) => match f.poll() {
-                Ok(NotReady) => Ok(NotReady),
-                r @ _ => {
-                    self.handshake = None;
-                    r.map(|a| a.map(Some))
-                },
+            &mut Some(ref mut f) => {
+                match f.poll() {
+                    Ok(NotReady) => Ok(NotReady),
+                    r @ _ => {
+                        println!("WWW self.handshake = None");
+                        self.handshake = None;
+                        r.map(|a| a.map(Some))
+                            .map_err(|err| {
+                                TransportError::HandshakeError {
+                                    inner: err,
+                                    description: "error during inner poll during succesfull poll in TcpConnectionStream".to_owned()
+                                }
+                            })
+                    },
+                }
             }
         }
     }
