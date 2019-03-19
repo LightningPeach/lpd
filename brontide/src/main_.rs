@@ -10,6 +10,7 @@ use secp256k1::constants::SECRET_KEY_SIZE;
 use tokio::net;
 
 fn main() {
+    // TODO(mkl): rewrite into some usefull utilite, like add command line options
     use tokio::prelude::{Stream, Future};
 
     let secret = {
@@ -25,6 +26,9 @@ fn main() {
 
     let node_secret = secret.clone();
     let node = listener.incoming()
+        // TODO(mkl): it will work before first error.
+        // First error will stop it. Which results in dropping all variables
+        // and closing all connections
         .for_each(move |stream| {
             let connection = brontide::BrontideStream::incoming(stream, node_secret)
                 .map(|stream| println!("new connection: {}@{}", hex::encode(&stream.remote_key().serialize()[..]), stream.as_ref().peer_addr().unwrap()))
@@ -34,19 +38,20 @@ fn main() {
         })
         .map_err(|e| println!("error: {:?}", e));
 
-    let outgoing_secret = secret.clone();
-    let outgoing = net::TcpStream::connect(&"127.0.0.1:10000".parse().unwrap())
-        .and_then(move |stream| {
-            use secp256k1::PublicKey;
-            use secp256k1::Secp256k1;
-            let public = PublicKey::from_slice(&hex::decode("02bb358785cba705f6339f1eca6a8209e33afc80c9207d99a90a6fbb538c668929").unwrap()).unwrap().into();
-            let connection = brontide::BrontideStream::outgoing(stream, outgoing_secret, public)
-                .map(|stream| println!("outgoing connection: {}", stream.as_ref().peer_addr().unwrap()))
-                .map_err(|e| println!("handshake error: {:?}", e));
-            tokio::spawn(connection);
-            Ok(())
-        })
-        .map_err(|e| println!("error: {:?}", e));
+//    let outgoing_secret = secret.clone();
+//    let outgoing = net::TcpStream::connect(&"127.0.0.1:10000".parse().unwrap())
+//        .and_then(move |stream| {
+//            use secp256k1::PublicKey;
+//            use secp256k1::Secp256k1;
+//            let public = PublicKey::from_slice(&hex::decode("02bb358785cba705f6339f1eca6a8209e33afc80c9207d99a90a6fbb538c668929").unwrap()).unwrap().into();
+//            let connection = brontide::BrontideStream::outgoing(stream, outgoing_secret, public)
+//                .map(|stream| println!("outgoing connection: {}", stream.as_ref().peer_addr().unwrap()))
+//                .map_err(|e| println!("handshake error: {:?}", e));
+//            tokio::spawn(connection);
+//            Ok(())
+//        })
+//        .map_err(|e| println!("error: {:?}", e));
 
-    tokio::run(outgoing.and_then(|()| node));
+//    tokio::run(outgoing.and_then(|()| node));
+    tokio::run( node);
 }

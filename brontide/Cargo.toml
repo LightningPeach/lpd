@@ -21,5 +21,9 @@ wire = { path = "../wire" }
 binformat = { path = "../binformat" }
 common-types = { path = "../common-types" }
 
+[[bin]]
+name = "main"
+path = "src/main_.rs"
+
 [features]
 testing = []

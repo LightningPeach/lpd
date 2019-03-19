@@ -32,6 +32,8 @@ pub fn cleanup(name: &str) {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // TODO(mkl): add possibility to connect to already existing testenv
+    // TODO(mkl): add posibility to leave nodes working after tests ends
     println!("Starting testnev");
     use std::thread;
     use std::time::Duration;

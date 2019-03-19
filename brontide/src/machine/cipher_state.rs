@@ -105,6 +105,9 @@ impl CipherState {
         ).map(|t| {
             self.next();
             t
+        }).map_err(|err| {
+            dbg!(&err);
+            err
         })
     }
 

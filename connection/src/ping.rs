@@ -4,12 +4,13 @@ use binformat::WireError;
 use tokio::prelude::Sink;
 use either::Either;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct PingContext {
     timestamp: i64,
     tick: u8,
 }
 
+#[derive(Debug)]
 pub struct PingMessage(Ping);
 
 impl MessageFiltered for PingMessage {
@@ -21,6 +22,7 @@ impl MessageFiltered for PingMessage {
     }
 }
 
+#[derive(Debug)]
 pub struct PingEvent;
 
 impl RelevantEvent for PingEvent {
@@ -41,6 +43,8 @@ impl MessageConsumer for PingContext {
         S: Sink<SinkItem=MessageExt, SinkError=WireError> + Send + 'static,
     {
         use chrono::prelude::*;
+
+        dbg!(&message);
 
         let mut this = self;
         match message {
