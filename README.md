@@ -28,6 +28,27 @@ Basic of Lightning Technologies.
 
 See `rpc/interface/*.proto` for rpc interface.
 
+Bitcoin daemon and Electrum Server should be running before run lpd server.
+
+Install `electrs` with:
+
+    git clone https://github.com/romanz/electrs &&
+    cd electrs &&
+    git checkout e49cef1bbcaf1710613dab4578d61b99c7dbd478 &&
+    cargo install --debug --path .
+
+Run `bitcoind`:
+
+`bitcoind -txindex -regtest -rpcport=18443 -rpcuser=devuser -rpcpassword=devpass -zmqpubrawblock=tcp://127.0.0.1:18501 -zmqpubrawtx=tcp://127.0.0.1:18502`
+
+Run `electrs`:
+
+`electrs --network=regtest --jsonrpc-import --cookie=devuser:devpass --daemon-rpc-addr=127.0.0.1:18443`
+
+Generate some blocks:
+
+`bitcoin-cli -rpcport=18443 -rpcuser=devuser -rpcpassword=devpass generate 1`
+
 The command for running the rpc server is:
 
 `cargo run --package server`
