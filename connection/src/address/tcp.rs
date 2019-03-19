@@ -33,7 +33,12 @@ impl AbstractAddress for SocketAddr {
                     description: format!("cannot create tcp listener for {:?}", self)
                 }
             })?;
-        let incoming_connections = listener.incoming();
+        let incoming_connections = listener
+            .incoming()
+            .map(|conn| {
+                println!("incoming connection from: {:?}", conn.peer_addr());
+                conn
+            });
         Ok(TcpConnectionStream {
             inner: Box::new(incoming_connections),
             handshake: None,
