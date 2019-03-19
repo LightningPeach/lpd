@@ -8,6 +8,8 @@ enum Error {
 }
 
 fn main() -> Result<(), Error> {
+    // TODO(mkl): add aditional commands
+    // use some lib for argument parsing
     use std::{sync::Arc, net::{SocketAddr, IpAddr, Ipv4Addr}};
     use grpc::{Client, ClientStub};
     use httpbis::ClientTlsOption;

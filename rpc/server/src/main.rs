@@ -2,10 +2,14 @@ extern crate grpc;
 extern crate tls_api_native_tls;
 extern crate tls_api;
 extern crate httpbis;
+extern crate secp256k1;
+extern crate hex;
 
 extern crate futures;
 
 extern crate implementation;
+
+extern crate connection;
 
 mod config;
 use self::config::{Argument, Error as CommandLineReadError};
@@ -27,6 +31,7 @@ enum Error {
     Io(IoError),
     SendError(SendError<Command<SocketAddr>>),
     ThreadError(Box<dyn Any + Send + 'static>),
+    TransportError(connection::TransportError)
 }
 
 fn main() -> Result<(), Error> {
@@ -67,6 +72,11 @@ fn main() -> Result<(), Error> {
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
         ];
 
+        use secp256k1::{SecretKey, PublicKey, Secp256k1};
+        let seckey = SecretKey::from_slice(&secret[..]).unwrap();
+        let pubkey = PublicKey::from_secret_key(&Secp256k1::new(), &seckey);
+        let pubkey_hex = hex::encode(&pubkey.serialize()[..]);
+        println!("Node URI: {}@{}", pubkey_hex, argument.p2p_address);
         (handle, Arc::new(RwLock::new(Node::new(secret, argument.db_path))), rx, tx)
     };
 
@@ -76,6 +86,7 @@ fn main() -> Result<(), Error> {
             server.http.set_tls(acceptor);
         }
         server.http.set_addr(argument.address).map_err(Httpbis)?;
+        // TODO(mkl): make it configurable
         server.http.set_cpu_pool_threads(4);
         server.add_service(routing_service(node.clone(), tx));
         server.add_service(channel_service());
@@ -83,7 +94,10 @@ fn main() -> Result<(), Error> {
         server.build().map_err(Grpc)?
     };
 
-    Node::listen(node, &argument.p2p_address, rx).map_err(Io)?;
+    Node::listen(node, &argument.p2p_address, rx)
+        .map_err(|err| {
+            Error::TransportError(err)
+        })?;
 
     handle.join().map_err(ThreadError)??;
 

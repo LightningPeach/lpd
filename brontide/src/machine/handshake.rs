@@ -6,9 +6,9 @@ use super::symmetric_state::{SymmetricState, MAC_SIZE};
 
 #[derive(Debug)]
 pub enum HandshakeError {
-    Io(io::Error),
-    IoTimeout(timeout::Error<io::Error>),
-    Crypto(EcdsaError),
+    Io(io::Error, String),
+    IoTimeout(timeout::Error<io::Error>, String),
+    Crypto(EcdsaError, String),
     UnknownHandshakeVersion(String),
 }
 
@@ -17,9 +17,9 @@ impl error::Error for HandshakeError {
         use self::HandshakeError::*;
 
         match self {
-            &Io(ref e) => Some(e),
-            &IoTimeout(ref e) => Some(e),
-            &Crypto(ref e) => Some(e),
+            &Io(ref e, _) => Some(e),
+            &IoTimeout(ref e, _) => Some(e),
+            &Crypto(ref e, _) => Some(e),
             _ => None,
         }
     }
@@ -30,9 +30,9 @@ impl fmt::Display for HandshakeError {
         use self::HandshakeError::*;
 
         match self {
-            &Io(ref e) => write!(f, "io error: {}", e),
-            &IoTimeout(ref e) => write!(f, "io timeout error: {}", e),
-            &Crypto(ref e) => write!(f, "crypto error: {}", e),
+            &Io(ref e, ref desc) => write!(f, "io error, {}: {}", desc, e),
+            &IoTimeout(ref e, ref desc) => write!(f, "io timeout error, {}: {}", desc, e),
+            &Crypto(ref e, ref desc) => write!(f, "crypto error, {}: {}", desc, e),
             &UnknownHandshakeVersion(ref msg) => write!(f, "{}", msg),
         }
     }
@@ -54,6 +54,12 @@ enum HandshakeVersion {
 // 1 + 33 + 16
 pub struct ActOne {
     bytes: [u8; 1 + 33 + MAC_SIZE],
+}
+
+impl fmt::Debug for ActOne {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ActOne[ {} ]", hex::encode(&self.bytes[..]))
+    }
 }
 
 impl Default for ActOne {
@@ -80,6 +86,7 @@ impl ActOne {
     const SIZE: usize = 1 + 33 + MAC_SIZE;
 
     fn new(version: HandshakeVersion, key: [u8; 33], tag: [u8; MAC_SIZE]) -> Self {
+        dbg!("ActOne::new()");
         let mut s = ActOne {
             bytes: [0; Self::SIZE],
         };
@@ -116,6 +123,7 @@ pub struct ActTwo(ActOne);
 
 impl Default for ActTwo {
     fn default() -> Self {
+        dbg!("ActTwo::default()");
         ActTwo(Default::default())
     }
 }
@@ -145,6 +153,7 @@ pub struct ActThree {
 
 impl Default for ActThree {
     fn default() -> Self {
+        dbg!("ActThree::default()");
         ActThree {
             bytes: [0; Self::SIZE],
         }
@@ -172,6 +181,7 @@ impl ActThree {
         tag_first: [u8; MAC_SIZE],
         tag_second: [u8; MAC_SIZE],
     ) -> Self {
+        dbg!("ActThree::new()");
         let mut s = ActThree {
             bytes: [0; Self::SIZE],
         };
@@ -222,6 +232,7 @@ pub struct HandshakeIn {
 
 impl HandshakeIn {
     pub fn new(local_secret: SecretKey) -> Result<Self, EcdsaError> {
+        dbg!("HandshakeIn::new()");
         let contexts = (Secp256k1::signing_only(), Secp256k1::verification_only());
 
         let mut symmetric_state = SymmetricState::new(PROTOCOL_NAME);
@@ -245,7 +256,8 @@ impl HandshakeIn {
     // initiator's ephemeral key and responder's static key.
     pub fn receive_act_one(mut self, act_one: ActOne) -> Result<HandshakeInActOne, HandshakeError> {
         use common_types::ac::SecretKey;
-
+        dbg!("HandshakeIn::receive_act_one()");
+        dbg!(&act_one);
         let contexts = &self.contexts;
 
         // If the handshake version is unknown, then the handshake fails
@@ -256,18 +268,28 @@ impl HandshakeIn {
         }
 
         // e
-        let remote_ephemeral = act_one.key().map_err(HandshakeError::Crypto)?;
+        let remote_ephemeral = act_one.key().map_err(|err| {
+            HandshakeError::Crypto(err, "cannot create ephemeral public key from bytes".to_owned())
+        })?;
         self.symmetric_state.mix_hash(&remote_ephemeral.serialize());
 
         // es
-        let s = self.local_static.dh(&contexts.1, &remote_ephemeral).map_err(HandshakeError::Crypto)?;
+        let s = self.local_static
+            .dh(&contexts.1, &remote_ephemeral)
+            .map_err(|err| {
+                HandshakeError::Crypto(err, "cannot calculate Diffie-Hellman (es)".to_owned())
+            })?;
         self.symmetric_state.mix_key(&s.serialize()[..]);
 
         // If the initiator doesn't know our static key, then this operation
         // will fail.
         self.symmetric_state
             .decrypt_and_hash(&[], act_one.tag())
-            .map_err(HandshakeError::Io)?;
+            .map_err(|err| {
+                dbg!(&err);
+                // TODO(mkl): why it is IO error, and not Crypto error
+                HandshakeError::Io(err, "cannot decrypt_and_hash during receive ActOne".to_owned())
+            })?;
 
         Ok(HandshakeInActOne {
             base: self,
@@ -286,6 +308,7 @@ pub struct HandshakeOut {
 
 impl HandshakeOut {
     pub fn new(local_secret: SecretKey, remote_public: PublicKey) -> Result<Self, EcdsaError> {
+        dbg!("HandshakeOut::new()");
         let mut symmetric_state = SymmetricState::new(PROTOCOL_NAME);
         symmetric_state.mix_hash("lightning".as_bytes());
         symmetric_state.mix_hash(&remote_public.serialize());
@@ -295,6 +318,7 @@ impl HandshakeOut {
             symmetric_state: symmetric_state,
             local_static: local_secret,
             remote_static: remote_public,
+            // TODO(mkl): is it crypto secure to use this source of randomness
             ephemeral_gen: || {
                 SecretKey::new(&mut rand::thread_rng())
             },
@@ -309,6 +333,7 @@ impl HandshakeOut {
     //
     //    -> e, es
     pub fn gen_act_one(mut self) -> Result<(ActOne, HandshakeOutActOne), HandshakeError> {
+        dbg!("HandshakeOut::gen_act_one()");
         use common_types::ac::SecretKey;
 
         let contexts = &self.contexts;
@@ -321,13 +346,19 @@ impl HandshakeOut {
         self.symmetric_state.mix_hash(&ephemeral);
 
         // es
-        let s = local_ephemeral.dh(&contexts.1, &self.remote_static).map_err(HandshakeError::Crypto)?;
+        let s = local_ephemeral
+            .dh(&contexts.1, &self.remote_static)
+            .map_err(|err| {
+                HandshakeError::Crypto(err, "Cannot calculate Diffie-Hellman (es) during generation ActOne".to_owned())
+            })?;
         self.symmetric_state.mix_key(&s.serialize()[..]);
 
         let auth_payload = self
             .symmetric_state
             .encrypt_and_hash(&[], &mut Vec::new())
-            .map_err(HandshakeError::Io)?;
+            .map_err(|err| {
+                HandshakeError::Io(err, "cannot encrypt_and_hash authentication payload during generation ActOne".to_owned())
+            })?;
 
         let act_one = ActOne::new(HandshakeVersion::_0, ephemeral, auth_payload);
         let handshake_act_one = HandshakeOutActOne {
@@ -356,6 +387,7 @@ impl HandshakeInActOne {
     //
     //    <- e, ee
     pub fn gen_act_two(mut self) -> Result<(ActTwo, HandshakeInActTwo), HandshakeError> {
+        dbg!("HandshakeInActOne::gen_act_two()");
         use common_types::ac::SecretKey;
 
         let contexts = &self.base.contexts;
@@ -368,14 +400,20 @@ impl HandshakeInActOne {
         self.base.symmetric_state.mix_hash(&ephemeral);
 
         // ee
-        let s = local_ephemeral.dh(&contexts.1, &self.remote_ephemeral).map_err(HandshakeError::Crypto)?;
+        let s = local_ephemeral
+            .dh(&contexts.1, &self.remote_ephemeral)
+            .map_err(|err| {
+                HandshakeError::Crypto(err, "Cannot compute Diffie-Hellman (ee) during generation ActTwo".to_owned())
+            })?;
         self.base.symmetric_state.mix_key(&s.serialize()[..]);
 
         let auth_payload = self
             .base
             .symmetric_state
             .encrypt_and_hash(&[], &mut Vec::new())
-            .map_err(HandshakeError::Io)?;
+            .map_err(|err | {
+                HandshakeError::Io(err, "cannot encrypt_and_hash authentication payload in generation ActTwo".to_owned())
+            })?;
 
         let act_two = ActTwo(ActOne::new(HandshakeVersion::_0, ephemeral, auth_payload));
         let handshake = HandshakeInActTwo {
@@ -396,6 +434,7 @@ impl HandshakeOutActOne {
     // the initiator. A successful processing of this packet authenticates the
     // initiator to the responder.
     pub fn receive_act_two(mut self, act_two: ActTwo) -> Result<HandshakeOutActTwo, HandshakeError> {
+        dbg!("HandshakeOutActOne::receive_act_two()");
         use common_types::ac::SecretKey;
 
         let contexts = &self.base.contexts;
@@ -410,19 +449,29 @@ impl HandshakeOutActOne {
         }
 
         // e
-        let remote_ephemeral = inner.key().map_err(HandshakeError::Crypto)?;
+        let remote_ephemeral = inner.key().map_err(|err|{
+            HandshakeError::Crypto(err, "cannot obtain remote ephemeral public key from bytes in receive ActTwo".to_owned())
+        })?;
         self.base
             .symmetric_state
             .mix_hash(&remote_ephemeral.serialize());
 
         // ee
-        let s = self.local_ephemeral.dh(&contexts.1, &remote_ephemeral).map_err(HandshakeError::Crypto)?;
+        let s = self.local_ephemeral
+            .dh(&contexts.1, &remote_ephemeral)
+            .map_err(|err| {
+                HandshakeError::Crypto(err, "cannot compute Diffie-Hellman public key (ee) in receive ActTwo".to_owned())
+            })?;
         self.base.symmetric_state.mix_key(&s.serialize()[..]);
 
         self.base
             .symmetric_state
             .decrypt_and_hash(&mut Vec::new(), inner.tag())
-            .map_err(HandshakeError::Io)?;
+            .map_err(|err| {
+                dbg!(&err);
+                // TODO(mkl): is it really an IO error ?
+                HandshakeError::Io(err, "cannot decrypt_and_has during receive ActTwo".to_owned())
+            })?;
 
         Ok(HandshakeOutActTwo {
             base: self.base,
@@ -442,6 +491,7 @@ impl HandshakeInActTwo {
     // initiator's static public key. Decryption of the static key serves to
     // authenticate the initiator to the responder.
     pub fn receive_act_three(mut self, act_three: ActThree) -> Result<Machine, HandshakeError> {
+        dbg!("HandshakeInActTwo::receive_act_three()");
         use common_types::ac::SecretKey;
 
         let contexts = &self.base.contexts;
@@ -461,19 +511,33 @@ impl HandshakeInActTwo {
             .base
             .symmetric_state
             .decrypt_and_hash(act_three.key(), act_three.tag_first())
-            .map_err(HandshakeError::Io)?;
+            .map_err(|err| {
+                dbg!(&err);
+                // TODO(mkl): is it really an IO error?
+                HandshakeError::Io(err, "cannot decrypt_and_hash during receive ActThree".to_owned())
+            })?;
         let remote_static = PublicKey::from_slice(&remote_pub)
-            .map_err(HandshakeError::Crypto)?;
+            .map_err(|err|{
+                dbg!(&err);
+                HandshakeError::Crypto(err, "cannot create remote pubkey from bytes during receive ActThree".to_owned())
+            })?;
 
         // se
-        let se = self.local_ephemeral.dh(&contexts.1, &remote_static)
-            .map_err(HandshakeError::Crypto)?;
+        let se = self.local_ephemeral
+            .dh(&contexts.1, &remote_static)
+            .map_err(|err| {
+                HandshakeError::Crypto(err, "Cannot compute Diffie-Helman public key (se) during receive ActThree".to_owned())
+            })?;
         self.base.symmetric_state.mix_key(&se.serialize()[..]);
 
         self.base
             .symmetric_state
             .decrypt_and_hash(&[], act_three.tag_second())
-            .map_err(HandshakeError::Io)?;
+            .map_err(|err| {
+                dbg!(&err);
+                // TODO(mkl): is it really an IO error?
+                HandshakeError::Io(err, "cannot decrypt_and_hash during receive ActThree".to_owned())
+            })?;
 
         // With the final ECDH operation complete, derive the session sending
         // and receiving keys.
@@ -506,6 +570,7 @@ impl HandshakeOutActTwo {
     //
     //    -> s, se
     pub fn gen_act_three(mut self) -> Result<(ActThree, Machine), HandshakeError> {
+        dbg!("HandshakeOutActTwo::gen_act_three");
         use secp256k1::constants::PUBLIC_KEY_SIZE;
         use common_types::ac::SecretKey;
 
@@ -518,17 +583,26 @@ impl HandshakeOutActTwo {
             .base
             .symmetric_state
             .encrypt_and_hash(&our_pubkey, &mut cipher_text)
-            .map_err(HandshakeError::Io)?;
+            // TODO(mkl): is it really an IO error
+            .map_err(|err| {
+                HandshakeError::Io(err, "cannot encrypt_and_hash during generate ActThree".to_owned())
+            })?;
 
-        let s = self.base.local_static.dh(&contexts.1, &self.remote_ephemeral)
-            .map_err(HandshakeError::Crypto)?;
+        let s = self.base.local_static
+            .dh(&contexts.1, &self.remote_ephemeral)
+            .map_err(|err| {
+                HandshakeError::Crypto(err, "cannot calculate Diffie-Hellman during generate ActThree".to_owned())
+            })?;
         self.base.symmetric_state.mix_key(&s.serialize()[..]);
 
         let auth_payload = self
             .base
             .symmetric_state
             .encrypt_and_hash(&[], &mut Vec::new())
-            .map_err(HandshakeError::Io)?;
+            // TODO(mkl): is it really an IO error
+            .map_err(|err| {
+                HandshakeError::Io(err, "cannot encrypt_and_hash authentication payload during generate ActThree".to_owned())
+            })?;
 
         let act_three = ActThree::new(HandshakeVersion::_0, cipher_text, tag, auth_payload);
 
@@ -598,6 +672,8 @@ impl Machine {
     {
         use bytes::BufMut;
 
+        dbg!(&dst);
+
         let length = {
             let mut buffer = self.message_buffer.write().unwrap();
             let mut cursor = io::Cursor::new(buffer.as_mut());
@@ -630,6 +706,13 @@ impl Machine {
     }
 
     pub fn read<T>(&mut self, src: &mut BytesMut) -> Result<Option<T>, WireError>
+        where
+            T: DeserializeOwned + fmt::Debug,
+    {
+        dbg!(self.read_int(src))
+    }
+
+    pub fn read_int<T>(&mut self, src: &mut BytesMut) -> Result<Option<T>, WireError>
     where
         T: DeserializeOwned,
     {
@@ -654,8 +737,11 @@ impl Machine {
                 self.receive_cipher
                     .decrypt(&[], &mut plain.as_mut(), cipher.as_ref(), tag)
                     .map_err(|e| match e {
-                        DecryptError::IoError(e) => e.into(),
-                        DecryptError::TagMismatch => WireError::custom("tag"),
+                        DecryptError::IoError(e) => dbg!(e.into()),
+                        DecryptError::TagMismatch => {
+                            println!("TagMismatch error 1");
+                            WireError::custom("tag")
+                        },
                     })?;
 
                 let length: u16 = BinarySD::deserialize(&plain[..])?;
@@ -675,8 +761,11 @@ impl Machine {
                         cipher.as_ref(),
                         tag,
                     ).map_err(|e| match e {
-                        DecryptError::IoError(e) => e.into(),
-                        DecryptError::TagMismatch => WireError::custom("tag"),
+                        DecryptError::IoError(e) => dbg!(e.into()),
+                        DecryptError::TagMismatch => {
+                            println!("TagMismatch error 2");
+                            WireError::custom("tag")
+                        },
                     })?;
 
                 BinarySD::deserialize(self.message_buffer.read().unwrap().as_ref()).map(Some)

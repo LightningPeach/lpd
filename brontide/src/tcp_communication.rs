@@ -118,6 +118,7 @@ pub struct Stream {
 
 impl Stream {
     pub fn new(stream: TcpStream, noise: Machine) -> Self {
+        dbg!("NEW Stream");
         Self {
             stream,
             noise,
@@ -179,11 +180,12 @@ impl Stream {
     }
 
     pub fn encrypt_and_write_message(&mut self, msg: &[u8]) -> Result<(), Box<Error>> {
+        dbg!(msg);
         self.noise.write_message(&mut self.stream, msg)
     }
 
     pub fn read_and_decrypt_message(&mut self) -> Result<Vec<u8>, Box<Error>> {
-        self.noise.read_message(&mut self.stream)
+        dbg!(self.noise.read_message(&mut self.stream))
     }
 }
 

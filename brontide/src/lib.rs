@@ -1,4 +1,4 @@
-#![forbid(unsafe_code)]
+//#![forbid(unsafe_code)]
 #![allow(non_shorthand_field_patterns)]
 
 mod machine;

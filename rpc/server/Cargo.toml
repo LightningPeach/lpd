@@ -12,7 +12,10 @@ tls-api = "0.1.*"
 tls-api-native-tls = "0.1.2"
 httpbis = "0.7.*"
 native-tls = "0.2"
+secp256k1 = "0.12"
+hex = "0.3"
 
 futures = "0.1"
 
 implementation = { path = "../implementation" }
+connection = { path = "../../connection" }

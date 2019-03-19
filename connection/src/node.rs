@@ -9,6 +9,7 @@ use wire::Message;
 use processor::{MessageConsumer, ConsumingFuture};
 use binformat::WireError;
 
+use crate::address::TransportError;
 use super::address::{AbstractAddress, ConnectionStream, Command, Connection};
 use super::ping::PingContext;
 
@@ -123,9 +124,9 @@ impl Node {
         tokio::spawn(connection)
     }
 
-    pub fn listen<A>(p_self: Arc<RwLock<Self>>, address: &A, control: Receiver<Command<A>>) -> Result<(), A::Error>
+    pub fn listen<A>(p_self: Arc<RwLock<Self>>, address: &A, control: Receiver<Command<A>>) -> Result<(), TransportError>
     where
-        A: AbstractAddress + Send + 'static,
+        A: AbstractAddress + Send  + 'static,
     {
         use tokio::prelude::stream::Stream;
         use futures::future::ok;
@@ -135,6 +136,8 @@ impl Node {
             .map_err(|e| println!("{:?}", e))
             .for_each(move |connection| {
                 let remote_public = connection.remote_key();
+                println!("NEW CONNECTION FROM: {:?}", remote_public);
+                // TODO(mkl): rewrite this
                 let maybe_peer = p_self.write().unwrap().add(remote_public);
                 match maybe_peer {
                     Either::Left(pk) => {

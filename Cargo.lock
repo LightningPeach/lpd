@@ -2084,11 +2084,14 @@ dependencies = [
 name = "server"
 version = "0.0.0"
 dependencies = [
+ "connection 0.1.0",
  "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "httpbis 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "implementation 0.0.0",
  "native-tls 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "secp256k1 0.12.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tls-api 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "tls-api-native-tls 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
