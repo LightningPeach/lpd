@@ -1,7 +1,6 @@
 use secp256k1::{PublicKey, SecretKey, Message, Signature, Error, Secp256k1, SignOnly, VerifyOnly};
 use super::ac;
-use serde::Serialize;
-use serde_derive::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize};
 
 impl ac::PublicKey for PublicKey {}
 
