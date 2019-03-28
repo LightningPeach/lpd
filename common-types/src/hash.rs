@@ -1,4 +1,4 @@
-use serde_derive::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize};
 use hex_literal::*;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
