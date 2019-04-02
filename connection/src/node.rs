@@ -95,7 +95,7 @@ impl Node {
             shared_state: SharedState(Arc::new(RwLock::new(State::new(p_db.clone())))),
             db: p_db,
             secret: SecretKey::from_slice(&secret[..]).unwrap(),
-            blockchain: Blockchain::bitcoin(),
+            blockchain: Blockchain::bitcoin(wallet.clone()),
             wallet: wallet,
         }
     }
@@ -195,9 +195,11 @@ impl Node {
 
     // TODO: add missing fields
     #[cfg(feature = "rpc")]
-    pub fn get_info(&self) -> Info {
+    pub fn get_info(&mut self) -> Info {
         use secp256k1::Secp256k1;
         use std::string::ToString;
+
+        self.blockchain.sync();
 
         let pk = PublicKey::from_secret_key(&Secp256k1::new(), &self.secret);
 
