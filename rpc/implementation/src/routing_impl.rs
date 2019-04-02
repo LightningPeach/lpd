@@ -102,7 +102,7 @@ impl RoutingService for RoutingImpl<SocketAddr> {
     fn get_info(&self, o: RequestOptions, p: Void) -> SingleResponse<Info> {
         let _ = (o, p);
 
-        let response = self.node.read().unwrap().get_info();
+        let response = self.node.write().unwrap().get_info();
 
         SingleResponse::completed(response)
     }
