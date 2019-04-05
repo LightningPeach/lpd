@@ -1,0 +1,9 @@
+[package]
+name = "wire-compatibility"
+version = "0.1.0"
+authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
+edition = "2018"
+
+[dependencies]
+wire = { path = "../wire" }
+binformat = { path = "../binformat" }
