@@ -2951,6 +2951,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wire-compatibility"
+version = "0.1.0"
+dependencies = [
+ "binformat 0.1.0",
+ "wire 0.1.0",
+]
+
+[[package]]
 name = "ws2_32-sys"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
