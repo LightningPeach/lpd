@@ -63,4 +63,7 @@ func main() {
 		HtlcPoint:            pubkey,
 		FirstCommitmentPoint: pubkey,
 	})
+	writeMessage(f, &lnwire.FundingCreated{})
+	writeMessage(f, &lnwire.FundingSigned{})
+	writeMessage(f, &lnwire.FundingLocked{})
 }
