@@ -26,8 +26,8 @@ impl Blockchain {
     }
 
     pub fn sync(&mut self) {
-        let height = self.wallet.lock().unwrap().wallet_lib()
-            .get_last_seen_block_height_from_memory();
-        self.block_height = height as _;
+        let mut wallet = self.wallet.lock().unwrap();
+        wallet.sync_with_tip();
+        self.block_height = wallet.wallet_lib().get_last_seen_block_height_from_memory() as _;
     }
 }
