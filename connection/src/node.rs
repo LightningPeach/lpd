@@ -111,15 +111,24 @@ impl Node {
         let (sink, stream) = connection.split();
 
         println!("INFO: new peer {}", peer.public);
+        let peer_pubkey = peer.public.clone();
 
         let p_graph = self.shared_state.clone();
         let processor = (p_graph, (PingContext::default(), (peer, ())));
+        // TODO(mkl)
         let connection = stream
             .fold((processor, sink), |(processor, sink), message| {
                 processor.process(sink, message)
             })
-            .map_err(|e| panic!("{:?}", e))
-            .map(|_| ());
+            .map_err(move |err| {
+                // TODO(mkl): correctly delete peer from list of connected peers
+                println!("ERROR with peer: {:?}, {:?}", &peer_pubkey, err);
+                ()
+            })
+            .map(move |_| {
+                // TODO(mkl): correctly delete peer from list of connected peers
+                println!("finished processing connection with peer: {:?}", &peer_pubkey);
+            });
 
         tokio::spawn(connection)
     }
