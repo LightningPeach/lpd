@@ -4,11 +4,23 @@ use super::ChannelId;
 use super::OutputIndex;
 use super::super::types::{RawSignature, RawPublicKey};
 
+use crate::message::types::RawPublicKey;
+
 use serde_derive::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
 pub struct FundingTxid {
     data: [u8; 32],
+}
+
+
+// In Bitcoin TxId are printed by convention in reverse order
+impl std::fmt::Debug for FundingTxid {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut d = self.data.clone();
+        d.reverse();
+        write!(f, "{}", hex::encode(&d[..]))
+    }
 }
 
 /// This message describes the outpoint which the funder has created
