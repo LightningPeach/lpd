@@ -115,7 +115,6 @@ impl Stream for TcpConnectionStream {
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         use tokio::prelude::Async::*;
-        dbg!(self.handshake.is_none());
         // TODO(mkl): rewrite this
         match &mut self.handshake {
             &mut None => {
@@ -129,7 +128,6 @@ impl Stream for TcpConnectionStream {
                     NotReady => Ok(NotReady),
                     Ready(None) => Ok(Ready(None)),
                     Ready(Some(stream)) => {
-                        dbg!("TcpConnectionStream::poll before handshake init");
                         let handshake = BrontideStream::incoming(stream, self.local_secret.clone());
                         self.handshake = Some(Box::new(handshake));
                         self.poll()
@@ -140,7 +138,6 @@ impl Stream for TcpConnectionStream {
                 match f.poll() {
                     Ok(NotReady) => Ok(NotReady),
                     r @ _ => {
-                        println!("WWW self.handshake = None");
                         self.handshake = None;
                         r.map(|a| a.map(Some))
                             .map_err(|err| {

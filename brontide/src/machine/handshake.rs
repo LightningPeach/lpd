@@ -86,7 +86,6 @@ impl ActOne {
     const SIZE: usize = 1 + 33 + MAC_SIZE;
 
     fn new(version: HandshakeVersion, key: [u8; 33], tag: [u8; MAC_SIZE]) -> Self {
-        dbg!("ActOne::new()");
         let mut s = ActOne {
             bytes: [0; Self::SIZE],
         };
@@ -153,7 +152,6 @@ pub struct ActThree {
 
 impl Default for ActThree {
     fn default() -> Self {
-        dbg!("ActThree::default()");
         ActThree {
             bytes: [0; Self::SIZE],
         }
@@ -232,7 +230,6 @@ pub struct HandshakeIn {
 
 impl HandshakeIn {
     pub fn new(local_secret: SecretKey) -> Result<Self, EcdsaError> {
-        dbg!("HandshakeIn::new()");
         let contexts = (Secp256k1::signing_only(), Secp256k1::verification_only());
 
         let mut symmetric_state = SymmetricState::new(PROTOCOL_NAME);
@@ -256,8 +253,6 @@ impl HandshakeIn {
     // initiator's ephemeral key and responder's static key.
     pub fn receive_act_one(mut self, act_one: ActOne) -> Result<HandshakeInActOne, HandshakeError> {
         use common_types::ac::SecretKey;
-        dbg!("HandshakeIn::receive_act_one()");
-        dbg!(&act_one);
         let contexts = &self.contexts;
 
         // If the handshake version is unknown, then the handshake fails
@@ -308,7 +303,6 @@ pub struct HandshakeOut {
 
 impl HandshakeOut {
     pub fn new(local_secret: SecretKey, remote_public: PublicKey) -> Result<Self, EcdsaError> {
-        dbg!("HandshakeOut::new()");
         let mut symmetric_state = SymmetricState::new(PROTOCOL_NAME);
         symmetric_state.mix_hash("lightning".as_bytes());
         symmetric_state.mix_hash(&remote_public.serialize());
@@ -333,7 +327,6 @@ impl HandshakeOut {
     //
     //    -> e, es
     pub fn gen_act_one(mut self) -> Result<(ActOne, HandshakeOutActOne), HandshakeError> {
-        dbg!("HandshakeOut::gen_act_one()");
         use common_types::ac::SecretKey;
 
         let contexts = &self.contexts;
@@ -387,7 +380,6 @@ impl HandshakeInActOne {
     //
     //    <- e, ee
     pub fn gen_act_two(mut self) -> Result<(ActTwo, HandshakeInActTwo), HandshakeError> {
-        dbg!("HandshakeInActOne::gen_act_two()");
         use common_types::ac::SecretKey;
 
         let contexts = &self.base.contexts;
@@ -434,7 +426,6 @@ impl HandshakeOutActOne {
     // the initiator. A successful processing of this packet authenticates the
     // initiator to the responder.
     pub fn receive_act_two(mut self, act_two: ActTwo) -> Result<HandshakeOutActTwo, HandshakeError> {
-        dbg!("HandshakeOutActOne::receive_act_two()");
         use common_types::ac::SecretKey;
 
         let contexts = &self.base.contexts;
@@ -491,7 +482,6 @@ impl HandshakeInActTwo {
     // initiator's static public key. Decryption of the static key serves to
     // authenticate the initiator to the responder.
     pub fn receive_act_three(mut self, act_three: ActThree) -> Result<Machine, HandshakeError> {
-        dbg!("HandshakeInActTwo::receive_act_three()");
         use common_types::ac::SecretKey;
 
         let contexts = &self.base.contexts;
@@ -570,7 +560,6 @@ impl HandshakeOutActTwo {
     //
     //    -> s, se
     pub fn gen_act_three(mut self) -> Result<(ActThree, Machine), HandshakeError> {
-        dbg!("HandshakeOutActTwo::gen_act_three");
         use secp256k1::constants::PUBLIC_KEY_SIZE;
         use common_types::ac::SecretKey;
 
@@ -673,8 +662,6 @@ impl Machine {
     {
         use bytes::BufMut;
 
-        dbg!(&dst);
-
         let length = {
             let mut buffer = self.message_buffer.write().unwrap();
             let mut cursor = io::Cursor::new(buffer.as_mut());
@@ -712,7 +699,11 @@ impl Machine {
         where
             T: DeserializeOwned + fmt::Debug,
     {
-        dbg!(self.read_int(src))
+        // TODO(mkl): make logging messages optional
+//        dbg!(self.read_int(src))
+        let r = self.read_int(src);
+        eprintln!("{:#?}", &r);
+        r
     }
 
     pub fn read_int<T>(&mut self, src: &mut BytesMut) -> Result<Option<T>, WireError>
