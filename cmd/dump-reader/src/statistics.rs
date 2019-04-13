@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::message::MessageInfo;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Statistics {
     pub number: u64,
     pub size: u64
@@ -26,7 +26,7 @@ impl Statistics {
 
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Report {
     pub all: Statistics,
     pub min_time: u64,
