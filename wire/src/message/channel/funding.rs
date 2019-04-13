@@ -4,8 +4,6 @@ use super::ChannelId;
 use super::OutputIndex;
 use super::super::types::{RawSignature, RawPublicKey};
 
-use crate::message::types::RawPublicKey;
-
 use serde_derive::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
@@ -69,11 +67,6 @@ impl From<FundingTxid> for [u8; 32] {
     }
 }
 
-impl std::fmt::Debug for FundingTxid {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "FundingTxid({})", self.to_hex())
-    }
-}
 
 impl FundingTxid {
     // Use `reversed` byte ordering as Bitcoin uses when displaying transaction hashes
