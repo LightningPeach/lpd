@@ -32,10 +32,9 @@ use serde_json::Deserializer;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use crate::config::Command;
-use crate::wsdclient::WSDEnum;
+use crate::wsdclient::{WSDEnum, Format, PlotParameters};
 
 // TODO(mkl): print messages in JSON format subcommand
-// TODO(mkl): plot sequence of messages
 // TODO(mkl): add comments
 // TODO(mkl): add tests
 // TODO(mkl): clippy
@@ -80,25 +79,25 @@ impl MessageProcessor for ReportGenerator {
 // Creates diagram using websequencediagram website
 #[derive(Debug, Clone)]
 pub struct DiagramGenerator {
-    spec: String
+    spec: String,
+    plot_parameters: PlotParameters,
+    output_file: String,
+    spec_output_file: Option<String>
 }
 
 
-// TODO(mkl): move websequence diagram creation into separate file
 // TODO(mkl): add error processing
-// TODO(mkl): add output format options
-// TODO(mkl): add output style options
-// TODO(mkl): add support for API key. Include support of env variable
 // TODO(mkl): add checking for premium features. Like image format
 impl DiagramGenerator {
-    pub fn new() -> DiagramGenerator {
+    pub fn new(plot_parameters: PlotParameters, output_file: String, spec_output_file: Option<String>) -> DiagramGenerator {
         DiagramGenerator {
-            spec: String::new()
+            spec: String::new(),
+            plot_parameters,
+            output_file,
+            spec_output_file
         }
     }
 }
-
-
 
 impl MessageProcessor for DiagramGenerator {
     fn init(&mut self) {
@@ -117,22 +116,21 @@ impl MessageProcessor for DiagramGenerator {
         write!(self.spec, "{}->{}: {}\n", src, dst, msg.type_);
     }
     fn finalize(&mut self) {
-        println!("New diagram generated");
-        println!("{}", self.spec);
+        if let Some(ref spec_output_file) = self.spec_output_file {
+            let mut spec_f = fs::File::create(spec_output_file).unwrap();
+            spec_f.write_all(self.spec.as_bytes());
+        }
 
         let diag = wsdclient::get_diagram(
             &self.spec,
-            &wsdclient::Style::Default,
-            &wsdclient::Format::Png,
-            None
+            &self.plot_parameters,
         ).unwrap();
 
-        let mut f = fs::File::create("out.png").unwrap();
+        let mut f = fs::File::create(&self.output_file).unwrap();
         // copy the response body directly to stdout
         f.write_all(&diag[..]).unwrap();
     }
 }
-
 
 fn main() -> Result<(), Box<Error>> {
     let config = Config::from_command_line();
@@ -156,7 +154,7 @@ fn main() -> Result<(), Box<Error>> {
 
     let mut processor: Box<MessageProcessor> = match config.command {
          Command::Report => Box::new(ReportGenerator::new()),
-        Command::Diagram => Box::new(DiagramGenerator::new())
+        Command::Diagram{output_file, plot_parameters, spec_output_file} => Box::new(DiagramGenerator::new(plot_parameters, output_file, spec_output_file))
     };
 
     processor.init();
