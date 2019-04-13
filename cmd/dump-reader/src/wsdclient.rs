@@ -7,6 +7,7 @@ use serde::{Serialize, Deserialize};
 use serde_json::Deserializer;
 
 use std::error::Error;
+use crate::wsdclient::PaperSize::_11x17;
 
 fn normalise_str(s: &str) -> String {
     s.to_lowercase()
@@ -19,9 +20,13 @@ pub trait WSDEnum where Self: std::marker::Sized {
     fn wsd_value(&self) -> String;
     fn all() -> Vec<Self>;
 
+    fn human_readable_value(&self) -> String {
+        self.wsd_value()
+    }
+
     fn from_str(s: &str) -> Option<Self> {
         for x in Self::all() {
-            if normalise_str(&x.wsd_value()) == normalise_str(s) {
+            if normalise_str(&x.human_readable_value()) == normalise_str(s) {
                 return Some(x)
             }
         }
@@ -33,6 +38,27 @@ pub trait WSDEnum where Self: std::marker::Sized {
             .iter()
             .map(|x| x.wsd_value())
             .collect()
+    }
+
+    fn all_human_readable_values() -> Vec<String> {
+        Self::all()
+            .iter()
+            .map(|x| x.human_readable_value())
+            .collect()
+    }
+
+    fn help_str() -> String {
+        Self::all()
+            .iter()
+            .map(|x| {
+                if x.premium_feature() {
+                    format!("{} (premium)", x.human_readable_value())
+                } else {
+                    x.human_readable_value()
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(", ")
     }
 }
 
@@ -136,6 +162,113 @@ impl WSDEnum for Style {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PaperSize {
+    None,
+    Letter,
+    A4,
+    _11x17,
+    A1,
+    A2,
+    A3,
+    Legal
+}
+
+impl Default for PaperSize {
+    fn default() -> PaperSize {
+        PaperSize::None
+    }
+}
+
+
+
+impl WSDEnum for PaperSize {
+    fn premium_feature(&self) -> bool {
+        // TODO(mkl): check if it is actually correct
+        false
+    }
+
+    fn wsd_value(&self) -> String {
+        match self {
+            PaperSize::None => "none".to_owned(),
+            PaperSize::Letter => "lettter".to_owned(),
+            PaperSize::A4 => "a4".to_owned(),
+            PaperSize::_11x17 => "11x17".to_owned(),
+            PaperSize::A1 => "a1".to_owned(),
+            PaperSize::A2 => "a2".to_owned(),
+            PaperSize::A3 => "a3".to_owned(),
+            PaperSize::Legal => "legal".to_owned()
+        }
+    }
+
+    fn all() -> Vec<PaperSize> {
+        use PaperSize::*;
+        vec![None, Letter, A4, _11x17, A1, A2, A3, Legal]
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PaperOrientation {
+    Portrait,
+    Landscape
+}
+
+impl Default for PaperOrientation {
+    fn default() -> PaperOrientation {
+        PaperOrientation::Portrait
+    }
+}
+
+impl WSDEnum for PaperOrientation {
+    fn premium_feature(&self) -> bool {
+        // TODO(mkl): check this
+        return false
+    }
+
+    // in request Portrait is encoded as landscape=0
+    // Landscape is encoded as landscape=1
+    fn wsd_value(&self) -> String {
+        match self {
+            PaperOrientation::Portrait => "0".to_owned(),
+            PaperOrientation::Landscape => "1".to_owned()
+        }
+    }
+
+    fn all() -> Vec<PaperOrientation> {
+        vec![PaperOrientation::Portrait, PaperOrientation::Landscape]
+    }
+
+    fn human_readable_value(&self) -> String {
+        match self {
+            PaperOrientation::Portrait => "portrait".to_owned(),
+            PaperOrientation::Landscape => "landscape".to_owned()
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlotParameters {
+    pub style: Style,
+    pub format: Format,
+    pub paper_size: Option<PaperSize>,
+    pub paper_orientation: Option<PaperOrientation>,
+    pub scale: Option<u32>,
+    pub api_key: Option<String>
+}
+
+impl Default for PlotParameters {
+    fn default() -> PlotParameters {
+        PlotParameters {
+            style: Style::default(),
+            format: Format::default(),
+            paper_size: None,
+            paper_orientation: None,
+            scale: None,
+            api_key: None
+        }
+    }
+}
+
 // Represent response from websequence diagram website
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct WebSequenceDiagramResponse {
@@ -146,21 +279,50 @@ struct WebSequenceDiagramResponse {
 }
 
 
-pub fn get_diagram(spec: &str, style: &Style, format: &Format, api_key: Option<String>) -> Result<Vec<u8>, Box<Error>> {
+pub fn get_diagram(spec: &str, parameters: &PlotParameters) -> Result<Vec<u8>, Box<Error>> {
+    // TODO(mkl): correct handling of incorrect API key
+    // if send request for pdf but key is incorrect png in returned
+    let mut params = vec![
+        ("message".to_owned(), spec.to_owned()),
+        ("style".to_owned(), parameters.style.wsd_value()),
+        ("format".to_owned(), parameters.format.wsd_value()),
+        ("apiVersion".to_owned(), "1".to_owned())
+    ];
+    if let Some(ref api_key) = parameters.api_key {
+        params.push(("apikey".to_owned(), api_key.clone()));
+    }
+    if let Some(ref paper_size) = parameters.paper_size {
+        params.push(("paper".to_owned(), paper_size.wsd_value()));
+    }
+    if let Some(ref paper_orientation) = parameters.paper_orientation {
+        params.push(("landscape".to_owned(), paper_orientation.wsd_value()));
+    }
+    if let Some(ref scale) = parameters.scale {
+        params.push(("scale".to_owned(), format!("{}", scale)));
+    }
+
     let resp = reqwest::Client::new()
         .post("http://www.websequencediagrams.com/index.php")
-        .form(&[
-            ("message", spec),
-            ("style", &style.wsd_value()),
-            ("format", &format.wsd_value()),
-            ("apiVersion", "1")
-        ])
+        .form(&params)
         .send();
+
     let wr: WebSequenceDiagramResponse = match resp {
         Ok(mut r) => {
-            match serde_json::from_reader(r) {
+
+            let mut v = vec![];
+            // Save the response, so we can check it if something going wrong
+            std::io::copy(&mut r, &mut v).unwrap();
+
+            if !r.status().is_success() {
+                return Err(format!("Error response from wsd code={:?} response={}", r.status(), String::from_utf8_lossy(&v)).into())
+            }
+
+            println!("response: {}", String::from_utf8_lossy(&v));
+            match serde_json::from_reader(&v[..]) {
                 Ok(r) => r,
                 Err(err) => {
+                    println!("Error deserializing websequencegiagram response: {:?}", &err);
+                    println!("Response: {}", String::from_utf8_lossy(&v));
                     return Err(format!("Error deserializing websequencegiagram response: {:?}", err).into());
                 }
             }
