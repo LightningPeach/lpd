@@ -9,7 +9,8 @@ fn split_list(s: Option<&str>) -> Vec<String> {
 
 #[derive(Debug, Clone)]
 pub enum Command {
-    Report
+    Report,
+    Diagram
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +60,11 @@ impl Config {
                     .about("Generate report about size and number of messages")
                     .version("0.0.0")
             )
+            .subcommand(
+                SubCommand::with_name("diagram")
+                    .about("Generate diagram")
+                    .version("0.0.0")
+            )
             .get_matches();
 
         let filter_types = split_list(matches.value_of("filter-type"));
@@ -69,6 +75,8 @@ impl Config {
         let mut command = Command::Report;
         if matches.is_present("report") {
             command = Command::Report;
+        } else if matches.is_present("diagram") {
+            command = Command::Diagram;
         }
 
         Config {

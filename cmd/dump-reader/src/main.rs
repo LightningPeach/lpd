@@ -4,6 +4,7 @@
 extern crate clap;
 extern crate serde;
 extern crate serde_json;
+extern crate reqwest;
 
 mod message;
 use message::MessageInfo;
@@ -30,13 +31,14 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use crate::config::Command;
 
-
 // TODO(mkl): print messages in JSON format subcommand
 // TODO(mkl): plot sequence of messages
 // TODO(mkl): add comments
 // TODO(mkl): add tests
 // TODO(mkl): clippy
 // TODO(mkl): rustfmt
+// TODO(mkl): logging
+// TODO(mkl): different output formats
 
 trait MessageProcessor {
     fn init(&mut self);
@@ -72,6 +74,85 @@ impl MessageProcessor for ReportGenerator {
     }
 }
 
+// Creates diagram using websequencediagram website
+#[derive(Debug, Clone)]
+pub struct DiagramGenerator {
+    spec: String
+}
+
+impl DiagramGenerator {
+    pub fn new() -> DiagramGenerator {
+        DiagramGenerator {
+            spec: String::new()
+        }
+    }
+}
+
+// Represent response from websequence diagram website
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct WebSequenceDiagramResponse {
+    img: String,
+    errors: Vec<String>
+
+    // TODO(mkl): add aditional fields
+}
+
+impl MessageProcessor for DiagramGenerator {
+    fn init(&mut self) {
+        self.spec = String::new()
+    }
+    fn process_msg(&mut self, msg: &MessageInfo) {
+        use std::fmt::Write;
+        let (src, dst) = match msg.direction.as_str() {
+            "sent" => ("self".to_owned(), msg.peer_pubkey.clone()),
+            "received" => (msg.peer_pubkey.clone(), "self".to_owned()),
+            default=> {
+                println!("Unknown direction: {}", msg.direction);
+                return;
+            }
+        };
+        write!(self.spec, "{}->{}: {}\n", src, dst, msg.type_);
+    }
+    fn finalize(&mut self) {
+        println!("New diagram generated");
+        println!("{}", self.spec);
+
+        let resp = reqwest::Client::new()
+            .post("http://www.websequencediagrams.com/index.php")
+            .form(&[
+                ("message", self.spec.as_ref()),
+                ("style", "default"),
+                ("apiVersion", "1")
+            ])
+            .send();
+        let wr: WebSequenceDiagramResponse = match resp {
+            Ok(mut r) => {
+                 match serde_json::from_reader(r) {
+                    Ok(r) => r,
+                    Err(err) => {
+                        println!("Error deserializing websequencegiagram response: {:?}", err);
+                        return;
+                    }
+                }
+            },
+            Err(err) =>  {
+                println!("ERROR: {}", err);
+                return;
+            }
+        };
+        println!("wr={:?}", wr);
+
+        let mut resp2 = reqwest::Client::new()
+            .get(("http://www.websequencediagrams.com/index.php".to_owned() + &wr.img).as_str())
+            .send().unwrap();
+
+        let mut f = fs::File::create("out.png").unwrap();
+        // copy the response body directly to stdout
+        std::io::copy(&mut resp2, &mut f);
+
+    }
+}
+
 
 fn main() -> Result<(), Box<Error>> {
     let config = Config::from_command_line();
@@ -94,7 +175,8 @@ fn main() -> Result<(), Box<Error>> {
     );
 
     let mut processor: Box<MessageProcessor> = match config.command {
-         Command::Report => Box::new(ReportGenerator::new())
+         Command::Report => Box::new(ReportGenerator::new()),
+        Command::Diagram => Box::new(DiagramGenerator::new())
     };
 
     processor.init();
