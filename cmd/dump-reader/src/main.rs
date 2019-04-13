@@ -28,15 +28,49 @@ use serde_json::Deserializer;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use crate::config::Command;
 
 
-// TODO(mkl): move functionality in separate files
 // TODO(mkl): print messages in JSON format subcommand
 // TODO(mkl): plot sequence of messages
 // TODO(mkl): add comments
 // TODO(mkl): add tests
 // TODO(mkl): clippy
 // TODO(mkl): rustfmt
+
+trait MessageProcessor {
+    fn init(&mut self);
+    fn process_msg(&mut self, msg: &MessageInfo);
+    fn finalize(&mut self);
+}
+
+#[derive(Debug, Clone)]
+struct ReportGenerator {
+    report: Report
+}
+
+impl ReportGenerator {
+    fn new() -> ReportGenerator {
+        ReportGenerator {
+            report: Report::new()
+        }
+    }
+}
+
+impl MessageProcessor for ReportGenerator {
+    fn init(&mut self) {
+        self.report = Report::new();
+    }
+
+    fn process_msg(&mut self, msg: &MessageInfo) {
+        self.report.process_msg(msg)
+    }
+
+    fn finalize(&mut self) {
+        self.report.finalise();
+        println!("{}", serde_json::to_string_pretty(&self.report).unwrap());
+    }
+}
 
 
 fn main() -> Result<(), Box<Error>> {
@@ -59,7 +93,12 @@ fn main() -> Result<(), Box<Error>> {
         config.filter_peers
     );
 
-    let mut report = Report::new();
+    let mut processor: Box<MessageProcessor> = match config.command {
+         Command::Report => Box::new(ReportGenerator::new())
+    };
+
+    processor.init();
+
     for value in stream {
         match value {
             Ok(v) => {
@@ -68,14 +107,11 @@ fn main() -> Result<(), Box<Error>> {
                     continue;
                 }
                 println!("{:?}", &v);
-                report.process_msg(&v);
+                processor.process_msg(&v)
             },
             Err(e) => println!("ERROR: {:?}", e)
         }
     }
-    report.finalise();
-
-    println!("{}", serde_json::to_string_pretty(&report).unwrap());
-
+    processor.finalize();
     Ok(())
 }
