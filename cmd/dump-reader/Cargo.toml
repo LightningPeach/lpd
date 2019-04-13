@@ -9,4 +9,4 @@ description = "Tool for reading and extracting useful data from message dump fil
 clap = "2.33.0"
 serde = { version = "1.0.90", features = ["derive"] }
 serde_json = "*"
-#serde_macros = "0.8.9"
+reqwest = "0.9.14"
