@@ -18,11 +18,13 @@ use filter::Filter;
 mod config;
 use config::{Config};
 
+mod wsdclient;
+
 use std::fs;
 
 use clap::{App, Arg};
 use std::error::Error;
-use std::io::Read;
+use std::io::{Read, Write};
 
 use serde::{Serialize, Deserialize};
 use serde_json::Deserializer;
@@ -30,6 +32,7 @@ use serde_json::Deserializer;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use crate::config::Command;
+use crate::wsdclient::WSDEnum;
 
 // TODO(mkl): print messages in JSON format subcommand
 // TODO(mkl): plot sequence of messages
@@ -80,6 +83,13 @@ pub struct DiagramGenerator {
     spec: String
 }
 
+
+// TODO(mkl): move websequence diagram creation into separate file
+// TODO(mkl): add error processing
+// TODO(mkl): add output format options
+// TODO(mkl): add output style options
+// TODO(mkl): add support for API key. Include support of env variable
+// TODO(mkl): add checking for premium features. Like image format
 impl DiagramGenerator {
     pub fn new() -> DiagramGenerator {
         DiagramGenerator {
@@ -88,14 +98,7 @@ impl DiagramGenerator {
     }
 }
 
-// Represent response from websequence diagram website
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct WebSequenceDiagramResponse {
-    img: String,
-    errors: Vec<String>
 
-    // TODO(mkl): add aditional fields
-}
 
 impl MessageProcessor for DiagramGenerator {
     fn init(&mut self) {
@@ -117,39 +120,16 @@ impl MessageProcessor for DiagramGenerator {
         println!("New diagram generated");
         println!("{}", self.spec);
 
-        let resp = reqwest::Client::new()
-            .post("http://www.websequencediagrams.com/index.php")
-            .form(&[
-                ("message", self.spec.as_ref()),
-                ("style", "default"),
-                ("apiVersion", "1")
-            ])
-            .send();
-        let wr: WebSequenceDiagramResponse = match resp {
-            Ok(mut r) => {
-                 match serde_json::from_reader(r) {
-                    Ok(r) => r,
-                    Err(err) => {
-                        println!("Error deserializing websequencegiagram response: {:?}", err);
-                        return;
-                    }
-                }
-            },
-            Err(err) =>  {
-                println!("ERROR: {}", err);
-                return;
-            }
-        };
-        println!("wr={:?}", wr);
-
-        let mut resp2 = reqwest::Client::new()
-            .get(("http://www.websequencediagrams.com/index.php".to_owned() + &wr.img).as_str())
-            .send().unwrap();
+        let diag = wsdclient::get_diagram(
+            &self.spec,
+            &wsdclient::Style::Default,
+            &wsdclient::Format::Png,
+            None
+        ).unwrap();
 
         let mut f = fs::File::create("out.png").unwrap();
         // copy the response body directly to stdout
-        std::io::copy(&mut resp2, &mut f);
-
+        f.write_all(&diag[..]).unwrap();
     }
 }
 
