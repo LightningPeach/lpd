@@ -15,12 +15,16 @@ impl Filter {
             peers
         }
     }
+
+    #[allow(dead_code)]
     pub fn empty() -> Filter {
         Filter::new(vec![], vec![], vec![])
     }
+
+
     pub fn pass(&self, msg: &MessageInfo) -> bool {
-        (self.types.len() == 0 || self.types.contains(&msg.type_))
-            && (self.directions.len() == 0 || self.directions.contains(&msg.direction))
-            && (self.peers.len() == 0 || self.peers.contains(&msg.peer_pubkey))
+        (self.types.is_empty() || self.types.contains(&msg.type_))
+            && (self.directions.is_empty() || self.directions.contains(&msg.direction))
+            && (self.peers.is_empty() || self.peers.contains(&msg.peer_pubkey))
     }
 }

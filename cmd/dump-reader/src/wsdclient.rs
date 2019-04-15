@@ -4,10 +4,8 @@
 use std::borrow::ToOwned;
 
 use serde::{Serialize, Deserialize};
-use serde_json::Deserializer;
 
 use std::error::Error;
-use crate::wsdclient::PaperSize::_11x17;
 
 fn normalise_str(s: &str) -> String {
     s.to_lowercase()
@@ -36,14 +34,14 @@ pub trait WSDEnum where Self: std::marker::Sized {
     fn all_wsd_values() -> Vec<String> {
         Self::all()
             .iter()
-            .map(|x| x.wsd_value())
+            .map(WSDEnum::wsd_value)
             .collect()
     }
 
     fn all_human_readable_values() -> Vec<String> {
         Self::all()
             .iter()
-            .map(|x| x.human_readable_value())
+            .map(WSDEnum::human_readable_value)
             .collect()
     }
 
@@ -136,7 +134,7 @@ impl Default for Style {
 
 impl WSDEnum for Style {
     fn premium_feature(&self) -> bool {
-        return false;
+        false
     }
 
     // Converts to value used in WSD API
@@ -222,7 +220,7 @@ impl Default for PaperOrientation {
 impl WSDEnum for PaperOrientation {
     fn premium_feature(&self) -> bool {
         // TODO(mkl): check this
-        return false
+        false
     }
 
     // in request Portrait is encoded as landscape=0
@@ -337,12 +335,12 @@ pub fn get_diagram(spec: &str, parameters: &PlotParameters) -> Result<Vec<u8>, B
         .send().unwrap();
 
     if !resp2.status().is_success() {
-        return Err(format!("Error getting image from size").into())
+        return Err("Error getting image from size".to_string().into())
     }
 
     let mut data = vec![];
     // copy the response body directly to stdout
-    std::io::copy(&mut resp2, &mut data);
+    std::io::copy(&mut resp2, &mut data).unwrap();
     Ok(data)
 }
 
