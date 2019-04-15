@@ -5,7 +5,9 @@ use crate::wsdclient::{WSDEnum, Format, Style, PaperSize, PaperOrientation};
 
 fn split_list(s: Option<&str>) -> Vec<String> {
     match s {
-        Some(s) => s.split(",").map(|x| x.to_owned()).collect(),
+        Some(s) => s
+            .split(',')
+            .map(ToOwned::to_owned).collect(),
         None => vec![]
     }
 }
@@ -137,11 +139,9 @@ impl Config {
             let mut api_key: Option<String> = None;
             if let Some(api_key_arg) = sub_matches.value_of("api-key") {
                 api_key = Some(api_key_arg.to_owned())
-            } else {
-                if let Ok(api_key_env) = std::env::var("WEBSEQUENCEDIAGRAM_API_KEY") {
+            } else if let Ok(api_key_env) = std::env::var("WEBSEQUENCEDIAGRAM_API_KEY") {
                     api_key = Some(api_key_env);
                 }
-            }
 
             let mut format = Format::Png;
             if let Some(format_arg_str) = sub_matches.value_of("format") {
@@ -207,17 +207,17 @@ impl Config {
             };
 
             let plot_parameters = wsdclient::PlotParameters {
-                style: style,
-                format: format,
-                paper_size: paper_size,
-                paper_orientation: paper_orientation,
-                scale: scale,
-                api_key: api_key
+                style,
+                format,
+                paper_size,
+                paper_orientation,
+                scale,
+                api_key
             };
             command = Command::Diagram {
-                output_file: output_file,
-                plot_parameters: plot_parameters,
-                spec_output_file: spec_output_file
+                output_file,
+                plot_parameters,
+                spec_output_file
             }
         }
 

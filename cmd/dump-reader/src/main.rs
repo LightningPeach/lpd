@@ -10,7 +10,7 @@ mod message;
 use message::MessageInfo;
 
 mod statistics;
-use statistics::{Statistics, Report};
+use statistics::{Report};
 
 mod filter;
 use filter::Filter;
@@ -22,17 +22,13 @@ mod wsdclient;
 
 use std::fs;
 
-use clap::{App, Arg};
 use std::error::Error;
-use std::io::{Read, Write};
+use std::io::{Write};
 
-use serde::{Serialize, Deserialize};
 use serde_json::Deserializer;
 
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 use crate::config::Command;
-use crate::wsdclient::{WSDEnum, Format, PlotParameters};
+use crate::wsdclient::{PlotParameters};
 
 // TODO(mkl): print messages in JSON format subcommand
 // TODO(mkl): add comments
@@ -108,17 +104,17 @@ impl MessageProcessor for DiagramGenerator {
         let (src, dst) = match msg.direction.as_str() {
             "sent" => ("self".to_owned(), msg.peer_pubkey.clone()),
             "received" => (msg.peer_pubkey.clone(), "self".to_owned()),
-            default=> {
+            _=> {
                 println!("Unknown direction: {}", msg.direction);
                 return;
             }
         };
-        write!(self.spec, "{}->{}: {}\n", src, dst, msg.type_);
+        writeln!(self.spec, "{}->{}: {}", src, dst, msg.type_).unwrap();
     }
     fn finalize(&mut self) {
         if let Some(ref spec_output_file) = self.spec_output_file {
             let mut spec_f = fs::File::create(spec_output_file).unwrap();
-            spec_f.write_all(self.spec.as_bytes());
+            spec_f.write_all(self.spec.as_bytes()).unwrap();
         }
 
         let diag = wsdclient::get_diagram(
@@ -135,7 +131,7 @@ impl MessageProcessor for DiagramGenerator {
 fn main() -> Result<(), Box<Error>> {
     let config = Config::from_command_line();
     println!("Using input file: {}", &config.input_file_name);
-    let mut file = fs::File::open(&config.input_file_name)
+    let file = fs::File::open(&config.input_file_name)
         .map_err(|err| format!("error opening file: {} {:?}", &config.input_file_name, err) )?;
 //    let mut content = String::new();
 //    file.read_to_string(&mut content)
