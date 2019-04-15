@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 
 use serde::{Serialize, Deserialize};
 
@@ -85,9 +84,7 @@ impl Report {
     pub fn process_msg_for_map(data: &mut HashMap<String, Statistics>, key: String, msg_size: u64) {
         let entry = data
             .entry(key)
-            .or_insert(
-                Statistics::new()
-            );
+            .or_insert_with(Statistics::new);
         (*entry).process_msg(msg_size);
     }
 
