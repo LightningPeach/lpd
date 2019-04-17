@@ -46,13 +46,13 @@ trait MessageProcessor {
 
 #[derive(Debug, Clone)]
 struct ReportGenerator {
-    report: Report
+    report: Report,
 }
 
 impl ReportGenerator {
     fn new() -> ReportGenerator {
         ReportGenerator {
-            report: Report::new()
+            report: Report::new(),
         }
     }
 }
@@ -78,19 +78,22 @@ pub struct DiagramGenerator {
     spec: String,
     plot_parameters: PlotParameters,
     output_file: String,
-    spec_output_file: Option<String>
+    spec_output_file: Option<String>,
 }
-
 
 // TODO(mkl): add error processing
 // TODO(mkl): add checking for premium features. Like image format
 impl DiagramGenerator {
-    pub fn new(plot_parameters: PlotParameters, output_file: String, spec_output_file: Option<String>) -> DiagramGenerator {
+    pub fn new(
+        plot_parameters: PlotParameters,
+        output_file: String,
+        spec_output_file: Option<String>,
+    ) -> DiagramGenerator {
         DiagramGenerator {
             spec: String::new(),
             plot_parameters,
             output_file,
-            spec_output_file
+            spec_output_file,
         }
     }
 }
@@ -104,7 +107,7 @@ impl MessageProcessor for DiagramGenerator {
         let (src, dst) = match msg.direction.as_str() {
             "sent" => ("self".to_owned(), msg.peer_pubkey.clone()),
             "received" => (msg.peer_pubkey.clone(), "self".to_owned()),
-            _=> {
+            _ => {
                 println!("Unknown direction: {}", msg.direction);
                 return;
             }
@@ -117,10 +120,7 @@ impl MessageProcessor for DiagramGenerator {
             spec_f.write_all(self.spec.as_bytes()).unwrap();
         }
 
-        let diag = wsdclient::get_diagram(
-            &self.spec,
-            &self.plot_parameters,
-        ).unwrap();
+        let diag = wsdclient::get_diagram(&self.spec, &self.plot_parameters).unwrap();
 
         let mut f = fs::File::create(&self.output_file).unwrap();
         // copy the response body directly to stdout
@@ -132,25 +132,32 @@ fn main() -> Result<(), Box<Error>> {
     let config = Config::from_command_line();
     println!("Using input file: {}", &config.input_file_name);
     let file = fs::File::open(&config.input_file_name)
-        .map_err(|err| format!("error opening file: {} {:?}", &config.input_file_name, err) )?;
-//    let mut content = String::new();
-//    file.read_to_string(&mut content)
-//        .map(|x| println!("read bytes: {}", x))
-//        .map_err(|err| format!("cannot read from: {} {:?}", input_file_name, err))?;
+        .map_err(|err| format!("error opening file: {} {:?}", &config.input_file_name, err))?;
+    //    let mut content = String::new();
+    //    file.read_to_string(&mut content)
+    //        .map(|x| println!("read bytes: {}", x))
+    //        .map_err(|err| format!("cannot read from: {} {:?}", input_file_name, err))?;
 
-//    println!("{}", content);
-    let stream = Deserializer::from_reader(file)
-        .into_iter::<MessageInfo>();
+    //    println!("{}", content);
+    let stream = Deserializer::from_reader(file).into_iter::<MessageInfo>();
 
     let filter = Filter::new(
         config.filter_types,
         config.filter_directions,
-        config.filter_peers
+        config.filter_peers,
     );
 
     let mut processor: Box<MessageProcessor> = match config.command {
-         Command::Report => Box::new(ReportGenerator::new()),
-        Command::Diagram{output_file, plot_parameters, spec_output_file} => Box::new(DiagramGenerator::new(plot_parameters, output_file, spec_output_file))
+        Command::Report => Box::new(ReportGenerator::new()),
+        Command::Diagram {
+            output_file,
+            plot_parameters,
+            spec_output_file,
+        } => Box::new(DiagramGenerator::new(
+            plot_parameters,
+            output_file,
+            spec_output_file,
+        )),
     };
 
     processor.init();
@@ -164,8 +171,8 @@ fn main() -> Result<(), Box<Error>> {
                 }
                 println!("{:?}", &v);
                 processor.process_msg(&v)
-            },
-            Err(e) => println!("ERROR: {:?}", e)
+            }
+            Err(e) => println!("ERROR: {:?}", e),
         }
     }
     processor.finalize();

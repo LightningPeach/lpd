@@ -5,10 +5,8 @@ use crate::wsdclient::{WSDEnum, Format, Style, PaperSize, PaperOrientation};
 
 fn split_list(s: Option<&str>) -> Vec<String> {
     match s {
-        Some(s) => s
-            .split(',')
-            .map(ToOwned::to_owned).collect(),
-        None => vec![]
+        Some(s) => s.split(',').map(ToOwned::to_owned).collect(),
+        None => vec![],
     }
 }
 
@@ -18,8 +16,8 @@ pub enum Command {
     Diagram {
         output_file: String,
         plot_parameters: wsdclient::PlotParameters,
-        spec_output_file: Option<String>
-    }
+        spec_output_file: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -30,7 +28,7 @@ pub struct Config {
     pub filter_directions: Vec<String>,
     pub filter_peers: Vec<String>,
 
-    pub command: Command
+    pub command: Command,
 }
 
 impl Config {
@@ -134,21 +132,25 @@ impl Config {
         if matches.is_present("report") {
             command = Command::Report;
         } else if matches.is_present("diagram") {
-            let sub_matches= matches.subcommand_matches("diagram").unwrap();
+            let sub_matches = matches.subcommand_matches("diagram").unwrap();
 
             let mut api_key: Option<String> = None;
             if let Some(api_key_arg) = sub_matches.value_of("api-key") {
                 api_key = Some(api_key_arg.to_owned())
             } else if let Ok(api_key_env) = std::env::var("WEBSEQUENCEDIAGRAM_API_KEY") {
-                    api_key = Some(api_key_env);
-                }
+                api_key = Some(api_key_env);
+            }
 
             let mut format = Format::Png;
             if let Some(format_arg_str) = sub_matches.value_of("format") {
                 if let Some(format_arg) = Format::from_str(format_arg_str) {
                     format = format_arg;
                 } else {
-                    println!("ERROR: incorrect format value. Possible values are: {}. Got: {}", Format::help_str(), format_arg_str);
+                    println!(
+                        "ERROR: incorrect format value. Possible values are: {}. Got: {}",
+                        Format::help_str(),
+                        format_arg_str
+                    );
                     std::process::exit(1);
                 }
             }
@@ -158,7 +160,11 @@ impl Config {
                 if let Some(style_arg) = Style::from_str(style_arg_str) {
                     style = style_arg;
                 } else {
-                    println!("ERROR: incorrect style value. Possible values are: {}. Got: {}", Style::help_str(), style_arg_str);
+                    println!(
+                        "ERROR: incorrect style value. Possible values are: {}. Got: {}",
+                        Style::help_str(),
+                        style_arg_str
+                    );
                     std::process::exit(1);
                 }
             }
@@ -168,14 +174,20 @@ impl Config {
                 if let Some(paper_size_arg) = PaperSize::from_str(paper_size_arg_str) {
                     paper_size = Some(paper_size_arg)
                 } else {
-                    println!("ERROR: incorrect paper-size value. Possible values are: {}. Got: {}", PaperSize::help_str(), paper_size_arg_str);
+                    println!(
+                        "ERROR: incorrect paper-size value. Possible values are: {}. Got: {}",
+                        PaperSize::help_str(),
+                        paper_size_arg_str
+                    );
                     std::process::exit(1);
                 }
             }
 
             let mut paper_orientation: Option<PaperOrientation> = None;
             if let Some(paper_orientation_arg_str) = sub_matches.value_of("paper-orientation") {
-                if let Some(paper_orientation_arg) = PaperOrientation::from_str(paper_orientation_arg_str) {
+                if let Some(paper_orientation_arg) =
+                    PaperOrientation::from_str(paper_orientation_arg_str)
+                {
                     paper_orientation = Some(paper_orientation_arg)
                 } else {
                     println!("ERROR: incorrect paper-orientation value. Possible values are: {}. Got: {}", PaperOrientation::help_str(), paper_orientation_arg_str);
@@ -189,22 +201,27 @@ impl Config {
                 if let Ok(scale_arg) = u32::from_str(scale_arg_str) {
                     scale = Some(scale_arg)
                 } else {
-                    println!("ERROR: incorrect scale value. It shoulf be positive integer. Got: {}", scale_arg_str);
+                    println!(
+                        "ERROR: incorrect scale value. It shoulf be positive integer. Got: {}",
+                        scale_arg_str
+                    );
                     std::process::exit(1);
                 }
             }
 
-            let output_file: String = if let Some(output_file_arg) = sub_matches.value_of("output-file") {
-                output_file_arg.to_owned()
-            } else {
-                format!("out.{}", format.wsd_value())
-            };
+            let output_file: String =
+                if let Some(output_file_arg) = sub_matches.value_of("output-file") {
+                    output_file_arg.to_owned()
+                } else {
+                    format!("out.{}", format.wsd_value())
+                };
 
-            let spec_output_file: Option<String> = if let Some(spec_output_file_arg) = sub_matches.value_of("spec-output-file") {
-                Some(spec_output_file_arg.to_owned())
-            } else {
-                None
-            };
+            let spec_output_file: Option<String> =
+                if let Some(spec_output_file_arg) = sub_matches.value_of("spec-output-file") {
+                    Some(spec_output_file_arg.to_owned())
+                } else {
+                    None
+                };
 
             let plot_parameters = wsdclient::PlotParameters {
                 style,
@@ -212,12 +229,12 @@ impl Config {
                 paper_size,
                 paper_orientation,
                 scale,
-                api_key
+                api_key,
             };
             command = Command::Diagram {
                 output_file,
                 plot_parameters,
-                spec_output_file
+                spec_output_file,
             }
         }
 
@@ -226,7 +243,7 @@ impl Config {
             filter_types,
             filter_directions,
             filter_peers,
-            command
+            command,
         }
     }
 }

@@ -8,12 +8,13 @@ use serde::{Serialize, Deserialize};
 use std::error::Error;
 
 fn normalise_str(s: &str) -> String {
-    s.to_lowercase()
-        .replace("-", "")
-        .replace("_", "")
+    s.to_lowercase().replace("-", "").replace("_", "")
 }
 
-pub trait WSDEnum where Self: std::marker::Sized {
+pub trait WSDEnum
+where
+    Self: std::marker::Sized,
+{
     fn premium_feature(&self) -> bool;
     fn wsd_value(&self) -> String;
     fn all() -> Vec<Self>;
@@ -25,17 +26,14 @@ pub trait WSDEnum where Self: std::marker::Sized {
     fn from_str(s: &str) -> Option<Self> {
         for x in Self::all() {
             if normalise_str(&x.human_readable_value()) == normalise_str(s) {
-                return Some(x)
+                return Some(x);
             }
         }
         None
     }
 
     fn all_wsd_values() -> Vec<String> {
-        Self::all()
-            .iter()
-            .map(WSDEnum::wsd_value)
-            .collect()
+        Self::all().iter().map(WSDEnum::wsd_value).collect()
     }
 
     fn all_human_readable_values() -> Vec<String> {
@@ -81,7 +79,7 @@ impl WSDEnum for Format {
         match self {
             Format::Png => false,
             Format::Pdf => true,
-            Format::Svg => true
+            Format::Svg => true,
         }
     }
 
@@ -90,7 +88,7 @@ impl WSDEnum for Format {
         match self {
             Format::Png => "png".to_owned(),
             Format::Pdf => "pdf".to_owned(),
-            Format::Svg => "svg".to_owned()
+            Format::Svg => "svg".to_owned(),
         }
     }
 
@@ -123,7 +121,7 @@ pub enum Style {
     Patent,
     Qsd,
     Rose,
-    Roundgreen
+    Roundgreen,
 }
 
 impl Default for Style {
@@ -150,13 +148,16 @@ impl WSDEnum for Style {
             Style::Patent => "patent".to_owned(),
             Style::Qsd => "qsd".to_owned(),
             Style::Rose => "rose".to_owned(),
-            Style::Roundgreen => "roundgreen".to_owned()
+            Style::Roundgreen => "roundgreen".to_owned(),
         }
     }
 
     fn all() -> Vec<Style> {
         use Style::*;
-        vec![Default, Earth, Magazine, ModernBlue, Mscgen, Napkin, Omegapple, Patent, Qsd, Rose, Roundgreen]
+        vec![
+            Default, Earth, Magazine, ModernBlue, Mscgen, Napkin, Omegapple, Patent, Qsd, Rose,
+            Roundgreen,
+        ]
     }
 }
 
@@ -169,7 +170,7 @@ pub enum PaperSize {
     A1,
     A2,
     A3,
-    Legal
+    Legal,
 }
 
 impl Default for PaperSize {
@@ -177,8 +178,6 @@ impl Default for PaperSize {
         PaperSize::None
     }
 }
-
-
 
 impl WSDEnum for PaperSize {
     fn premium_feature(&self) -> bool {
@@ -195,7 +194,7 @@ impl WSDEnum for PaperSize {
             PaperSize::A1 => "a1".to_owned(),
             PaperSize::A2 => "a2".to_owned(),
             PaperSize::A3 => "a3".to_owned(),
-            PaperSize::Legal => "legal".to_owned()
+            PaperSize::Legal => "legal".to_owned(),
         }
     }
 
@@ -208,7 +207,7 @@ impl WSDEnum for PaperSize {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PaperOrientation {
     Portrait,
-    Landscape
+    Landscape,
 }
 
 impl Default for PaperOrientation {
@@ -228,7 +227,7 @@ impl WSDEnum for PaperOrientation {
     fn wsd_value(&self) -> String {
         match self {
             PaperOrientation::Portrait => "0".to_owned(),
-            PaperOrientation::Landscape => "1".to_owned()
+            PaperOrientation::Landscape => "1".to_owned(),
         }
     }
 
@@ -239,7 +238,7 @@ impl WSDEnum for PaperOrientation {
     fn human_readable_value(&self) -> String {
         match self {
             PaperOrientation::Portrait => "portrait".to_owned(),
-            PaperOrientation::Landscape => "landscape".to_owned()
+            PaperOrientation::Landscape => "landscape".to_owned(),
         }
     }
 }
@@ -251,7 +250,7 @@ pub struct PlotParameters {
     pub paper_size: Option<PaperSize>,
     pub paper_orientation: Option<PaperOrientation>,
     pub scale: Option<u32>,
-    pub api_key: Option<String>
+    pub api_key: Option<String>,
 }
 
 impl Default for PlotParameters {
@@ -262,7 +261,7 @@ impl Default for PlotParameters {
             paper_size: None,
             paper_orientation: None,
             scale: None,
-            api_key: None
+            api_key: None,
         }
     }
 }
@@ -271,11 +270,8 @@ impl Default for PlotParameters {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct WebSequenceDiagramResponse {
     img: String,
-    errors: Vec<String>
-
-    // TODO(mkl): add aditional fields
+    errors: Vec<String>, // TODO(mkl): add aditional fields
 }
-
 
 pub fn get_diagram(spec: &str, parameters: &PlotParameters) -> Result<Vec<u8>, Box<Error>> {
     // TODO(mkl): correct handling of incorrect API key
@@ -284,7 +280,7 @@ pub fn get_diagram(spec: &str, parameters: &PlotParameters) -> Result<Vec<u8>, B
         ("message".to_owned(), spec.to_owned()),
         ("style".to_owned(), parameters.style.wsd_value()),
         ("format".to_owned(), parameters.format.wsd_value()),
-        ("apiVersion".to_owned(), "1".to_owned())
+        ("apiVersion".to_owned(), "1".to_owned()),
     ];
     if let Some(ref api_key) = parameters.api_key {
         params.push(("apikey".to_owned(), api_key.clone()));
@@ -306,36 +302,48 @@ pub fn get_diagram(spec: &str, parameters: &PlotParameters) -> Result<Vec<u8>, B
 
     let wr: WebSequenceDiagramResponse = match resp {
         Ok(mut r) => {
-
             let mut v = vec![];
             // Save the response, so we can check it if something going wrong
             std::io::copy(&mut r, &mut v).unwrap();
 
             if !r.status().is_success() {
-                return Err(format!("Error response from wsd code={:?} response={}", r.status(), String::from_utf8_lossy(&v)).into())
+                return Err(format!(
+                    "Error response from wsd code={:?} response={}",
+                    r.status(),
+                    String::from_utf8_lossy(&v)
+                )
+                .into());
             }
 
             println!("response: {}", String::from_utf8_lossy(&v));
             match serde_json::from_reader(&v[..]) {
                 Ok(r) => r,
                 Err(err) => {
-                    println!("Error deserializing websequencegiagram response: {:?}", &err);
+                    println!(
+                        "Error deserializing websequencegiagram response: {:?}",
+                        &err
+                    );
                     println!("Response: {}", String::from_utf8_lossy(&v));
-                    return Err(format!("Error deserializing websequencegiagram response: {:?}", err).into());
+                    return Err(format!(
+                        "Error deserializing websequencegiagram response: {:?}",
+                        err
+                    )
+                    .into());
                 }
             }
-        },
-        Err(err) =>  {
+        }
+        Err(err) => {
             return Err(format!("ERROR: {}", err).into());
         }
     };
 
     let mut resp2 = reqwest::Client::new()
         .get(("http://www.websequencediagrams.com/index.php".to_owned() + &wr.img).as_str())
-        .send().unwrap();
+        .send()
+        .unwrap();
 
     if !resp2.status().is_success() {
-        return Err("Error getting image from size".to_string().into())
+        return Err("Error getting image from size".to_string().into());
     }
 
     let mut data = vec![];
