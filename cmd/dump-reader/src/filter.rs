@@ -3,7 +3,7 @@ use crate::message::MessageInfo;
 pub struct Filter {
     pub types: Vec<String>,
     pub directions: Vec<String>,
-    pub peers: Vec<String>
+    pub peers: Vec<String>,
 }
 
 impl Filter {
@@ -12,7 +12,7 @@ impl Filter {
         Filter {
             types,
             directions,
-            peers
+            peers,
         }
     }
 
@@ -20,7 +20,6 @@ impl Filter {
     pub fn empty() -> Filter {
         Filter::new(vec![], vec![], vec![])
     }
-
 
     pub fn pass(&self, msg: &MessageInfo) -> bool {
         (self.types.is_empty() || self.types.contains(&msg.type_))
