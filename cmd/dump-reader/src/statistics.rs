@@ -7,22 +7,18 @@ use crate::message::MessageInfo;
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Statistics {
     pub number: u64,
-    pub size: u64
+    pub size: u64,
 }
 
 impl Statistics {
     pub fn new() -> Statistics {
-        Statistics {
-            number: 0,
-            size: 0
-        }
+        Statistics { number: 0, size: 0 }
     }
 
     pub fn process_msg(&mut self, x: u64) {
         self.number += 1;
         self.size += x;
     }
-
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -34,12 +30,12 @@ pub struct Report {
     pub avg_msg_number_per_sec: u64,
     pub avg_msg_size_per_sec: u64,
     pub stat_by_type: HashMap<String, Statistics>,
-    pub stat_by_peer: HashMap<String, Statistics>
+    pub stat_by_peer: HashMap<String, Statistics>,
 }
 
 impl Report {
     pub fn new() -> Report {
-        Report{
+        Report {
             all: Statistics::new(),
             min_time: std::u64::MAX,
             max_time: 0,
@@ -82,9 +78,7 @@ impl Report {
     }
 
     pub fn process_msg_for_map(data: &mut HashMap<String, Statistics>, key: String, msg_size: u64) {
-        let entry = data
-            .entry(key)
-            .or_insert_with(Statistics::new);
+        let entry = data.entry(key).or_insert_with(Statistics::new);
         (*entry).process_msg(msg_size);
     }
 

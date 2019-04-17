@@ -12,7 +12,7 @@ pub struct MessageInfo {
     pub direction: String,
 
     #[serde(rename = "type")]
-    pub type_ : String,
+    pub type_: String,
 
     // Unix timestamp
     pub time: String,
