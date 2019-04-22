@@ -59,7 +59,7 @@ fn main() -> Result<(), Error> {
             println!("the command is propagated, terminating...");
         }).map_err(SendError)?;
 
-        // TODO: get key from wallet
+        // TODO: generate and store it somehow
         let secret = [
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
