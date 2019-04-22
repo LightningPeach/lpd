@@ -49,10 +49,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("End waiting for bitcoind");
 
     // Generate some blocks to activate segwit
-    btc_running.rpc_client().generate(500).unwrap_or_else(|err|{
-        println!("cannot mine initial blocks: {:?}", err);
-        panic!(err);
-    });
+    btc_running.rpc_client().generate(500)
+        .unwrap_or_else(|err| {
+            println!("rpc error, cannot mine initial blocks: {:?}", err);
+            panic!(err);
+        })
+        .unwrap_or_else(|err| {
+            println!("client error, cannot mine initial blocks: {:?}", err);
+            panic!(err);
+        });
 
     // creating two nodes with base port 9800
     let nodes = LnRunning::batch(2, 9800, btc_running.as_ref());
