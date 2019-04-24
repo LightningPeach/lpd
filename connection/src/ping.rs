@@ -1,4 +1,4 @@
-use wire::{Message, Ping, Pong};
+use wire::{Message, MessageExt, Ping, Pong};
 use processor::{MessageConsumer, MessageFiltered, RelevantEvent, Event, ConsumingFuture};
 use binformat::WireError;
 use tokio::prelude::Sink;
@@ -13,8 +13,8 @@ pub struct PingContext {
 pub struct PingMessage(Ping);
 
 impl MessageFiltered for PingMessage {
-    fn filter(v: Message) -> Result<Self, Message> {
-        match v {
+    fn filter(v: MessageExt) -> Result<Self, MessageExt> {
+        match v.message {
             Message::Ping(ping) => Ok(PingMessage(ping)),
             _ => Err(v),
         }
@@ -38,7 +38,7 @@ impl MessageConsumer for PingContext {
 
     fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> ConsumingFuture<Self, S>
     where
-        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+        S: Sink<SinkItem=MessageExt, SinkError=WireError> + Send + 'static,
     {
         use chrono::prelude::*;
 
@@ -47,14 +47,14 @@ impl MessageConsumer for PingContext {
             Either::Left(PingMessage(ping)) => {
                 this.timestamp = Utc::now().timestamp();
                 let pong = Message::Pong(Pong::new(&ping));
-                ConsumingFuture::from_send(this, sink.send(pong))
+                ConsumingFuture::from_send(this, sink.send(pong.into()))
             },
             Either::Right(PingEvent) => {
                 this.tick += 1;
                 if this.tick == 30 || Utc::now().timestamp() - this.timestamp >= 30 {
                     this.tick = 0;
                     let ping = Message::Ping(Ping::new(256, 256).unwrap());
-                    ConsumingFuture::from_send(this, sink.send(ping))
+                    ConsumingFuture::from_send(this, sink.send(ping.into()))
                 } else {
                     ConsumingFuture::ok(this, sink)
                 }

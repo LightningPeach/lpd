@@ -194,6 +194,21 @@ impl<'de> Deserialize<'de> for Message {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub struct MessageExt {
+    pub message: Message,
+    pub extra_data: Vec<u8>,
+}
+
+impl From<Message> for MessageExt {
+    fn from(v: Message) -> Self {
+        MessageExt {
+            message: v,
+            extra_data: Vec::new(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use binformat::BinarySD;
