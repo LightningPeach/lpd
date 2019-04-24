@@ -1,7 +1,7 @@
 fn main() {
     use binformat::BinarySD;
     use wire::Message;
-    use std::{fs::File, io::{Cursor, Read}};
+    use std::{fs::File, io::{Cursor, Read, Seek, SeekFrom}};
     use std::process::Command;
 
     let _ = Command::new("go")
@@ -24,6 +24,11 @@ fn main() {
         let position = cursor.position() as u16;
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         println!("{:?}", msg);
-        assert_eq!(position + length, cursor.position() as u16);
+
+        let extra_length = position + length - (cursor.position() as u16);
+        if extra_length > 0 {
+            println!("WARNING: extra length: {}", extra_length);
+        }
+        cursor.seek(SeekFrom::Start((position + length) as u64)).unwrap();
     }
 }
