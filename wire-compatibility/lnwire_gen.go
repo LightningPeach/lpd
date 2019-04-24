@@ -39,6 +39,8 @@ func writeMessage(w io.Writer, msg lnwire.Message) {
 func createRevokeAndAck() lnwire.Message {
 	var chanId lnwire.ChannelID
 	var revocation [32]byte
+	chanId[0] = 1
+	revocation[1] = 2
 	privkey, _ := btcec.NewPrivateKey(btcec.S256())
 	pubkey := privkey.PubKey()
 	msg := &lnwire.RevokeAndAck{
@@ -49,6 +51,45 @@ func createRevokeAndAck() lnwire.Message {
 	return msg
 }
 
+func createFundingLocked() lnwire.Message {
+	var chanId lnwire.ChannelID
+	chanId[0] = 1
+	privkey, _ := btcec.NewPrivateKey(btcec.S256())
+	pubkey := privkey.PubKey()
+	msg := &lnwire.FundingLocked{
+		ChanID: chanId,
+		NextPerCommitmentPoint: pubkey,
+	}
+	return msg
+}
+
+func createAnnounceSignatures() lnwire.Message {
+	var chanId lnwire.ChannelID
+	chanId[0] = 1
+	shortChannelID := lnwire.ShortChannelID{
+		BlockHeight: 100,
+		TxIndex: 10,
+		TxPosition: 1,
+	}
+	var nodeSignature lnwire.Sig
+	nodeSignature[2] = 3
+
+	var bitcoinSignature lnwire.Sig
+	bitcoinSignature[1] = 4
+
+	extraOpaqueData := []byte{1, 2, 3, 100}
+
+	msg := &lnwire.AnnounceSignatures {
+		ChannelID: chanId,
+		ShortChannelID: shortChannelID,
+		NodeSignature: nodeSignature,
+		BitcoinSignature: bitcoinSignature,
+		ExtraOpaqueData: extraOpaqueData,
+	}
+	return msg
+}
+
+
 func main() {
 	var f, err = os.Create("/tmp/messages")
 	if err != nil {
@@ -56,6 +97,7 @@ func main() {
 	}
 	defer f.Close()
 
+	// TODO(mkl): refactor into some object, like TestDataProducer
 	pubkey, err := randPubKey()
 	if err != nil {
 		panic(err)
@@ -79,6 +121,7 @@ func main() {
 	})
 	writeMessage(f, &lnwire.FundingCreated{})
 	writeMessage(f, &lnwire.FundingSigned{})
-	writeMessage(f, &lnwire.FundingLocked{})
 	writeMessage(f, createRevokeAndAck())
+	writeMessage(f, createFundingLocked())
+	writeMessage(f, createAnnounceSignatures())
 }
