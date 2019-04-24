@@ -7,7 +7,7 @@ use tokio::prelude::{Future, AsyncRead, AsyncWrite, Sink};
 use tokio::executor::Spawn;
 use futures::sync::mpsc::Receiver;
 use secp256k1::Signature;
-use wire::Message;
+use wire::{Message, MessageExt};
 use processor::{MessageConsumer, ConsumingFuture};
 use binformat::WireError;
 
@@ -49,7 +49,7 @@ impl MessageConsumer for Remote {
     fn consume<S>(mut self, sink: S, message: Either<Self::Message, Self::Relevant>) -> ConsumingFuture<Self, S>
     where
         Self: Sized,
-        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+        S: Sink<SinkItem=MessageExt, SinkError=WireError> + Send + 'static,
     {
         // TODO: use them
         let _ = (&self.db, &self.public, &self.wallet);
@@ -62,7 +62,7 @@ impl MessageConsumer for Remote {
                 match self.channel.next(message) {
                     (state, Some(response)) => {
                         println!("response message: {:?}", response);
-                        let send = sink.send(response);
+                        let send = sink.send(response.into());
                         self.channel = state;
                         ConsumingFuture::from_send(self, send)
                     },

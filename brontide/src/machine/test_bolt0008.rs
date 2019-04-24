@@ -143,7 +143,7 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
         use bytes::BytesMut;
 
         let mut buffer = BytesMut::with_capacity(0x100);
-        machine.write(payload.clone(), &mut buffer)?;
+        machine.write(payload.clone(), Vec::new(), &mut buffer)?;
 
         if transport_message_vectors.get(&i).is_some() {
             let actual = hex::encode(buffer.as_mut());
@@ -153,9 +153,9 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
 
         // Responder decrypts the bytes, in every iteration, and
         // should always be able to decrypt the same payload message.
-        let plaintext = responder_machine.read(&mut buffer)?;
+        let plaintext = responder_machine.read::<(u8, u8, u8, u8, u8)>(&mut buffer)?.unwrap();
         // Ensure decryption succeeded
-        assert_eq!(plaintext, Some(payload));
+        assert_eq!(plaintext.0, payload);
     }
 
     Ok(())

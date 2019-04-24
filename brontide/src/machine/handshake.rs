@@ -554,6 +554,7 @@ impl HandshakeOutActTwo {
 use bytes::BytesMut;
 use binformat::{BinarySD, WireError};
 use serde::{Serialize, de::DeserializeOwned};
+use std::io::Write;
 
 pub struct Machine {
     send_cipher: CipherState,
@@ -592,7 +593,7 @@ impl Machine {
         self.remote_static.clone()
     }
 
-    pub fn write<T>(&mut self, item: T, dst: &mut BytesMut) -> Result<(), WireError>
+    pub fn write<T>(&mut self, item: T, extra_data: Vec<u8>, dst: &mut BytesMut) -> Result<(), WireError>
     where
         T: Serialize,
     {
@@ -602,6 +603,7 @@ impl Machine {
             let mut buffer = self.message_buffer.write().unwrap();
             let mut cursor = io::Cursor::new(buffer.as_mut());
             BinarySD::serialize(&mut cursor, &item)?;
+            cursor.write(extra_data.as_slice()).map_err(WireError::from)?;
             cursor.position() as usize
         };
 
@@ -629,7 +631,7 @@ impl Machine {
         Ok(())
     }
 
-    pub fn read<T>(&mut self, src: &mut BytesMut) -> Result<Option<T>, WireError>
+    pub fn read<T>(&mut self, src: &mut BytesMut) -> Result<Option<(T, Vec<u8>)>, WireError>
     where
         T: DeserializeOwned,
     {
@@ -679,7 +681,18 @@ impl Machine {
                         DecryptError::TagMismatch => WireError::custom("tag"),
                     })?;
 
-                BinarySD::deserialize(self.message_buffer.read().unwrap().as_ref()).map(Some)
+                let buffer = self.message_buffer.read().unwrap();
+                let mut cursor = io::Cursor::new(buffer.as_ref());
+                BinarySD::deserialize(&mut cursor)
+                    .map(|m| {
+                        let read = cursor.position() as usize;
+                        let extra_size = length - read;
+                        let mut extra_data = Vec::with_capacity(extra_size);
+                        extra_data.resize(extra_size, 0);
+                        extra_data.as_mut_slice().copy_from_slice(&cursor.into_inner()[read..length]);
+                        (m, extra_data)
+                    })
+                    .map(Some)
             }
         }
     }

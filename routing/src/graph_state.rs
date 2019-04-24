@@ -14,7 +14,7 @@ use either::Either;
 #[cfg(feature = "rpc")]
 use secp256k1::PublicKey;
 
-use wire::{Message, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel};
+use wire::{Message, MessageExt, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel};
 use processor::{MessageFiltered, MessageConsumer, ConsumingFuture};
 
 use binformat::WireError;
@@ -199,13 +199,13 @@ pub enum TopologyMessage {
 }
 
 impl MessageFiltered for TopologyMessage {
-    fn filter(v: Message) -> Result<Self, Message> {
-        match v {
+    fn filter(v: MessageExt) -> Result<Self, MessageExt> {
+        match v.message {
             Message::Init(v) => Ok(TopologyMessage::Init(v)),
             Message::AnnouncementNode(v) => Ok(TopologyMessage::AnnouncementNode(v)),
             Message::AnnouncementChannel(v) => Ok(TopologyMessage::AnnouncementChannel(v)),
             Message::UpdateChannel(v) => Ok(TopologyMessage::UpdateChannel(v)),
-            v @ _ => Err(v),
+            _ => Err(v),
         }
     }
 }
@@ -219,7 +219,7 @@ impl MessageConsumer for SharedState {
 
     fn consume<S>(self, sink: S, message: Either<Self::Message, Self::Relevant>) -> ConsumingFuture<Self, S>
     where
-        S: Sink<SinkItem=Message, SinkError=WireError> + Send + 'static,
+        S: Sink<SinkItem=MessageExt, SinkError=WireError> + Send + 'static,
     {
         use wire::{Init, RawFeatureVector, FeatureBit::*};
 
@@ -227,7 +227,7 @@ impl MessageConsumer for SharedState {
             TopologyMessage::Init(_) => {
                 let local = RawFeatureVector::new().set_bit(InitialRoutingSync);
                 let init = Message::Init(Init::new(RawFeatureVector::new(), local));
-                return ConsumingFuture::from_send(self, sink.send(init));
+                return ConsumingFuture::from_send(self, sink.send(init.into()));
             },
             TopologyMessage::AnnouncementNode(v) => self.0.write().unwrap().run(v),
             TopologyMessage::AnnouncementChannel(v) => self.0.write().unwrap().run(v),
