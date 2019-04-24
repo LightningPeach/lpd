@@ -3,8 +3,7 @@ use super::Hash256;
 use super::MilliSatoshi;
 use super::OnionBlob;
 use super::SatoshiPerKiloWeight;
-use super::super::types::RawSignature;
-use secp256k1::PublicKey;
+use super::super::types::{RawSignature, RawPublicKey};
 
 use binformat::SerdeVec;
 
@@ -72,7 +71,7 @@ pub struct CommitmentSigned {
 pub struct RevokeAndAck {
     pub channel_id: ChannelId,
     pub revocation_preimage: [u8; 32],
-    pub next_per_commitment_point: PublicKey,
+    pub next_per_commitment_point: RawPublicKey,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]

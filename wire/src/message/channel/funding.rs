@@ -1,7 +1,6 @@
 use super::ChannelId;
 use super::OutputIndex;
-use super::super::types::RawSignature;
-use secp256k1::PublicKey;
+use super::super::types::{RawSignature, RawPublicKey};
 
 use serde_derive::{Serialize, Deserialize};
 
@@ -27,7 +26,7 @@ pub struct FundingSigned {
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct FundingLocked {
     pub channel_id: ChannelId,
-    pub next_per_commitment_point: PublicKey,
+    pub next_per_commitment_point: RawPublicKey,
 }
 
 impl From<FundingTxid> for [u8; 32] {

@@ -79,5 +79,6 @@ func main() {
 	})
 	writeMessage(f, &lnwire.FundingCreated{})
 	writeMessage(f, &lnwire.FundingSigned{})
+	writeMessage(f, &lnwire.FundingLocked{})
 	writeMessage(f, createRevokeAndAck())
 }
