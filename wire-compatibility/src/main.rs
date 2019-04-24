@@ -1,3 +1,5 @@
+use std::thread::sleep;
+
 fn main() {
     use binformat::BinarySD;
     use wire::Message;

@@ -16,6 +16,7 @@ pub struct AnnouncementChannelData {
     short_channel_id: ShortChannelId,
     pub node_id: (RawPublicKey, RawPublicKey),
     pub bitcoin_key: (RawPublicKey, RawPublicKey),
+    extra_opaque_data: Vec<u8>,
 }
 
 impl AnnouncementChannelData {
