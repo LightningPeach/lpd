@@ -35,8 +35,22 @@ func writeMessage(w io.Writer, msg lnwire.Message) {
 	}
 }
 
+
+func createRevokeAndAck() lnwire.Message {
+	var chanId lnwire.ChannelID
+	var revocation [32]byte
+	privkey, _ := btcec.NewPrivateKey(btcec.S256())
+	pubkey := privkey.PubKey()
+	msg := &lnwire.RevokeAndAck{
+		ChanID:            chanId,
+		Revocation:        revocation,
+		NextRevocationKey: pubkey,
+	}
+	return msg
+}
+
 func main() {
-	var f, err = os.Create("../target/messages")
+	var f, err = os.Create("/tmp/messages")
 	if err != nil {
 		panic(err)
 	}
@@ -65,5 +79,5 @@ func main() {
 	})
 	writeMessage(f, &lnwire.FundingCreated{})
 	writeMessage(f, &lnwire.FundingSigned{})
-	writeMessage(f, &lnwire.FundingLocked{})
+	writeMessage(f, createRevokeAndAck())
 }
