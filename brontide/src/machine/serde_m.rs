@@ -3,7 +3,7 @@ use super::handshake::Machine;
 use tokio::codec::{Encoder, Decoder};
 use bytes::BytesMut;
 use binformat::WireError;
-use wire::{Message, MessageExt};
+use wire::MessageExt;
 
 impl Encoder for Machine {
     type Item = MessageExt;

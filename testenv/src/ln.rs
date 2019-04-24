@@ -4,13 +4,11 @@ use super::al::AbstractLightningNode;
 use crate::home::create_file_for_redirect;
 
 use std::process::{Command, Child};
-use std::thread::sleep;
 
 use std::io;
 use std::fmt;
 use std::fs::File;
 use std::path::PathBuf;
-use std::time::Duration;
 
 use lnd_rust::rpc::GetInfoResponse;
 use lnd_rust::rpc::LightningAddress;
