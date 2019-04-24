@@ -225,7 +225,7 @@ impl MessageConsumer for SharedState {
 
         match message.left().unwrap() {
             TopologyMessage::Init(_) => {
-                let local = RawFeatureVector::new().set_bit(InitialRoutingSync);
+                let local = RawFeatureVector::new();
                 let init = Message::Init(Init::new(RawFeatureVector::new(), local));
                 return ConsumingFuture::from_send(self, sink.send(init.into()));
             },

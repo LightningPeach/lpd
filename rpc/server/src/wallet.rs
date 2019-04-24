@@ -10,11 +10,12 @@ where
         electrumx::ElectrumxWallet,
     };
     use bitcoin::network::constants::Network;
-    use std::io::stdin;
+    //use std::io::stdin;
 
-    println!("enter password for wallet");
-    let mut passphrase = String::new();
-    stdin().read_line(&mut passphrase).unwrap();
+    //println!("enter password for wallet");
+    //let mut passphrase = String::new();
+    //stdin().read_line(&mut passphrase).unwrap();
+    let passphrase = "qwerty".to_owned();
 
     let config = |passphrase: String| WalletConfig::new(
         Network::Regtest,
