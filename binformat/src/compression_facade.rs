@@ -61,12 +61,8 @@ impl<'de, T> Deserialize<'de> for SerdeVec<T> where T: PackSized + de::Deseriali
                     if size == 0 { break; }
                     let element: T = seq.next_element()?
                         .ok_or(de::Error::custom(format!("cannot read T")))?;
-                    if size == element.pack_size() {
-                        break;
-                    } else {
-                        if size < element.pack_size() {
-                            return Err(de::Error::custom(format!("cannot assemble integer amount of T")))
-                        }
+                    if size < element.pack_size() {
+                        return Err(de::Error::custom(format!("cannot assemble integer amount of T")))
                     }
                     size -= element.pack_size();
                     data.push(element);
