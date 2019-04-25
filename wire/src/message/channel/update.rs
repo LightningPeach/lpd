@@ -28,6 +28,7 @@ pub struct UpdateChannelData {
     pub htlc_minimum: MilliSatoshi,
     pub base_fee: u32,
     pub fee_rate: u32,
+    htlc_maximum: MilliSatoshi,
 }
 
 impl UpdateChannelData {
