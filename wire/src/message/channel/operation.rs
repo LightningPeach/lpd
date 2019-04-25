@@ -5,8 +5,6 @@ use super::OnionBlob;
 use super::SatoshiPerKiloWeight;
 use super::super::types::{RawSignature, RawPublicKey};
 
-use binformat::SerdeVec;
-
 use serde_derive::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
@@ -64,7 +62,7 @@ pub struct UpdateFailMalformedHtlc {
 pub struct CommitmentSigned {
     pub channel_id: ChannelId,
     pub signature: RawSignature,
-    pub htlc_signatures: SerdeVec<RawSignature>,
+    pub htlc_signatures: Vec<RawSignature>,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
