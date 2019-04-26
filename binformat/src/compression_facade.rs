@@ -139,11 +139,14 @@ impl<'de, T> Deserialize<'de> for UncompressedData<T> where T: PackSized + de::D
                 use std::io::Read;
 
                 let mut decoder = read::ZlibDecoder::new(v);
-                let mut decompressed_bytes = Vec::<u8>::new();
+                let mut decompressed_bytes = vec![0, 0];
                 let _ = Read::read_to_end(&mut decoder, &mut decompressed_bytes)
                     .map_err(|e| E::custom(format!("decompression error: {:?}", e)))?;
-                BinarySD::deserialize(decompressed_bytes.as_slice())
-                    .map_err(|e| E::custom(format!("deserialize error: {:?}", e)))
+                let size = decompressed_bytes.len() - 2;
+                let _ = BinarySD::serialize(&mut decompressed_bytes[0..2], &(size as u16)).unwrap();
+                let v = BinarySD::deserialize(decompressed_bytes.as_slice())
+                    .map_err(|e| E::custom(format!("deserialize error: {:?}", e)))?;
+                Ok(UncompressedData(v))
             }
         }
 
