@@ -106,10 +106,10 @@ impl<T> Serialize for UncompressedData<T> where T: PackSized + Serialize {
         use std::io::Read;
 
         let mut bytes = Vec::<u8>::new();
-        let &UncompressedData(ref data) = self;
+        let &UncompressedData(SerdeVec(ref data)) = self;
         BinarySD::serialize(&mut bytes, data)
             .map_err(|e| ser::Error::custom(format!("serialize error: {:?}", e)))?;
-        let mut encoder = read::ZlibEncoder::new(bytes.as_slice(), Compression::fast());
+        let mut encoder = read::ZlibEncoder::new(&bytes.as_slice()[2..], Compression::default());
         let mut compressed_bytes = Vec::<u8>::new();
         let _ = Read::read_to_end(&mut encoder, &mut compressed_bytes)
             .map_err(|e| ser::Error::custom(format!("compression error: {:?}", e)))?;
