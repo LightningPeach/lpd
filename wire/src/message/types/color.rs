@@ -1,8 +1,22 @@
 use super::common::Module;
 
+// I guess it is RGBA
 #[derive(Clone, Default, Eq, PartialEq, Debug)]
 pub struct Color {
     data: [u8; 4],
+}
+
+impl Color {
+    pub fn from_u32(x: u32) -> Color {
+        let mut data = [0u8; 4];
+        data[0] = ((x >> 24) & 0xFF) as u8; // Red
+        data[1] = ((x >> 16) & 0xFF) as u8; // Green
+        data[2] = ((x >> 8) & 0xFF) as u8; // Blue
+        data[3] = ((x >> 0) & 0xFF) as u8; // Alpha
+        return Color {
+            data
+        }
+    }
 }
 
 impl serde::Serialize for Color {
@@ -11,6 +25,8 @@ impl serde::Serialize for Color {
     }
 }
 
+// TODO(mkl): maybe do not drop A value?
+// TODO(mkl): maybe create type RGB color
 impl<'de> serde::Deserialize<'de> for Color {
     fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Color, D::Error> {
         let v: (u8, u8, u8) = serde::Deserialize::deserialize(d)?;
@@ -20,6 +36,7 @@ impl<'de> serde::Deserialize<'de> for Color {
     }
 }
 
+// TODO(mkl): maybe create enum Colors with different colors instead of adding functions to Color
 // basis constructors
 pub trait ColorBasis {
     fn r() -> Self;
@@ -59,6 +76,8 @@ mod debug {
     }
 }
 
+// TODO(mkl): add some tests
+// TODO(mkl): add usability functions
 mod module {
     use super::Color;
     use super::Module;
