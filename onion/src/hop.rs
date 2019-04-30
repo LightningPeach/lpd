@@ -2,7 +2,6 @@ use super::crypto::HmacData;
 use wire::{Satoshi, ShortChannelId};
 use secp256k1::PublicKey;
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
-use serde_derive::{Serialize, Deserialize};
 use chacha::{ChaCha, KeyStream};
 use std::ops::BitXorAssign;
 

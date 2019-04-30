@@ -3,7 +3,6 @@ mod feature_bit;
 mod raw_feature_vector;
 mod feature_vector;
 #[macro_use]
-mod crypto_types;
 mod units;
 mod onion_blob;
 mod color;
@@ -26,4 +25,3 @@ pub use self::units::CsvDelay;
 pub use self::units::SatoshiPerVByte;
 pub use self::onion_blob::OnionBlob;
 pub use self::color::Color;
-pub use self::crypto_types::{RawSignature, RawPublicKey};
