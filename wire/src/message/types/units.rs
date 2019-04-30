@@ -2,29 +2,59 @@ use super::Wrapper;
 
 use serde_derive::{Serialize, Deserialize};
 
-#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Satoshi {
     raw: u64,
 }
 
-#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub struct MilliSatoshi {
     raw: u64,
 }
 
-#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SatoshiPerKiloWeight {
     raw: u32,
 }
 
-#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CsvDelay {
     raw: u16,
 }
 
-#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SatoshiPerVByte {
     raw: u64,
+}
+
+impl std::fmt::Debug for Satoshi {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Satoshi({})", self.raw)
+    }
+}
+
+impl std::fmt::Debug for MilliSatoshi {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "MilliSatoshi({})", self.raw)
+    }
+}
+
+impl std::fmt::Debug for SatoshiPerKiloWeight {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "SatoshiPerKiloWeight({})", self.raw)
+    }
+}
+
+impl std::fmt::Debug for CsvDelay {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "CsvDelay({})", self.raw)
+    }
+}
+
+impl std::fmt::Debug for SatoshiPerVByte {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "SatoshiPerVByte({})", self.raw)
+    }
 }
 
 mod wrappers {

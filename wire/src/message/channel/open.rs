@@ -76,7 +76,15 @@ pub struct ReestablishChannel {
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::ChannelKeys;
     use binformat::BinarySD;
+    use crate::message::channel::ChannelId;
+    use crate::message::channel::operation::{UpdateFulfillHtlc, HtlcId, u8_32_from_hex};
+    use crate::CsvDelay;
+    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use crate::Message;
+    use pretty_assertions::{assert_eq, assert_ne};
+    use secp256k1::PublicKey;
 
     #[test]
     fn open_channel_ser() {
@@ -116,4 +124,66 @@ mod test {
         let restored: OpenChannel = BinarySD::deserialize(vec.as_slice()).unwrap();
         assert_eq!(restored, msg);
     }
+
+    #[test]
+    fn accept_channel_test() {
+        let msg_hex = "0021000a00000000000000000000000000000000000000000000000000000000000000000000000000640000000000018a88000000000000271000000000000003e900000002000a000702f4f54c706c49df82c35453fafcbe3fe55268e274651f50d573f8eeeee8b3a31d032dc1b351406ab5404a2d1c05dfeceb2fdee8228e3525a6be061bddf0a39bd6ad03d330de7e7e31acae3092babdc514570670b43fdf18d3ac0b397c9db2de52888f0297557fc325a8de27eca45e7f77db44f22b85d16d2ec5853adf7b21464e3c363202c5871b00d8d1bdedb91db3fb487959291da00ce179ef5a9172042e1a563773c7035281eef9aa59ce083ae6d614774bee20d586d2901262adfed1f8214dc5840e37";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = AcceptChannel {
+            temporary_channel_id: ChannelId::from_hex("000a000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            dust_limit: Satoshi::from(100),
+            max_htlc_value_in_flight: MilliSatoshi::from(101000),
+            chanel_reserve: Satoshi::from(10000),
+            htlc_minimum: MilliSatoshi::from(1001),
+            minimum_accept_depth: 2,
+            csv_delay: CsvDelay::from(10),
+            max_accepted_htlc_number: 7,
+            keys: ChannelKeys {
+                funding: RawPublicKey::from_hex("02f4f54c706c49df82c35453fafcbe3fe55268e274651f50d573f8eeeee8b3a31d").unwrap(),
+                revocation: RawPublicKey::from_hex("032dc1b351406ab5404a2d1c05dfeceb2fdee8228e3525a6be061bddf0a39bd6ad").unwrap(),
+                payment: RawPublicKey::from_hex("03d330de7e7e31acae3092babdc514570670b43fdf18d3ac0b397c9db2de52888f").unwrap(),
+                delayed_payment: RawPublicKey::from_hex("0297557fc325a8de27eca45e7f77db44f22b85d16d2ec5853adf7b21464e3c3632").unwrap(),
+                htlc: RawPublicKey::from_hex("02c5871b00d8d1bdedb91db3fb487959291da00ce179ef5a9172042e1a563773c7").unwrap(),
+                first_per_commitment: RawPublicKey::from_hex("035281eef9aa59ce083ae6d614774bee20d586d2901262adfed1f8214dc5840e37").unwrap(),
+            }
+        };
+        let wrapped_msg_correct = Message::AcceptChannel(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
+    }
+
+
+    #[test]
+    fn reestablish_channel_test() {
+        let msg_hex = "00880100000000000000000000000000000000000000000000000000000000000000000000000000000b00000000000000020002000000000000000000000000000000000000000000000000000000000000031de8e2207c6ad1d81f5458c40b9cb1b519448ad67b00983e411ef522cbb187b6";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = ReestablishChannel {
+            channel_id: ChannelId::from_hex("0100000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            next_local_commitment_number: 11,
+            next_remote_revocation_number: 2,
+            last_remote_commit_secret: u8_32_from_hex("0002000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            local_unrevoked_commit_point: RawPublicKey::from_hex("031de8e2207c6ad1d81f5458c40b9cb1b519448ad67b00983e411ef522cbb187b6").unwrap(),
+        };
+        let wrapped_msg_correct = Message::ReestablishChannel(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
+    }
 }
+
+

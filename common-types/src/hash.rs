@@ -1,3 +1,5 @@
+use hex as hex_mod;
+use std::error::Error;
 use serde::{Serialize, Deserialize};
 use hex_literal::*;
 
@@ -7,6 +9,7 @@ pub struct Hash256 {
 }
 
 impl Hash256 {
+    // TODO(mkl): add other blockchains: simnet, regtest, litecoin ...
     pub const BITCOIN_CHAIN_HASH: Self = Hash256 {
         data: hex!("6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000"),
     };
@@ -14,6 +17,19 @@ impl Hash256 {
     pub const TEST_HASH: Self = Hash256 {
         data: hex!("38faad210ccb4b018c866049827661643433f1a261a54a8b3faa9e682341158d"),
     };
+
+    pub fn from_hex(s: &str) -> Result<Hash256, Box<Error>> {
+        let b = hex_mod::decode(s)
+            .map_err(|err| format!("cannot decode Hash256 from hex: {:?}", err))?;
+        if b.len() != 32 {
+            return Err(format!("error decoding Hash256, wrong byte length, got {}, want {}", b.len(), 32).into())
+        }
+        let mut h: [u8; 32] = [0; 32];
+        h.copy_from_slice(&b[..]);
+        Ok(Hash256{
+            data: h
+        })
+    }
 }
 
 impl From<[u8; 32]> for Hash256 {
