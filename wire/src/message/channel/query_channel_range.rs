@@ -5,9 +5,9 @@ use serde_derive::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct QueryChannelRange {
-    chain_hash: Hash256,
-    first_block_height: u32,
-    number_of_blocks: u32,
+    pub chain_hash: Hash256,
+    pub first_block_height: u32,
+    pub number_of_blocks: u32,
 }
 
 impl QueryChannelRange {
@@ -22,17 +22,22 @@ impl QueryChannelRange {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ReplyChannelRange {
-    chain_hash: Hash256,
-    first_block_height: u32,
-    number_of_blocks: u32,
-    complete: bool,
-    encoded_short_ids: ShortChannelIdEncoding,
+    pub chain_hash: Hash256,
+    pub first_block_height: u32,
+    pub number_of_blocks: u32,
+    pub complete: bool,
+    pub encoded_short_ids: ShortChannelIdEncoding,
 }
 
 #[cfg(test)]
 mod tests {
     use binformat::BinarySD;
     use super::*;
+
+    use crate::message::channel::ChannelId;
+    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use crate::{Message, RevokeAndAck, RawPublicKey, CommitmentSigned, RawSignature};
+    use pretty_assertions::{assert_eq, assert_ne};
 
     #[test]
     fn reply_channel_range() {
@@ -47,5 +52,106 @@ mod tests {
         ];
         let t: ReplyChannelRange = BinarySD::deserialize(&v[..]).unwrap();
         println!("{:?}", t);
+    }
+
+
+    #[test]
+    fn test_query_channel_range() {
+        let msg_hex = "010700000b0000000000000000000000000000000000000000000000000000000000000027100000000c";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = QueryChannelRange {
+            chain_hash: Hash256::from_hex("00000b0000000000000000000000000000000000000000000000000000000000").unwrap(),
+            first_block_height: 10000,
+            number_of_blocks: 12,
+        };
+        let wrapped_msg_correct = Message::QueryChannelRange(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
+    }
+
+//    hex: 010800000b0000000000000000000000000000000000000000000000000000000000000027100000000c01001900002fbd000001000a003a9800000c0065030d40000005000b
+//    ChainHash: 00000b0000000000000000000000000000000000000000000000000000000000
+//    FirstBlockHeight: 10000
+//    NumBlocks: 12
+//    Complete: 1
+//    EncodingType: 0
+//    ShortChanIDs: 3
+//    13437131603116042
+//    16492674417426533
+//    219902325555527691
+    #[test]
+    fn reply_channel_range_plain_test() {
+        let msg_hex = "010800000b0000000000000000000000000000000000000000000000000000000000000027100000000c01001900002fbd000001000a003a9800000c0065030d40000005000b";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = ReplyChannelRange {
+            chain_hash: Hash256::from_hex("00000b0000000000000000000000000000000000000000000000000000000000").unwrap(),
+            first_block_height: 10000,
+            number_of_blocks: 12,
+            complete: 1 != 0,
+            encoded_short_ids: ShortChannelIdEncoding::from_u64_vec(0, &vec![
+                13437131603116042,
+                16492674417426533,
+                219902325555527691,
+            ]).unwrap(),
+        };
+        let wrapped_msg_correct = Message::ReplyChannelRange(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
+    }
+
+
+    // Seems not working
+    //    hex: 010800000b0000000000000000000000000000000000000000000000000000000000000027100000000c01002501789c62d0dfcbc0c0c8c0c5603583818187219599d781818195811b100000ffff2720029b
+    //    ChainHash: 00000b0000000000000000000000000000000000000000000000000000000000
+    //    FirstBlockHeight: 10000
+    //    NumBlocks: 12
+    //    Complete: 1
+    //    EncodingType: 1
+    //    ShortChanIDs: 3
+    //    13437131603116042
+    //    16492674417426533
+    //    219902325555527691
+    #[test]
+    fn reply_channel_range_zlib_test() {
+        let msg_hex = "010800000b0000000000000000000000000000000000000000000000000000000000000027100000000c01002501789c62d0dfcbc0c0c8c0c5603583818187219599d781818195811b100000ffff2720029b";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = ReplyChannelRange {
+            chain_hash: Hash256::from_hex("00000b0000000000000000000000000000000000000000000000000000000000").unwrap(),
+            first_block_height: 10000,
+            number_of_blocks: 12,
+            complete: 1 != 0,
+            encoded_short_ids: ShortChannelIdEncoding::from_u64_vec(1, &vec![
+                13437131603116042,
+                16492674417426533,
+                219902325555527691,
+            ]).unwrap(),
+        };
+        let wrapped_msg_correct = Message::ReplyChannelRange(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
     }
 }

@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::collections::HashSet;
 
 use serde::Serialize;
@@ -6,6 +7,10 @@ use serde::Deserialize;
 use serde::Deserializer;
 
 use super::FeatureBit;
+use crate::FeatureVector;
+use std::io::Cursor;
+
+use binformat::BinarySD;
 
 #[derive(Default, Clone, Eq, PartialEq)]
 pub struct RawFeatureVector {
@@ -43,6 +48,17 @@ impl RawFeatureVector {
 
     pub fn is_set_bit(&self, feature_bit: &FeatureBit) -> bool {
         self.set.contains(feature_bit)
+    }
+
+    pub fn from_hex(s: &str) -> Result<RawFeatureVector, Box<Error>> {
+        let b = hex::decode(s)
+            .map_err(|err| format!("cannot decode FeatureVector from hex: {:?}", err))?;
+
+        // For some reason  from(stuff: Vec<u8>) do not work here...
+        let mut cursor = Cursor::new(&b);
+        let v = BinarySD::deserialize::<RawFeatureVector, _>(&mut cursor)
+            .map_err(|err| format!("cannot decode RawFeatureVector: {:?}", err))?;
+        Ok(v)
     }
 }
 

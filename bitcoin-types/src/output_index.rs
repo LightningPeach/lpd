@@ -10,3 +10,15 @@ impl From<OutputIndex> for u16 {
         return x.index;
     }
 }
+
+impl OutputIndex {
+    pub fn from_u16(x: u16) -> OutputIndex{
+        OutputIndex {
+            index: x,
+        }
+    }
+
+    pub fn to_u16(&self) -> u16 {
+        self.index
+    }
+}

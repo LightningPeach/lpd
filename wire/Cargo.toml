@@ -27,6 +27,7 @@ binformat = { path = "../binformat", features = ["secp256k1"] }
 
 [dev-dependencies]
 common-types = { path = "../common-types", features = ["testing"] }
+pretty_assertions = "0.6.1"
 
 [features]
 testing = []

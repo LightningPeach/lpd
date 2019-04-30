@@ -1,3 +1,4 @@
+use std::error::Error;
 use secp256k1::{Signature, PublicKey};
 use binformat::PackSized;
 
@@ -11,7 +12,7 @@ macro_rules! public_key {
     } }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct RawPublicKey(pub PublicKey);
 
 impl From<PublicKey> for RawPublicKey {
@@ -20,11 +21,34 @@ impl From<PublicKey> for RawPublicKey {
     }
 }
 
+impl std::fmt::Debug for RawPublicKey {
+    // use compact format, same as as to_hex()
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "RawPublicKey({})", self.to_hex())
+    }
+}
+
 impl AsRef<PublicKey> for RawPublicKey {
     fn as_ref(&self) -> &PublicKey {
         match self {
             &RawPublicKey(ref i) => i,
         }
+    }
+}
+
+impl RawPublicKey {
+    // assume serialized compressed or not?
+    pub fn from_hex(s: &str) -> Result<RawPublicKey, Box<Error>> {
+        use std::str::FromStr;
+        let pk = PublicKey::from_str(s)
+            .map_err(|err| format!("error decoding pubkey: {:?}", err))?;
+        Ok(RawPublicKey(pk))
+    }
+
+    // assume serialized compressed
+    pub fn to_hex(&self) -> String {
+        let b = self.0.serialize();
+        hex::encode(&b[..])
     }
 }
 
@@ -64,6 +88,34 @@ impl AsRef<Signature> for RawSignature {
         match self {
             &RawSignature(ref i) => i,
         }
+    }
+}
+
+impl RawSignature {
+    // use der encoding
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.serialize_der()
+    }
+
+    // use der encoding
+    pub fn from_bytes(v: &[u8]) -> Result<RawSignature, Box<Error>> {
+        let s = Signature::from_der(v)?;
+        Ok(RawSignature(s))
+    }
+
+    // use der encoding
+    pub fn to_hex(&self) -> String {
+        let b = self.to_bytes();
+        hex::encode(&b[..])
+    }
+
+    // use der encoding
+    pub fn from_hex(s: &str) -> Result<RawSignature, Box<Error>> {
+        let b = hex::decode(s)
+            .map_err(|err| format!("cannot decode RawSignature from hex: {:?}", err))?;
+        let sig = Signature::from_der(&b[..])
+            .map_err(|err| format!("cannot create RawSignature from bytes using der encoding: {:?}", err))?;
+        Ok(RawSignature(sig))
     }
 }
 
