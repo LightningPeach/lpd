@@ -75,21 +75,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             err
         })?;
 
-    println!("Before starting peach");
-    let peach_node = LpServer::new(9735, 10009, "peach")
-        .map_err(|err|{
-            println!("cannot create LpServer: {:?}", err);
-            err
-        })?
-        .run(btc_running.as_ref())
-        .map_err(|err| {
-            println!("cannot run LpServer: {:?}", err);
-            err
-        })?;
-    println!("After starting peach");
-    thread::sleep(Duration::from_secs(2));
-    println!("peach_node info: {:?}", peach_node.info());
-
 
 
     let mining_address = nodes[0].new_address().wait()
@@ -117,6 +102,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     thread::sleep(Duration::from_secs(5));
     println!("After waiting for mining blocks for money for first node");
 
+    /*println!("Before starting peach");
+    let peach_node = LpServer::new(9735, 10009, "peach")
+        .map_err(|err|{
+            println!("cannot create LpServer: {:?}", err);
+            err
+        })?
+        .run(btc_running.as_ref())
+        .map_err(|err| {
+            println!("cannot run LpServer: {:?}", err);
+            err
+        })?;
+    println!("After starting peach");
+    thread::sleep(Duration::from_secs(2));
+    println!("peach_node info: {:?}", peach_node.info());
+
     //let _ = nodes[0].connect_peer(&nodes[1]).wait()?;
     //let pk1 = nodes[1].address().pubkey;
     let _ = nodes[0].connect_peer(&peach_node).wait().map_err(|err| {
@@ -133,7 +133,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // TODO: run it
     let _ = update_stream.map(|i| {
         println!("{:?}", i);
-    });
+    });*/
 
     fn pause() {
         use std::io;
