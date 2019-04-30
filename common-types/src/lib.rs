@@ -3,6 +3,9 @@
 mod hash;
 pub use self::hash::Hash256;
 
+mod crypto_types;
+pub use self::crypto_types::{RawPublicKey, RawSignature};
+
 // abstract cryptography
 pub mod ac;
 

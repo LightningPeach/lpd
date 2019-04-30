@@ -1,8 +1,7 @@
 use super::{hop::{HopData, HopBytes}, crypto::{KeyType, HmacData}, route::OnionPacketVersion};
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
-use serde_derive::{Serialize, Deserialize};
-use wire::RawPublicKey;
-use common_types::Hash256;
+use serde::{Serialize, Deserialize};
+use common_types::{Hash256, RawPublicKey};
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct OnionPacket {

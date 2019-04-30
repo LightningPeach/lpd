@@ -3,8 +3,7 @@ use super::crypto::{HmacData, KeyType};
 use super::packet::{OnionPacket, ValidOnionPacket};
 
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
-use common_types::Hash256;
-use wire::RawPublicKey;
+use common_types::{Hash256, RawPublicKey};
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

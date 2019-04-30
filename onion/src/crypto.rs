@@ -1,7 +1,7 @@
-use wire::Hash256;
+use common_types::Hash256;
 use chacha::{ChaCha, KeyStream};
 use std::ops::BitXorAssign;
-use serde_derive::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize};
 
 pub enum KeyType {
     Rho,
