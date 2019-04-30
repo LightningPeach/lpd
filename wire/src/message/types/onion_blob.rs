@@ -1,10 +1,26 @@
-
+use std::error::Error;
 pub const ONION_PACKET_SIZE: usize = 1366;
 
 #[derive(Clone)]
 pub struct OnionBlob {
-    data: [u8; ONION_PACKET_SIZE],
+    pub data: [u8; ONION_PACKET_SIZE],
 }
+
+impl OnionBlob {
+    pub fn from_hex(s: &str) -> Result<OnionBlob, Box<Error>> {
+        let bytes = hex::decode(s.as_bytes())
+            .map_err(|err| format!("cannot decode OnionBlob from hex : {:?}", err))?;
+        if bytes.len() != ONION_PACKET_SIZE {
+            return Err(format!("incorrect byte length of OnionBlob, got {}, want {}", bytes.len(), ONION_PACKET_SIZE).into());
+        }
+        let mut data = [0; ONION_PACKET_SIZE];
+        data.copy_from_slice(&bytes);
+        Ok(OnionBlob {
+            data
+        })
+    }
+}
+
 
 mod serde_m {
     use super::OnionBlob;

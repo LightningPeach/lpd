@@ -11,9 +11,9 @@ pub type AnnouncementChannel = SignedRaw<SignedRaw<SignedRaw<SignedRaw<Data<Anno
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AnnouncementChannelData {
-    features: RawFeatureVector,
-    chain_hash: Hash256,
-    short_channel_id: ShortChannelId,
+    pub features: RawFeatureVector,
+    pub chain_hash: Hash256,
+    pub short_channel_id: ShortChannelId,
     pub node_id: (RawPublicKey, RawPublicKey),
     pub bitcoin_key: (RawPublicKey, RawPublicKey),
 }
@@ -34,6 +34,13 @@ mod test {
     use super::*;
     use common_types::ac::{Signed, Data};
     use binformat::BinarySD;
+
+    use crate::message::channel::{ChannelId};
+    use crate::message::{FundingCreated, FundingSigned, AnnounceSignatures};
+    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use crate::Message;
+    use pretty_assertions::{assert_eq, assert_ne};
+    use secp256k1::PublicKey;
 
     #[test]
     fn announcement_channel() {
@@ -83,5 +90,49 @@ mod test {
             .verify_key_inside(&context, |data| &data.bitcoin_key.1.as_ref()).ok().unwrap();
 
         println!("{:?}", t.as_ref_content());
+    }
+
+
+    #[test]
+    fn announcement_channel_test() {
+        let msg_hex = "010000000300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000182000b0000000000000000000000000000000000000000000000000000000000000004d200000200640235071ecd1b59d1810ef84bf770b8f1ebc96b21c3d69a2af6772727f49765547d02e4dec09faa3dacaa2f177b85839eb753ef48d0d09bc0f56739db9523b3480ec70339a618cddf1364ba7f256060463207e7ef9822bcfb721056c10692e879eb206203478a57a2fd26e4a006fa76b2fad703c8cc8ee86a3cdb89c4d7b06061898e58fb";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+        let msg_correct = SignedRaw {
+            signature: RawSignature::from_hex("3023021e030000000000000000000000000000000000000000000000000000000000020100").unwrap(),
+            data: SignedRaw {
+                signature: RawSignature::from_hex("3022021d0400000000000000000000000000000000000000000000000000000000020100").unwrap(),
+                data: SignedRaw {
+                    signature: RawSignature::from_hex("3024021f02000000000000000000000000000000000000000000000000000000000000020100").unwrap(),
+                    data: SignedRaw {
+                        signature: RawSignature::from_hex("3023021e050000000000000000000000000000000000000000000000000000000000020100").unwrap(),
+                        data: Data(
+                            AnnouncementChannelData {
+                                features: RawFeatureVector::from_hex("000182").unwrap(),
+                                chain_hash: Hash256::from_hex("000b000000000000000000000000000000000000000000000000000000000000").unwrap(),
+                                short_channel_id: ShortChannelId::from_u64(1356797348806756),
+                                node_id: (
+                                    RawPublicKey::from_hex("0235071ecd1b59d1810ef84bf770b8f1ebc96b21c3d69a2af6772727f49765547d").unwrap(),
+                                    RawPublicKey::from_hex("02e4dec09faa3dacaa2f177b85839eb753ef48d0d09bc0f56739db9523b3480ec7").unwrap(),
+                                ),
+                                bitcoin_key: (
+                                    RawPublicKey::from_hex("0339a618cddf1364ba7f256060463207e7ef9822bcfb721056c10692e879eb2062").unwrap(),
+                                    RawPublicKey::from_hex("03478a57a2fd26e4a006fa76b2fad703c8cc8ee86a3cdb89c4d7b06061898e58fb").unwrap(),
+                                ),
+                            }
+                        )
+                    }
+                }
+            }
+        };
+        let wrapped_msg_correct = Message::AnnouncementChannel(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
     }
 }
