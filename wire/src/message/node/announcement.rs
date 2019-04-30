@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use super::RawFeatureVector;
 use super::NodeAlias;
 use super::Color;
@@ -19,7 +21,7 @@ pub type AnnouncementNode = Signed<Data<AnnouncementNodeData>, RawSignature>;
 
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct AnnouncementNodeData {
-    features: RawFeatureVector,
+    pub features: RawFeatureVector,
     pub timestamp: u32,
     pub node_id: RawPublicKey,
     pub color: Color,
@@ -60,6 +62,17 @@ pub enum Address {
     IpV6(IpV6),
     TorV2(TorV2),
     TorV3(TorV3),
+}
+
+// TODO(mkl): add to_str function for Address with Tor support
+// Actually port is not part of IP address. It is added for convenience
+impl Address {
+    fn from_str(s: &str) -> Result<Address, Box<Error>> {
+        use std::str::FromStr;
+        let socket_addr = SocketAddr::from_str(s)
+            .map_err(|err| format!("cannot parse Address: {:?}", err))?;
+        Ok(Address::from(socket_addr))
+    }
 }
 
 impl From<SocketAddr> for Address {
@@ -202,8 +215,13 @@ mod serde_m {
 
 #[cfg(test)]
 mod tests {
-    use binformat::BinarySD;
     use super::*;
+
+    use binformat::BinarySD;
+    use crate::message::channel::ChannelId;
+    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use crate::{Message, RevokeAndAck, RawPublicKey, CommitmentSigned, RawSignature};
+    use pretty_assertions::{assert_eq, assert_ne};
 
     #[test]
     fn announcement_node() {
@@ -229,6 +247,42 @@ mod tests {
             0, 0
         ];
         let t: AnnouncementNode = BinarySD::deserialize(&v[..]).unwrap();
+        // TODO(mkl): add automatic check
         println!("{:?}", t);
+    }
+
+    #[test]
+    fn announcement_node_test() {
+        let msg_hex = "01010000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000759e23203639e0e2447aaf1fee79699ac59d6166544bf8583c42dbeabd35fc45e63c0831721140a01000000000000000000000000000000000000000000000000000000000000000028017f0000012710010909090904d2010a0a65152b67021fff00000a8885a3000000000000ac1f0b55";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = Signed {
+            signature: RawSignature::from_hex("3022021d0100000000000000000000000000000000000000000000000000000000020100").unwrap(),
+            data: Data (
+                AnnouncementNodeData {
+                    features: RawFeatureVector::from_hex("0000").unwrap(),
+                    timestamp: 123331122,
+                    node_id: RawPublicKey::from_hex("03639e0e2447aaf1fee79699ac59d6166544bf8583c42dbeabd35fc45e63c08317").unwrap(),
+                    color: Color::from_u32(554961408),
+                    alias: NodeAlias::from_hex("0100000000000000000000000000000000000000000000000000000000000000").unwrap(),
+                    address: SerdeVec(vec![
+                        Address::from_str("127.0.0.1:10000").unwrap(),
+                        Address::from_str("9.9.9.9:1234").unwrap(),
+                        Address::from_str("10.10.101.21:11111").unwrap(),
+                        Address::from_str("[1fff:0:a88:85a3::ac1f]:2901").unwrap(),
+                    ]),
+                }
+            )
+        };
+        let wrapped_msg_correct = Message::AnnouncementNode(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
     }
 }

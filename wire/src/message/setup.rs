@@ -32,6 +32,11 @@ mod test {
     use super::super::types::RawFeatureVector;
     use super::super::types::FeatureBit;
 
+    use crate::message::channel::ChannelId;
+    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use crate::{Message, RevokeAndAck, RawPublicKey, CommitmentSigned, RawSignature};
+    use pretty_assertions::{assert_eq, assert_ne};
+
     #[test]
     fn test_init_serde() {
         use self::FeatureBit::*;
@@ -51,5 +56,27 @@ mod test {
         let new = BinarySD::deserialize(&data[..]).unwrap();
 
         assert_eq!(init, new);
+    }
+
+
+    #[test]
+    fn init_test() {
+        let msg_hex = "001000000001cb";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = Init {
+            global_features: RawFeatureVector::from_hex("0000").unwrap(),
+            local_features: RawFeatureVector::from_hex("0001cb").unwrap(),
+        };
+        let wrapped_msg_correct = Message::Init(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
     }
 }

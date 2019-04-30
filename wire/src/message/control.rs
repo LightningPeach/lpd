@@ -11,8 +11,8 @@ use super::MessageSize;
 /// in order to the response message fit in the size limit.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct Ping {
-    pong_length: MessageSize,
-    data: Vec<u8>,
+    pub pong_length: MessageSize,
+    pub data: Vec<u8>,
 }
 
 impl Ping {
@@ -60,7 +60,7 @@ impl Ping {
 /// Should fail the channel if
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct Pong {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl Pong {
@@ -76,4 +76,59 @@ impl Pong {
     pub fn length(&self) -> MessageSize {
         self.data.len() as _
     }
+}
+
+
+#[cfg(test)]
+mod test {
+    use binformat::BinarySD;
+    use crate::message::channel::ChannelId;
+    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use crate::{Message, RevokeAndAck, RawPublicKey, CommitmentSigned, RawSignature};
+    use pretty_assertions::{assert_eq, assert_ne};
+    use super::{Ping, Pong};
+
+    #[test]
+    fn ping_test() {
+        let msg_hex = "0012000a000401020304";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = Ping {
+            pong_length: 10,
+            data: hex::decode("01020304").unwrap(),
+        };
+        let wrapped_msg_correct = Message::Ping(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
+    }
+
+
+    #[test]
+    fn pong_test() {
+        let msg_hex = "0013000201c8";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = Pong {
+            data: hex::decode("01c8").unwrap(),
+        };
+        let wrapped_msg_correct = Message::Pong(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
+    }
+
+
 }

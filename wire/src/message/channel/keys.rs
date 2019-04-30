@@ -5,12 +5,12 @@ use super::super::types::RawPublicKey;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ChannelKeys {
-    funding: RawPublicKey,
-    revocation: RawPublicKey,
-    payment: RawPublicKey,
-    delayed_payment: RawPublicKey,
-    htlc: RawPublicKey,
-    first_per_commitment: RawPublicKey,
+    pub funding: RawPublicKey,
+    pub revocation: RawPublicKey,
+    pub payment: RawPublicKey,
+    pub delayed_payment: RawPublicKey,
+    pub htlc: RawPublicKey,
+    pub first_per_commitment: RawPublicKey,
 }
 
 impl ChannelKeys {

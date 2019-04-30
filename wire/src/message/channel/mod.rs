@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use super::types::*;
 
 mod funding;
@@ -32,6 +34,7 @@ use binformat::PackSized;
 use bitflags::bitflags;
 
 use serde_derive::{Serialize, Deserialize};
+//use nom::AsBytes;
 
 bitflags! {
     #[derive(Serialize, Deserialize)]
@@ -40,16 +43,42 @@ bitflags! {
     }
 }
 
-#[derive(Default, Serialize, Deserialize, Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Default, Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
 pub struct ChannelId {
     data: [u8; 32],
 }
 
+
 impl ChannelId {
+    // TODO(mkl): maybe rename
+    // TODO(mkl): maybe add to_bytes/from_bytes methods to conversion from/to u32
     pub fn all() -> Self {
         ChannelId {
             data: [0; 32],
         }
+    }
+
+    pub fn from_hex(s: &str) -> Result<Self, Box<Error>> {
+        let bytes = hex::decode(s.as_bytes())
+            .map_err(|err| format!("cannot decode hex: {:?}", err))?;
+        if bytes.len() != 32 {
+            return Err(format!("incorrect byte length of ChannelId, got {}, want {}", bytes.len(), 32).into());
+        }
+        let mut data = [0; 32];
+        data.copy_from_slice(&bytes);
+        Ok(ChannelId{
+            data
+        })
+    }
+
+    pub fn to_hex(&self) -> String {
+        hex::encode(&self.data[..])
+    }
+}
+
+impl std::fmt::Debug for ChannelId {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "ChannelId({})",hex::encode(&self.data[..]))
     }
 }
 
@@ -61,15 +90,25 @@ impl From<[u8; 32]> for ChannelId {
     }
 }
 
+// TODO(mkl): implement conversion from/to human-readable format, like 0:0:0
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct ShortChannelId {
-    block_height: u32,
-    tx_index: u32,
-    tx_position: u16,
+    pub block_height: u32,
+    pub tx_index: u32,
+    pub tx_position: u16,
 }
 
 impl PackSized for ShortChannelId {
     const SIZE: usize = 8;
+}
+
+impl ShortChannelId {
+    pub fn from_u64(x: u64) -> Self {
+        x.into()
+    }
+    pub fn to_u64(&self) -> u64 {
+        self.clone().into()
+    }
 }
 
 impl From<u64> for ShortChannelId {
