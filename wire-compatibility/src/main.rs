@@ -55,9 +55,9 @@ fn main() {
     use std::{fs::File, io::Read};
     use std::process::Command;
 
-    let _ = Command::new("go")
-        .current_dir("wire-compatibility")
-        .arg("run").arg("lnwire_gen.go").output().unwrap();
+//    let _ = Command::new("go")
+//        .current_dir("wire-compatibility")
+//        .arg("run").arg("lnwire_gen.go").output().unwrap();
 
     let data = {
         let mut file = File::open("/tmp/messages").unwrap();

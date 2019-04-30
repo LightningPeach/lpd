@@ -135,7 +135,7 @@ message! {
         FundingSigned(35u16, as_funding_signed),
         FundingLocked(36u16, as_funding_locked),
         ShutdownChannel(38u16, as_shutdown_channel),
-        ClosingNegotiation(39u16, as_closing_negotiation),
+        ClosingSigned(39u16, as_closing_signed),
         UpdateAddHtlc(128u16, as_update_add_htlc),
         UpdateFulfillHtlc(130u16, as_update_fulfill_htlc),
         UpdateFailHtlc(131u16, as_update_fail_htlc),

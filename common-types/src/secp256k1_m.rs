@@ -82,7 +82,7 @@ where
     S: From<Signature> + AsRef<Signature>,
 {
     pub signature: S,
-    data: T,
+    pub data: T,
 }
 
 impl<T, S> ac::Data<Message> for Signed<T, S>
