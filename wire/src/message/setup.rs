@@ -3,10 +3,12 @@ use super::channel::ChannelId;
 
 use serde_derive::{Serialize, Deserialize};
 
+/// The first message reveals the features supported or required by this node,
+/// even if this is a reconnection
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct Init {
-    global_features: RawFeatureVector,
-    local_features: RawFeatureVector,
+    pub global_features: RawFeatureVector,
+    pub local_features: RawFeatureVector,
 }
 
 impl Init {
@@ -18,10 +20,12 @@ impl Init {
     }
 }
 
+/// The channel is referred to by `channel_id`,
+/// unless `channel_id` is 0 (i.e. all bytes are 0), in which case it refers to all channels.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct Error {
-    channel_id: ChannelId,
-    data: Vec<u8>,
+    pub channel_id: ChannelId,
+    pub data: Vec<u8>,
 }
 
 #[cfg(test)]

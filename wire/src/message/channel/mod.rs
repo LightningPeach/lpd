@@ -43,11 +43,13 @@ bitflags! {
     }
 }
 
+/// The unique identifier of the channel. It's derived from the funding transaction
+/// by combining the funding_txid and the funding_output_index, using big-endian exclusive-OR
+/// (i.e. funding_output_index alters the last 2 bytes).
 #[derive(Default, Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
 pub struct ChannelId {
-    data: [u8; 32],
+    pub data: [u8; 32],
 }
-
 
 impl ChannelId {
     // TODO(mkl): maybe rename
@@ -78,23 +80,26 @@ impl ChannelId {
 
 impl std::fmt::Debug for ChannelId {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "ChannelId({})",hex::encode(&self.data[..]))
+        write!(f, "ChannelId({})", hex::encode(&self.data[..]))
     }
 }
 
 impl From<[u8; 32]> for ChannelId {
     fn from(x: [u8; 32]) -> Self {
-        ChannelId{
+        ChannelId {
             data: x,
         }
     }
 }
 
+/// The unique description of the funding transaction
 // TODO(mkl): implement conversion from/to human-readable format, like 0:0:0
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct ShortChannelId {
     pub block_height: u32,
+    /// the transaction index within the block
     pub tx_index: u32,
+    /// the output index that pays to the channel
     pub tx_position: u16,
 }
 
@@ -106,6 +111,7 @@ impl ShortChannelId {
     pub fn from_u64(x: u64) -> Self {
         x.into()
     }
+
     pub fn to_u64(&self) -> u64 {
         self.clone().into()
     }
