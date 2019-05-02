@@ -18,6 +18,11 @@ bitflags! {
     }
 }
 
+/// After a channel has been initially announced, each side independently announces
+/// the fees and minimum expiry delta it requires to relay HTLCs through this channel.
+/// Each uses the 8-byte channel shortid that matches the `channel_announcement`
+/// and the 1-bit `channel_flags` field to indicate which end of the channel it's on
+/// (origin or final). A node can do this multiple times, in order to change fees.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateChannelData {
     pub hash: Hash256,
