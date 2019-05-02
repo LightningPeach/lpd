@@ -36,10 +36,9 @@ mod test {
     use super::super::types::RawFeatureVector;
     use super::super::types::FeatureBit;
 
-    use crate::message::channel::ChannelId;
-    use std::io::{Cursor, Read, Seek, SeekFrom};
-    use crate::{Message, RevokeAndAck, RawPublicKey, CommitmentSigned, RawSignature};
-    use pretty_assertions::{assert_eq, assert_ne};
+    use std::io::Cursor;
+    use crate::Message;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_init_serde() {

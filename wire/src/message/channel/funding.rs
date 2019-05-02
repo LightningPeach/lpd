@@ -102,14 +102,10 @@ mod test {
     use super::*;
     use binformat::BinarySD;
     use crate::message::channel::{ChannelId, OutputIndex};
-    use crate::message::channel::operation::{UpdateFulfillHtlc, HtlcId, u8_32_from_hex};
     use crate::message::{FundingCreated, FundingSigned};
-    use crate::CsvDelay;
-    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use std::io::Cursor;
     use crate::Message;
-    use pretty_assertions::{assert_eq, assert_ne};
-    use secp256k1::PublicKey;
-
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn funding_created_test() {

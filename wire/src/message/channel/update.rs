@@ -49,21 +49,19 @@ impl UpdateChannelData {
 
 #[cfg(test)]
 mod test {
-    use crate::UpdateChannel;
-
     use super::*;
     use binformat::BinarySD;
-    use crate::message::channel::ChannelId;
-    use crate::message::channel::operation::{UpdateFulfillHtlc, HtlcId, u8_32_from_hex};
-    use crate::CsvDelay;
-    use std::io::{Cursor, Read, Seek, SeekFrom};
+    use std::io::Cursor;
     use crate::Message;
-    use pretty_assertions::{assert_eq, assert_ne};
-    use secp256k1::PublicKey;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn update_channel_test() {
-        let msg_hex = "0102000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000064000004000f000f42400101006400000000000003e800000064000000050000000005f5e100";
+        let msg_hex = "\
+            01020000030000000000000000000000000000000000000000000000000000000000000000000000\
+            00000000000000000000000000000000000000000000000000000004000000000000000000000000\
+            000000000000000000000000000000000000000064000004000f000f424001010064000000000000\
+            03e800000064000000050000000005f5e100";
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = Signed {

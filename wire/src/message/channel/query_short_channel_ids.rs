@@ -134,10 +134,9 @@ mod test {
     use super::*;
 
     use binformat::BinarySD;
-    use crate::message::channel::ChannelId;
-    use std::io::{Cursor, Read, Seek, SeekFrom};
-    use crate::{Message, RevokeAndAck, RawPublicKey, CommitmentSigned, RawSignature};
-    use pretty_assertions::{assert_eq, assert_ne};
+    use std::io::Cursor;
+    use crate::Message;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn query_short_channel_ids_plane_test() {

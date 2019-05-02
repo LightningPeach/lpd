@@ -70,7 +70,7 @@ pub enum Address {
 // TODO(mkl): add to_str function for Address with Tor support
 // Actually port is not part of IP address. It is added for convenience
 impl Address {
-    fn from_str(s: &str) -> Result<Address, Box<Error>> {
+    pub fn from_str(s: &str) -> Result<Address, Box<Error>> {
         use std::str::FromStr;
         let socket_addr = SocketAddr::from_str(s)
             .map_err(|err| format!("cannot parse Address: {:?}", err))?;
@@ -221,10 +221,9 @@ mod tests {
     use super::*;
 
     use binformat::BinarySD;
-    use crate::message::channel::ChannelId;
-    use std::io::{Cursor, Read, Seek, SeekFrom};
-    use crate::{Message, RevokeAndAck, RawPublicKey, CommitmentSigned, RawSignature};
-    use pretty_assertions::{assert_eq, assert_ne};
+    use std::io::Cursor;
+    use crate::{Message, RawPublicKey, RawSignature};
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn announcement_node() {
@@ -256,7 +255,12 @@ mod tests {
 
     #[test]
     fn announcement_node_test() {
-        let msg_hex = "01010000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000759e23203639e0e2447aaf1fee79699ac59d6166544bf8583c42dbeabd35fc45e63c0831721140a01000000000000000000000000000000000000000000000000000000000000000028017f0000012710010909090904d2010a0a65152b67021fff00000a8885a3000000000000ac1f0b55";
+        let msg_hex = "\
+            01010000000100000000000000000000000000000000000000000000000000000000000000000000\
+            000000000000000000000000000000000000000000000000000000000759e23203639e0e2447aaf1\
+            fee79699ac59d6166544bf8583c42dbeabd35fc45e63c0831721140a010000000000000000000000\
+            00000000000000000000000000000000000000000028017f0000012710010909090904d2010a0a65\
+            152b67021fff00000a8885a3000000000000ac1f0b55";
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = Signed {
