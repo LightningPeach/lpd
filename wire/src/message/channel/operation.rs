@@ -49,6 +49,11 @@ impl HtlcId {
     }
 }
 
+/// Either node can send `update_add_htlc` to offer an HTLC to the other,
+/// which is redeemable in return for a payment preimage. Amounts are in millisatoshi,
+/// though on-chain enforcement is only possible for whole satoshi amounts
+/// greater than the dust limit (in commitment transactions these are rounded down
+/// as specified in BOLT #3).
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateAddHtlc {
     pub channel_id: ChannelId,
@@ -59,6 +64,7 @@ pub struct UpdateAddHtlc {
     pub onion_blob: OnionBlob,
 }
 
+/// Remove HTLC if the payment preimage is supplied.
 // TODO(mkl): maybe add types PaymentHash, PaymentPreImage
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateFulfillHtlc {
@@ -67,21 +73,25 @@ pub struct UpdateFulfillHtlc {
     pub payment_preimage: [u8; 32],
 }
 
+/// Remove HTLC if it has timed out or it has failed to route.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateFailHtlc {
-    channel_id: ChannelId,
-    id: HtlcId,
-    reason: Vec<u8>,
+    pub channel_id: ChannelId,
+    pub id: HtlcId,
+    pub reason: Vec<u8>,
 }
 
+/// Remove HTLC if it is malformed.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateFailMalformedHtlc {
-    channel_id: ChannelId,
-    id: HtlcId,
-    sha256_of_onion: Hash256,
-    failure_code: u16,
+    pub channel_id: ChannelId,
+    pub id: HtlcId,
+    pub sha256_of_onion: Hash256,
+    pub failure_code: u16,
 }
 
+/// When a node has changes for the remote commitment, it can apply them,
+/// sign the resulting transaction (as defined in BOLT #3), and send a `commitment_signed` message.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct CommitmentSigned {
     pub channel_id: ChannelId,
@@ -89,6 +99,14 @@ pub struct CommitmentSigned {
     pub htlc_signatures: Vec<RawSignature>,
 }
 
+/// Once the recipient of `commitment_signed` checks the signature
+/// and knows it has a valid new commitment transaction,
+/// it replies with the commitment preimage for the previous commitment transaction
+/// in a `revoke_and_ack` message.
+/// This message also implicitly serves as an acknowledgment
+/// of receipt of the `commitment_signed`, so this is a logical time
+/// for the `commitment_signed` sender to apply (to its own commitment)
+/// any pending updates it sent before that `commitment_signed`.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct RevokeAndAck {
     pub channel_id: ChannelId,
@@ -96,6 +114,15 @@ pub struct RevokeAndAck {
     pub next_per_commitment_point: RawPublicKey,
 }
 
+/// An `update_fee` message is sent by the node which is paying the Bitcoin fee.
+/// Like any update, it's first committed to the receiver's commitment transaction
+/// and then (once acknowledged) committed to the sender's. Unlike an HTLC,
+/// `update_fee` is never closed but simply replaced.
+/// There is a possibility of a race, as the recipient can add new HTLCs
+/// before it receives the `update_fee`. Under this circumstance,
+/// the sender may not be able to afford the fee on its own commitment transaction,
+/// once the `update_fee` is finally acknowledged by the recipient.
+/// In this case, the fee will be less than the fee rate, as described in BOLT #3.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateFee {
     pub channel_id: ChannelId,
