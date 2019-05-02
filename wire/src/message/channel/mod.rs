@@ -39,6 +39,8 @@ use serde_derive::{Serialize, Deserialize};
 bitflags! {
     #[derive(Serialize, Deserialize)]
     pub struct ChannelFlags: u8 {
+        /// Indicates whether the initiator of the funding flow wishes to advertise
+        /// this channel publicly to the network, as detailed within BOLT #7.
         const FF_ANNOUNCE_CHANNEL = 0b00000001;
     }
 }
