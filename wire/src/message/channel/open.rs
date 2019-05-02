@@ -163,6 +163,45 @@ mod test {
     }
 
     #[test]
+    fn open_channel_test() {
+        let msg_hex = "002000000c0000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000186a0000000000000303500000000000000c8000000000000271000000000000003e800000000000003e80000000a000f000a03aed565ae1dd10928cb333954d9d13326072451e247f73a7ec641272cff6e9a8a03a524d6aaf0ab577a48665f783dad101e175fde3d6a6b82b4514d1620a248bdeb033e5ff9d4ec0a9537689c59377c3fc1fab8c4d8473ff4d658f58464da855edf050384a8e93b5cec3771a679f0440883dc1afe9fb57193dbb6f03b071e5037972a890293cc716c3039c6b089bbad8da01be38e66600c708a9a6d57c6b34acde072c16a028e95ee83d07fa9f2927a8a65152917bb5d41253a7b0b56664b083c596d35178a01";
+        let msg_bytes = hex::decode(msg_hex).unwrap();
+
+        let msg_correct = OpenChannel {
+            chain_hash: Hash256::from_hex("00000c0000000000000000000000000000000000000000000000000000000000").unwrap(),
+            temporary_channel_id: ChannelId::from_hex("0200000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            funding: Satoshi::from(100000),
+            push: MilliSatoshi::from(12341),
+            dust_limit: Satoshi::from(200),
+            max_in_flight: MilliSatoshi::from(10000),
+            channel_reserve: Satoshi::from(1000),
+            htlc_minimum: MilliSatoshi::from(1000),
+            fee: SatoshiPerKiloWeight::from(10),
+            csv_delay: CsvDelay::from(15),
+            max_accepted_htlc_number: 10,
+            keys: ChannelKeys {
+                funding: RawPublicKey::from_hex("03aed565ae1dd10928cb333954d9d13326072451e247f73a7ec641272cff6e9a8a").unwrap(),
+                revocation: RawPublicKey::from_hex("03a524d6aaf0ab577a48665f783dad101e175fde3d6a6b82b4514d1620a248bdeb").unwrap(),
+                payment: RawPublicKey::from_hex("033e5ff9d4ec0a9537689c59377c3fc1fab8c4d8473ff4d658f58464da855edf05").unwrap(),
+                delayed_payment: RawPublicKey::from_hex("0384a8e93b5cec3771a679f0440883dc1afe9fb57193dbb6f03b071e5037972a89").unwrap(),
+                htlc: RawPublicKey::from_hex("0293cc716c3039c6b089bbad8da01be38e66600c708a9a6d57c6b34acde072c16a").unwrap(),
+                first_per_commitment: RawPublicKey::from_hex("028e95ee83d07fa9f2927a8a65152917bb5d41253a7b0b56664b083c596d35178a").unwrap(),
+            },
+            flags: ChannelFlags::from_u8(1),
+        };
+        let wrapped_msg_correct = Message::OpenChannel(msg_correct);
+
+        let mut cursor = Cursor::new(msg_bytes.clone());
+        let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
+        assert_eq!(&msg, &wrapped_msg_correct);
+
+        // Now check deserialization
+        let mut new_msg_bytes = vec![];
+        BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
+        assert_eq!(new_msg_bytes, msg_bytes);
+    }
+
+    #[test]
     fn accept_channel_test() {
         let msg_hex = "\
             0021000a000000000000000000000000000000000000000000000000000000000000000000000000\
