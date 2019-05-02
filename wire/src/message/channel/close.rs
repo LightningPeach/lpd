@@ -4,17 +4,28 @@ use super::super::types::RawSignature;
 
 use serde_derive::{Serialize, Deserialize};
 
+/// Either node (or both) can send a shutdown message to initiate closing,
+/// along with the scriptpubkey it wants to be paid to.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ShutdownChannel {
     pub channel_id: ChannelId,
     pub script: Vec<u8>,
 }
 
-
+/// Once shutdown is complete and the channel is empty of HTLCs,
+/// the final current commitment transactions will have no HTLCs,
+/// and closing fee negotiation begins. The funder chooses a fee it thinks is fair,
+/// and signs the closing transaction with the `scriptpubkey` fields
+/// from the shutdown messages (along with its chosen fee) and sends the signature;
+/// the other node then replies similarly, using a fee it thinks is fair.
+/// This exchange continues until both agree on the same fee or when one side fails the channel.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ClosingSigned {
     pub channel_id: ChannelId,
+    /// less than or equal to the base fee of the final commitment transaction,
+    /// as calculated in BOLT #3
     pub fee: Satoshi,
+    /// the Bitcoin signature of the close transaction, as specified in BOLT #3
     pub signature: RawSignature,
 }
 
