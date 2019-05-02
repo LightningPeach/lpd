@@ -4,6 +4,10 @@ use super::types::RawSignature;
 
 use serde_derive::{Serialize, Deserialize};
 
+/// This is a direct message between the two endpoints of a channel and serves
+/// as an opt-in mechanism to allow the announcement of the channel to the rest of the network.
+/// It contains the necessary signatures, by the sender,
+/// to construct the channel_announcement message.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AnnounceSignatures {
     pub channel_id: ChannelId,

@@ -9,6 +9,10 @@ use serde_derive::{Serialize, Deserialize};
 pub type SignedRaw<T> = Signed<T, RawSignature>;
 pub type AnnouncementChannel = SignedRaw<SignedRaw<SignedRaw<SignedRaw<Data<AnnouncementChannelData>>>>>;
 
+/// This gossip message contains ownership information regarding a channel.
+/// It ties each on-chain Bitcoin key to the associated Lightning node key, and vice-versa.
+/// The channel is not practically usable until at least one side has announced
+/// its fee levels and expiry, using `channel_update`.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AnnouncementChannelData {
     pub features: RawFeatureVector,

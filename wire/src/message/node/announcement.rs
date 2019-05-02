@@ -19,6 +19,9 @@ use serde_derive::{Serialize, Deserialize};
 
 pub type AnnouncementNode = Signed<Data<AnnouncementNodeData>, RawSignature>;
 
+/// This gossip message allows a node to indicate extra data associated with it,
+/// in addition to its public key. To avoid trivial denial of service attacks,
+/// nodes not associated with an already known channel are ignored.
 #[derive(Clone, Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct AnnouncementNodeData {
     pub features: RawFeatureVector,
