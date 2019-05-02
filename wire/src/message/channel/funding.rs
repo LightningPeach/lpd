@@ -11,20 +11,40 @@ pub struct FundingTxid {
     data: [u8; 32],
 }
 
+/// This message describes the outpoint which the funder has created
+/// for the initial commitment transactions. After receiving the peer's signature,
+/// via `funding_signed`, it will broadcast the funding transaction.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct FundingCreated {
+    /// the same as the `temporary_channel_id` in the open_channel message
     pub temporary_channel_id: ChannelId,
+    /// the transaction ID of a non-malleable transaction
     pub funding_txid: FundingTxid,
+    /// the output number of that transaction that corresponds
+    /// the funding transaction output, as defined in BOLT #3
     pub output_index: OutputIndex,
+    /// the valid signature using its funding_pubkey for
+    /// the initial commitment transaction, as defined in BOLT #3
     pub signature: RawSignature,
 }
 
+/// This message gives the funder the signature it needs for the first commitment transaction,
+/// so it can broadcast the transaction knowing that funds can be redeemed, if need be.
+/// This message introduces the `channel_id` to identify the channel.
+/// It's derived from the funding transaction by combining the `funding_txid` and
+/// the `funding_output_index`, using big-endian exclusive-OR
+/// (i.e. `funding_output_index` alters the last 2 bytes).
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct FundingSigned {
     pub channel_id: ChannelId,
+    /// the valid signature, using its funding_pubkey for
+    /// the initial commitment transaction, as defined in BOLT #3
     pub signature: RawSignature,
 }
 
+/// This message indicates that the funding transaction has reached the `minimum_depth`
+/// asked for in `accept_channel`. Once both nodes have sent this,
+/// the channel enters normal operating mode.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct FundingLocked {
     pub channel_id: ChannelId,
