@@ -13,18 +13,48 @@ use super::ChannelPrivateKeys;
 
 use serde_derive::{Serialize, Deserialize};
 
+/// This message contains information about a node and indicates its desire to set up
+/// a new channel. This is the first step toward creating the funding transaction
+/// and both versions of the commitment transaction.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct OpenChannel {
+    /// Denotes the exact blockchain that the opened channel will reside within.
+    /// This is usually the genesis hash of the respective blockchain. The existence
+    /// of the `chain_hash` allows nodes to open channels across many distinct blockchains
+    /// as well as have channels within multiple blockchains opened to the same peer
+    /// (if it supports the target chains).
     pub chain_hash: Hash256,
+    /// The `temporary_channel_id` is used to identify this channel on a per-peer basis
+    /// until the funding transaction is established, at which point it is replaced
+    /// by the channel_id, which is derived from the funding transaction.
     pub temporary_channel_id: ChannelId,
+    /// The amount the sender is putting into the channel.
     pub funding: Satoshi,
+    /// An amount of initial funds that the sender is unconditionally giving to the receiver.
     pub push: MilliSatoshi,
+    /// The threshold below which outputs should not be generated
+    /// for this node's commitment or HTLC transactions (i.e. HTLCs below this amount
+    /// plus HTLC transaction fees are not enforceable on-chain).
+    /// This reflects the reality that tiny outputs are not considered standard transactions
+    /// and will not propagate through the Bitcoin network.
     pub dust_limit: Satoshi,
+    /// A cap on total value of outstanding HTLCs, which allows a node
+    /// to limit its exposure to HTLCs.
     pub max_in_flight: MilliSatoshi,
+    /// The minimum amount that the other node is to keep as a direct payment.
     pub channel_reserve: Satoshi,
+    /// Indicates the smallest value HTLC this node will accept.
     pub htlc_minimum: MilliSatoshi,
+    /// Indicates the initial fee rate in satoshi per 1000-weight
+    /// (i.e. 1/4 the more normally-used 'satoshi per 1000 vbytes')
+    /// that this side will pay for commitment and HTLC transactions,
+    /// as described in BOLT #3 (this can be adjusted later with an `update_fee` message).
     pub fee: SatoshiPerKiloWeight,
+    /// The number of blocks that the other node's to-self outputs must be delayed,
+    /// using `OP_CHECKSEQUENCEVERIFY` delays; this is how long it will have to wait
+    /// in case of breakdown before redeeming its own funds.
     pub csv_delay: CsvDelay,
+    /// Limits the number of outstanding HTLCs the other node can offer.
     pub max_accepted_htlc_number: u16,
     pub keys: ChannelKeys,
     pub flags: ChannelFlags,
@@ -35,6 +65,9 @@ pub struct OpenChannelShutdownScript {
     shutdown_script_pubkey: Vec<()>,
 }
 
+/// This message contains information about a node and indicates its acceptance
+/// of the new channel. This is the second step toward creating the funding transaction
+/// and both versions of the commitment transaction.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AcceptChannel {
     pub temporary_channel_id: ChannelId,
@@ -66,11 +99,15 @@ impl AcceptChannel {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ReestablishChannel {
-    channel_id: ChannelId,
-    next_local_commitment_number: u64,
-    next_remote_revocation_number: u64,
-    last_remote_commit_secret: [u8; 32],
-    local_unrevoked_commit_point: RawPublicKey,
+    pub channel_id: ChannelId,
+    /// A commitment number is a 48-bit incrementing counter for each commitment transaction;
+    /// counters are independent for each peer in the channel and start at 0.
+    /// They're only explicitly relayed to the other node in the case of re-establishment,
+    /// otherwise they are implicit.
+    pub next_local_commitment_number: u64,
+    pub next_remote_revocation_number: u64,
+    pub last_remote_commit_secret: [u8; 32],
+    pub local_unrevoked_commit_point: RawPublicKey,
 }
 
 #[cfg(test)]
@@ -127,7 +164,14 @@ mod test {
 
     #[test]
     fn accept_channel_test() {
-        let msg_hex = "0021000a00000000000000000000000000000000000000000000000000000000000000000000000000640000000000018a88000000000000271000000000000003e900000002000a000702f4f54c706c49df82c35453fafcbe3fe55268e274651f50d573f8eeeee8b3a31d032dc1b351406ab5404a2d1c05dfeceb2fdee8228e3525a6be061bddf0a39bd6ad03d330de7e7e31acae3092babdc514570670b43fdf18d3ac0b397c9db2de52888f0297557fc325a8de27eca45e7f77db44f22b85d16d2ec5853adf7b21464e3c363202c5871b00d8d1bdedb91db3fb487959291da00ce179ef5a9172042e1a563773c7035281eef9aa59ce083ae6d614774bee20d586d2901262adfed1f8214dc5840e37";
+        let msg_hex = "\
+            0021000a000000000000000000000000000000000000000000000000000000000000000000000000\
+            00640000000000018a88000000000000271000000000000003e900000002000a000702f4f54c706c\
+            49df82c35453fafcbe3fe55268e274651f50d573f8eeeee8b3a31d032dc1b351406ab5404a2d1c05\
+            dfeceb2fdee8228e3525a6be061bddf0a39bd6ad03d330de7e7e31acae3092babdc514570670b43f\
+            df18d3ac0b397c9db2de52888f0297557fc325a8de27eca45e7f77db44f22b85d16d2ec5853adf7b\
+            21464e3c363202c5871b00d8d1bdedb91db3fb487959291da00ce179ef5a9172042e1a563773c703\
+            5281eef9aa59ce083ae6d614774bee20d586d2901262adfed1f8214dc5840e37";
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = AcceptChannel {
@@ -163,7 +207,10 @@ mod test {
 
     #[test]
     fn reestablish_channel_test() {
-        let msg_hex = "00880100000000000000000000000000000000000000000000000000000000000000000000000000000b00000000000000020002000000000000000000000000000000000000000000000000000000000000031de8e2207c6ad1d81f5458c40b9cb1b519448ad67b00983e411ef522cbb187b6";
+        let msg_hex = "\
+            00880100000000000000000000000000000000000000000000000000000000000000000000000000\
+            000b0000000000000002000200000000000000000000000000000000000000000000000000000000\
+            0000031de8e2207c6ad1d81f5458c40b9cb1b519448ad67b00983e411ef522cbb187b6";
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = ReestablishChannel {
