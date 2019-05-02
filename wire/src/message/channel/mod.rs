@@ -36,10 +36,20 @@ use bitflags::bitflags;
 use serde_derive::{Serialize, Deserialize};
 //use nom::AsBytes;
 
-bitflags! {
-    #[derive(Serialize, Deserialize)]
-    pub struct ChannelFlags: u8 {
-        const FF_ANNOUNCE_CHANNEL = 0b00000001;
+//bitflags! {
+//    #[derive(Serialize, Deserialize)]
+//    pub struct ChannelFlags: u8 {
+//        const FF_ANNOUNCE_CHANNEL = 0b00000001;
+//    }
+//}
+
+#[derive(Default, Serialize, Deserialize, Eq, PartialEq, Copy, Clone, Debug)]
+pub struct ChannelFlags (pub u8);
+
+impl ChannelFlags {
+    const FF_ANNOUNCE_CHANNEL: ChannelFlags = ChannelFlags(0b00000001);
+    fn from_u8(x: u8) -> ChannelFlags {
+        return ChannelFlags(x)
     }
 }
 
