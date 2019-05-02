@@ -34,10 +34,9 @@ mod tests {
     use binformat::BinarySD;
     use super::*;
 
-    use crate::message::channel::ChannelId;
-    use std::io::{Cursor, Read, Seek, SeekFrom};
-    use crate::{Message, RevokeAndAck, RawPublicKey, CommitmentSigned, RawSignature};
-    use pretty_assertions::{assert_eq, assert_ne};
+    use std::io::Cursor;
+    use crate::Message;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn reply_channel_range() {
@@ -129,7 +128,10 @@ mod tests {
     //    219902325555527691
     #[test]
     fn reply_channel_range_zlib_test() {
-        let msg_hex = "010800000b0000000000000000000000000000000000000000000000000000000000000027100000000c01002501789c62d0dfcbc0c0c8c0c5603583818187219599d781818195811b100000ffff2720029b";
+        let msg_hex = "\
+            010800000b0000000000000000000000000000000000000000000000000000000000000027100000\
+            000c01002501789c62d0dfcbc0c0c8c0c5603583818187219599d781818195811b100000ffff2720\
+            029b";
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = ReplyChannelRange {

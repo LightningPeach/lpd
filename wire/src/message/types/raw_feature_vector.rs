@@ -7,7 +7,6 @@ use serde::Deserialize;
 use serde::Deserializer;
 
 use super::FeatureBit;
-use crate::FeatureVector;
 use std::io::Cursor;
 
 use binformat::BinarySD;

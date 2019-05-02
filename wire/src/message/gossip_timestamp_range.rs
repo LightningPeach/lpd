@@ -32,10 +32,9 @@ impl GossipTimestampRange {
 #[cfg(test)]
 mod test {
     use binformat::BinarySD;
-    use crate::message::channel::ChannelId;
-    use std::io::{Cursor, Read, Seek, SeekFrom};
-    use crate::{Message, RevokeAndAck, RawPublicKey, CommitmentSigned, RawSignature, GossipTimestampRange};
-    use pretty_assertions::{assert_eq, assert_ne};
+    use std::io::Cursor;
+    use crate::{Message, GossipTimestampRange};
+    use pretty_assertions::assert_eq;
     use common_types::Hash256;
 
 
