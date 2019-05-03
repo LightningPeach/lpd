@@ -3046,6 +3046,7 @@ name = "wire-compatibility"
 version = "0.1.0"
 dependencies = [
  "binformat 0.1.0",
+ "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "wire 0.1.0",
 ]
 
