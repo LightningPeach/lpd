@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 wire = { path = "../wire" }
 binformat = { path = "../binformat" }
+clap = "2.33"
