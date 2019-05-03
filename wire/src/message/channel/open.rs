@@ -100,6 +100,7 @@ impl AcceptChannel {
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ReestablishChannel {
     pub channel_id: ChannelId,
+
     /// A commitment number is a 48-bit incrementing counter for each commitment transaction;
     /// counters are independent for each peer in the channel and start at 0.
     /// They're only explicitly relayed to the other node in the case of re-establishment,
