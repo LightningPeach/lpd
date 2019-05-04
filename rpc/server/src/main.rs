@@ -29,14 +29,9 @@ enum Error {
     Httpbis(HttpbisError),
     CommandLineRead(CommandLineReadError),
     Io(IoError),
-<<<<<<< HEAD
-    SendError(ctrlc::Error),
     WalletError(WalletError),
-=======
-    SendError(SendError<Command<SocketAddr>>),
-    ThreadError(Box<dyn Any + Send + 'static>),
+    SendError(ctrlc::Error),
     TransportError(connection::TransportError)
->>>>>>> add TransportError type
 }
 
 fn main() -> Result<(), Error> {
@@ -77,19 +72,10 @@ fn main() -> Result<(), Error> {
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
         ];
 
-<<<<<<< HEAD
         let mut node_db_path = PathBuf::from(argument.db_path.clone());
         node_db_path.push("node");
 
         (Arc::new(RwLock::new(Node::new(wallet.clone(), secret, node_db_path))), tx, rx)
-=======
-        use secp256k1::{SecretKey, PublicKey, Secp256k1};
-        let seckey = SecretKey::from_slice(&secret[..]).unwrap();
-        let pubkey = PublicKey::from_secret_key(&Secp256k1::new(), &seckey);
-        let pubkey_hex = hex::encode(&pubkey.serialize()[..]);
-        println!("Node URI: {}@{}", pubkey_hex, argument.p2p_address);
-        (handle, Arc::new(RwLock::new(Node::new(secret, argument.db_path))), rx, tx)
->>>>>>> add TransportError type
     };
 
     let server = {
@@ -107,15 +93,10 @@ fn main() -> Result<(), Error> {
         server.build().map_err(Grpc)?
     };
 
-<<<<<<< HEAD
-    Node::listen(node, &argument.p2p_address, rx).map_err(Io)?;
-    println!("done");
-=======
     Node::listen(node, &argument.p2p_address, rx)
         .map_err(|err| {
             Error::TransportError(err)
         })?;
->>>>>>> add TransportError type
 
     // TODO: handle double ctrl+c
     //panic!("received termination command during processing termination command, terminate immediately");

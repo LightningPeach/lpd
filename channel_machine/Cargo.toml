@@ -23,10 +23,13 @@ version = "1.5"
 path = "../channel"
 
 [dependencies.bitcoin]
-version = "0.16"
+version = "0.18"
 
 [dependencies.secp256k1]
 version = "0.12"
 
 [dependencies.rand]
 version = "0.4"
+
+[dependencies.bitcoin_hashes]
+version = "0.3"

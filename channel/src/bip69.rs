@@ -1,4 +1,5 @@
 use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
+use bitcoin_hashes::Hash;
 
 // Represent reordering of transaction input and outputs
 // inputs is a vector of positions of initial transaction inputs
@@ -13,6 +14,15 @@ pub struct TransactionReordering {
     pub outputs: Vec<u32>,
 }
 
+
+fn reverse_u8_32(mut x: [u8; 32]) -> [u8; 32] {
+    for i in 0..15 {
+        let tmp = x[i];
+        x[i]= x[31-i];
+        x[31-i] = tmp;
+    }
+    x
+}
 
 impl TransactionReordering {
     // Applies reordering to a given transaction
@@ -56,8 +66,8 @@ impl TransactionReordering {
         let mut out_ind: Vec<u32> = (0u32..tx.output.len() as u32).collect();
 
         inp_ind.sort_unstable_by(|i, j| {
-            let h1 = tx.input[*i as usize].previous_output.txid.into_le();
-            let h2 = tx.input[*j as usize].previous_output.txid.into_le();
+            let h1 = reverse_u8_32(tx.input[*i as usize].previous_output.txid.into_inner());
+            let h2 = reverse_u8_32(tx.input[*j as usize].previous_output.txid.into_inner());
             let prev_hash_ordering = h1.cmp(&h2);
             let index_ordering = tx.input[*i as usize].previous_output.vout.cmp(&tx.input[*j as usize].previous_output.vout);
             return prev_hash_ordering.then(index_ordering);

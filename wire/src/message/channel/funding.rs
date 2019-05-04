@@ -4,6 +4,9 @@ use super::ChannelId;
 use super::OutputIndex;
 use super::super::types::{RawSignature, RawPublicKey};
 
+use bitcoin_hashes::{sha256d};
+use bitcoin_hashes::Hash;
+
 use serde_derive::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Copy, Clone)]
@@ -98,6 +101,10 @@ impl FundingTxid {
         Ok(FundingTxid {
             data: data_u8_32
         })
+    }
+
+    pub fn to_sha256d(&self) -> sha256d::Hash {
+        sha256d::Hash::from_slice(&self.data[..]).unwrap()
     }
 }
 

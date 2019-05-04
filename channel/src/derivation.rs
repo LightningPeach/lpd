@@ -1,10 +1,11 @@
 use secp256k1::{SecretKey, Secp256k1, PublicKey};
-use super::tools::sha256;
+use bitcoin_hashes::sha256;
+use bitcoin_hashes::Hash;
 
 // pubkey = basepoint + SHA256(per_commitment_point || basepoint) * G
 pub fn derive_pubkey(base_point: &PublicKey, per_commitment_point: &PublicKey) -> PublicKey {
     let joined = [&per_commitment_point.serialize()[..], &base_point.serialize()[..]].concat();
-    let h = sha256(&joined);
+    let h = sha256::Hash::hash(&joined).into_inner();
     let ctx = Secp256k1::new();
     // TODO(mkl): maybe return error instead of unwrap
     let sk = SecretKey::from_slice(&h).unwrap();
@@ -18,7 +19,7 @@ pub fn derive_privkey(base_point_secret: &SecretKey, per_commitment_point: &Publ
     let ctx = Secp256k1::new();
     let base_point = PublicKey::from_secret_key(&ctx, base_point_secret);
     let joined = [&per_commitment_point.serialize()[..], &base_point.serialize()[..]].concat();
-    let h = sha256(&joined);
+    let h = sha256::Hash::hash(&joined).into_inner();
     // TODO(mkl): maybe return error instead of unwrap
     let mut sk = base_point_secret.clone();
     sk.add_assign(&h[..]).unwrap();
@@ -32,8 +33,8 @@ pub fn derive_revocation_pubkey(revocation_base_point: &PublicKey, per_commitmen
 
     let joined1 = [&revocation_base_point.serialize()[..], &per_commitment_point.serialize()[..]].concat();
     let joined2 = [&per_commitment_point.serialize()[..], &revocation_base_point.serialize()[..]].concat();
-    let h1 = sha256(&joined1);
-    let h2 = sha256(&joined2);
+    let h1 = sha256::Hash::hash(&joined1).into_inner();
+    let h2 = sha256::Hash::hash(&joined2).into_inner();
 
     let mut pk1 = revocation_base_point.clone();
     pk1.mul_assign(&ctx, &h1[..]).unwrap();
@@ -61,8 +62,8 @@ pub fn derive_revocation_privkey(revocation_base_point_secret: &SecretKey, per_c
 
     let joined1 = [&revocation_base_point.serialize()[..], &per_commitment_point.serialize()[..]].concat();
     let joined2 = [&per_commitment_point.serialize()[..], &revocation_base_point.serialize()[..]].concat();
-    let h1 = sha256(&joined1);
-    let h2 = sha256(&joined2);
+    let h1 = sha256::Hash::hash(&joined1).into_inner();
+    let h2 = sha256::Hash::hash(&joined2).into_inner();
 
     // TODO(mkl): maybe return error instead of unwrap
     let mut sk1 = revocation_base_point_secret.clone();

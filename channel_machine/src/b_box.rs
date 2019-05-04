@@ -7,8 +7,10 @@ use wire::{
 
 use secp256k1::PublicKey;
 
+use bitcoin_hashes::{sha256d, sha256};
+use bitcoin_hashes::Hash;
+
 use bitcoin::consensus::encode::Encodable;
-use bitcoin::util::hash::Sha256dHash;
 
 use channel::derivation::{derive_pubkey, derive_revocation_pubkey};
 use channel::tools::get_obscuring_number;
@@ -113,7 +115,7 @@ pub struct ReadyState {
     our_info: PartnerInfo,
     their_info: PartnerInfo,
     obscuring_factor: u64,
-    funding_tx_id: Sha256dHash,
+    funding_tx_id: sha256d::Hash,
     funding_output_index: u16,
 }
 
@@ -218,7 +220,7 @@ pub struct WaitFundingLockedData {
     their_info: PartnerInfo,
     obscuring_factor: u64,
     funding: FundingInfo,
-    funding_tx_id: Sha256dHash,
+    funding_tx_id: sha256d::Hash,
     funding_output_index: u16,
 }
 
@@ -331,7 +333,7 @@ impl WaitFundingCreatedData {
 
             remotepubkey: remote_pubkey,
 
-            funding_tx_id: Sha256dHash::from(&<[u8; 32]>::from(msg.funding_txid.clone())[..]),
+            funding_tx_id: msg.funding_txid.to_sha256d(),
             funding_output_index: u16::from(msg.output_index) as u32,
 
             htlcs: vec![],
@@ -356,7 +358,7 @@ impl WaitFundingCreatedData {
             our_info: self.our_info,
             obscuring_factor,
             their_info: self.their_info,
-            funding_tx_id: Sha256dHash::from(&<[u8; 32]>::from(msg.funding_txid.clone())[..]),
+            funding_tx_id: msg.funding_txid.to_sha256d(),
             funding_output_index: msg.output_index.into(),
         };
         (

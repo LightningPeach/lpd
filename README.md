@@ -34,7 +34,7 @@ Install `electrs` with:
 
     git clone https://github.com/romanz/electrs &&
     cd electrs &&
-    git checkout e49cef1bbcaf1710613dab4578d61b99c7dbd478 &&
+    git checkout bb62df8793948b88cb2bc61580ca727cbbae9d31 &&
     cargo install --debug --path .
 
 Run `bitcoind`:

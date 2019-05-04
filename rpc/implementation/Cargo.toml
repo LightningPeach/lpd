@@ -13,7 +13,8 @@ wire = { path = "../../wire" }
 connection = { path = "../../connection", features = ["rpc"] }
 state = { path = "../../state" }
 wallet_lib = { package = "wallet", git = "https://github.com/LightningPeach/rust-wallet.git" }
-bitcoin = "0.16"
+bitcoin = "0.18"
+bitcoin_hashes = "0.3"
 
 futures = "0.1"
 hex = "0.3"
