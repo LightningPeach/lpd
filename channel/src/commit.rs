@@ -1,6 +1,6 @@
 use secp256k1::{PublicKey, SecretKey, Signature, Secp256k1, Message};
 use bitcoin::OutPoint;
-use bitcoin::util::hash::{Sha256dHash};
+use bitcoin_hashes::{sha256d, Hash};
 use bitcoin::blockdata::script::{Script};
 use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
 use bitcoin::util::bip143;
@@ -49,7 +49,7 @@ pub struct CommitTx {
 
     pub remotepubkey: PublicKey,
 
-    pub funding_tx_id: Sha256dHash,
+    pub funding_tx_id: sha256d::Hash,
     pub funding_output_index: u32,
 
     pub htlcs: Vec<HTLC>,
@@ -162,7 +162,7 @@ impl CommitTx {
             );
         // TODO(mkl): maybe do not use unwrap
         let sig = sec.sign(
-            &Message::from_slice(&tx_sig_hash.as_bytes()[..]).unwrap(),
+            &Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(),
             priv_key
         );
         sig

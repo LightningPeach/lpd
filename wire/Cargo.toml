@@ -14,11 +14,10 @@ serde = "1.0"
 serde_derive = "1.0"
 bitflags = "1.0"
 secp256k1 = { version = "0.12", features = ["serde", "rand"] }
-sha2 = "0.8"
-digest = "0.8"
 hex = "0.3"
 hex-literal = "0.1"
 rand = "0.4"
+bitcoin_hashes = "0.3"
 
 bincode = { path = "../bincode" }
 common-types = { path = "../common-types" }

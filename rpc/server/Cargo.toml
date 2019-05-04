@@ -18,7 +18,7 @@ hex = "0.3"
 
 futures = "0.1"
 
-bitcoin = "0.16"
+bitcoin = "0.18"
 
 implementation = { path = "../implementation" }
 connection = { path = "../../connection" }

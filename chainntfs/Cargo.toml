@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["evgeniy.scherbina <evgeniy.scherbina@bitfury.com>"]
 
 [dependencies]
-bitcoin = "0.16"
+bitcoin = "0.18"
 zmq = "0.8.2"
 bitcoin_rpc_client = { path = "../../bitcoinrpc-rust-client" }
 futures = "0.1.13"

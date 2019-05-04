@@ -1,8 +1,9 @@
 use secp256k1::{SecretKey, PublicKey};
-use bitcoin::util::hash::{Sha256dHash};
+use bitcoin_hashes::{sha256d, sha256};
+use bitcoin_hashes::Hash;
 use super::commit::{HTLCDirection, HTLC};
 
-use super::tools::{sha256, s2dh256, s2byte32, s2pubkey, s2privkey};
+use super::tools::{s2dh256, s2byte32, s2pubkey, s2privkey};
 
 //+funding_tx_id: 8984484a580b825b9972d7adb15050b3ab624ccd731946b3eeddb92f4e7ef6be
 //+funding_output_index: 0
@@ -97,7 +98,7 @@ impl HtlcExample {
         let htlc = HTLC{
             direction: direction,
             amount_msat: self.amount_msat,
-            payment_hash: sha256(&self.payment_preimage),
+            payment_hash: sha256::Hash::hash(&self.payment_preimage).into_inner(),
             expiry: self.expiry,
         };
         return htlc;
@@ -105,7 +106,7 @@ impl HtlcExample {
 }
 
 pub struct SpecExample {
-    pub funding_tx_id: Sha256dHash,
+    pub funding_tx_id: sha256d::Hash,
     pub funding_output_index: i32,
     pub funding_amount_satoshi: i64,
     pub commitment_number: u64,

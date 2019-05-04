@@ -13,8 +13,11 @@ use std::sync::{Mutex, Arc};
 use futures::sync::mpsc::Sender;
 use std::fmt::Debug;
 
+use bitcoin_hashes::{sha256d};
+use bitcoin_hashes::Hash;
+
 use bitcoin::{
-    network::serialize::serialize,
+    consensus::encode::serialize,
     blockdata::transaction::OutPoint,
 };
 
@@ -103,7 +106,7 @@ where
         let mut ops = Vec::new();
         for op in req.ops.into_vec() {
             ops.push(OutPoint {
-                txid: From::from(op.txid.as_slice()),
+                txid: sha256d::Hash::from_slice(op.txid.as_slice())?,
                 vout: op.vout,
             })
         }
@@ -111,7 +114,7 @@ where
         let tx = self.af.lock().unwrap().make_tx(ops, req.dest_addr, req.amt, req.submit)?;
 
         let mut resp = MakeTxResponse::new();
-        resp.set_serialized_raw_tx(serialize(&tx)?);
+        resp.set_serialized_raw_tx(serialize(&tx));
         Ok(resp)
     }
 
@@ -119,7 +122,7 @@ where
         let (tx, lock_id) = self.af.lock().unwrap().send_coins(req.dest_addr, req.amt, req.lock_coins, req.witness_only, req.submit)?;
 
         let mut resp = SendCoinsResponse::new();
-        resp.set_serialized_raw_tx(serialize(&tx).unwrap());
+        resp.set_serialized_raw_tx(serialize(&tx));
         if req.lock_coins {
             resp.set_lock_id(lock_id.into());
         }
@@ -149,7 +152,7 @@ where
         let utxo_list = self.af.lock().unwrap().wallet_lib().get_utxo_list();
         resp.set_utxos(RepeatedField::from_vec(utxo_list.into_iter().map(|utxo| {
             let mut op = RpcOutPoint::new();
-            op.set_txid(utxo.out_point.txid.into_bytes().to_vec());
+            op.set_txid(utxo.out_point.txid.into_inner().to_vec());
             op.set_vout(utxo.out_point.vout);
 
             let mut rpc_utxo = RpcUtxo::new();

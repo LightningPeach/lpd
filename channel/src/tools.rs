@@ -1,8 +1,11 @@
 use bitcoin;
 use hex;
 
+use bitcoin_hashes::{sha256, sha256d, hash160, ripemd160};
+use bitcoin_hashes::Hash;
+use bitcoin_hashes::hex::FromHex;
+use bitcoin_hashes::hex::ToHex;
 use bitcoin::blockdata::transaction::{Transaction};
-use bitcoin::util::hash::{Sha256dHash, Hash160, Ripemd160Hash};
 use bitcoin::blockdata::script::{Script, Builder};
 use bitcoin::blockdata::opcodes::all::*;
 
@@ -13,14 +16,11 @@ use bitcoin::consensus::serialize;
 
 use secp256k1::{SecretKey, PublicKey, Signature};
 
-use crypto::sha2::Sha256;
-use crypto::digest::Digest;
-
 pub const OP_CHECKSEQUENCEVERIFY: bitcoin::blockdata::opcodes::All = OP_NOP3;
 pub const OP_CHECKLOCKTIMEVERIFY: bitcoin::blockdata::opcodes::All = OP_NOP2;
 
-pub fn s2dh256(s: &str) -> Sha256dHash {
-    match Sha256dHash::from_hex(s) {
+pub fn s2dh256(s: &str) -> sha256d::Hash {
+    match sha256d::Hash::from_hex(s) {
         Ok(h) => return h,
         Err(e) => panic!(e)
     }
@@ -74,8 +74,8 @@ pub fn new_2x2_wsh_lock_script(pk1: &[u8], pk2: &[u8]) -> Script {
 }
 
 pub fn v0_p2wpkh(pk: &PublicKey) -> Script {
-    let h = Hash160::from_data(&pk.serialize()[..]);
-    let pk_hash160 = h.as_bytes();
+    let h = hash160::Hash::hash(&pk.serialize()[..]);
+    let pk_hash160 = h.into_inner();
     let sc = Builder::new()
         .push_opcode(OP_PUSHBYTES_0)
         .push_slice(&pk_hash160[..])
@@ -85,8 +85,8 @@ pub fn v0_p2wpkh(pk: &PublicKey) -> Script {
 
 pub fn p2pkh(pk: &PublicKey) -> Script {
     // OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
-    let h = Hash160::from_data(&pk.serialize()[..]);
-    let pk_hash160 = h.as_bytes();
+    let h = hash160::Hash::hash(&pk.serialize()[..]);
+    let pk_hash160 = h.into_inner();
     let sc = Builder::new()
         .push_opcode(OP_DUP)
         .push_opcode(OP_HASH160)
@@ -177,10 +177,8 @@ pub fn get_obscuring_number(local_payment_basepoint: &[u8], remote_payment_basep
 
     let concated = [local_payment_basepoint, remote_payment_basepoint].concat();
 
-    let mut rez = [0_u8; 32];
-    let mut sh = Sha256::new();
-    sh.input(&concated);
-    sh.result(&mut rez[..]);
+    let mut rez = sha256::Hash::hash(&concated).into_inner();
+
 
     let mut obscuring_number = 0;
     for i in 0..6 {
@@ -189,13 +187,13 @@ pub fn get_obscuring_number(local_payment_basepoint: &[u8], remote_payment_basep
     return obscuring_number;
 }
 
-pub fn sha256(x: &[u8]) -> [u8; 32] {
-    let mut h = Sha256::new();
-    h.input(x);
-    let mut hash: [u8; 32] = [0; 32];
-    h.result(&mut hash);
-    return hash;
-}
+//pub fn sha256(x: &[u8]) -> [u8; 32] {
+//    let mut h = Sha256::new();
+//    h.input(x);
+//    let mut hash: [u8; 32] = [0; 32];
+//    h.result(&mut hash);
+//    return hash;
+//}
 
 //OP_DUP OP_HASH160 <RIPEMD160(SHA256(revocationpubkey))> OP_EQUAL
 //OP_IF
@@ -215,7 +213,7 @@ pub fn offered_htlc(revocationpubkey: &PublicKey, remote_htlcpubkey: &PublicKey,
     let sc = Builder::new()
         .push_opcode(OP_DUP)
         .push_opcode(OP_HASH160)
-        .push_slice(&Hash160::from_data(&revocationpubkey.serialize()).as_bytes()[..])
+        .push_slice(&hash160::Hash::hash(&revocationpubkey.serialize()).into_inner()[..])
         .push_opcode(OP_EQUAL)
         .push_opcode(OP_IF)
             .push_opcode(OP_CHECKSIG)
@@ -238,7 +236,7 @@ pub fn offered_htlc(revocationpubkey: &PublicKey, remote_htlcpubkey: &PublicKey,
                 // OP_HASH160 <RIPEMD160(payment_hash)> OP_EQUALVERIFY
                 // OP_CHECKSIG
                 .push_opcode(OP_HASH160)
-                .push_slice(&Ripemd160Hash::from_data(&payment_hash).as_bytes()[..])
+                .push_slice(&ripemd160::Hash::hash(&payment_hash).into_inner()[..])
                 .push_opcode(OP_EQUALVERIFY)
                 .push_opcode(OP_CHECKSIG)
             .push_opcode(OP_ENDIF)
@@ -268,7 +266,7 @@ pub fn accepted_htlc(revocationpubkey: &PublicKey, remote_htlcpubkey: &PublicKey
     let sc = Builder::new()
         .push_opcode(OP_DUP)
         .push_opcode(OP_HASH160)
-        .push_slice(&Hash160::from_data(&revocationpubkey.serialize()).as_bytes()[..])
+        .push_slice(&hash160::Hash::hash(&revocationpubkey.serialize()).into_inner()[..])
         .push_opcode(OP_EQUAL)
         .push_opcode(OP_IF)
             .push_opcode(OP_CHECKSIG)
@@ -281,7 +279,7 @@ pub fn accepted_htlc(revocationpubkey: &PublicKey, remote_htlcpubkey: &PublicKey
             .push_opcode(OP_IF)
                 // # To local node via HTLC-success transaction.
                 .push_opcode(OP_HASH160)
-                .push_slice(&Ripemd160Hash::from_data(&payment_hash).as_bytes()[..])
+                .push_slice(&ripemd160::Hash::hash(&payment_hash).into_inner()[..])
                 .push_opcode(OP_EQUALVERIFY)
                 .push_int(2)
                 .push_opcode(OP_SWAP)
@@ -360,7 +358,9 @@ mod tests {
     use super::{spending_witness_2x2_multisig, s2sig, sha256, accepted_htlc, offered_htlc, assert_tx_eq, to_local_script, s2script, s2tx, new_2x2_multisig, new_2x2_wsh_lock_script, s2pubkey, v0_p2wpkh, s2dh256, p2pkh, p2pkh_unlock_script, get_obscuring_number, get_locktime, get_sequence};
     use super::super::spec_example::get_example;
     use secp256k1::{Secp256k1, SecretKey, PublicKey, Message};
-    use bitcoin::util::hash::Hash160;
+    use bitcoin_hashes::{hash160};
+    use bitcoin_hashes::Hash;
+    use bitcoin_hashes::hex::ToHex;
     use bitcoin::blockdata::script::Script;
     use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
     use bitcoin::consensus::Encodable;
@@ -441,8 +441,8 @@ mod tests {
         assert_eq!(hex::encode(&pk.serialize()[..]), "03535b32d5eb0a6ed0982a0479bbadc9868d9836f6ba94dd5a63be16d875069184");
 
         // Hash160 of compressed pubkey should be 3ca33c2e4446f4a305f23c80df8ad1afdcf652f9
-        let pk_hash160 = Hash160::from_data(&pk.serialize()[..]);
-        assert_eq!(hex::encode(&pk_hash160.as_bytes()[..]), "3ca33c2e4446f4a305f23c80df8ad1afdcf652f9");
+        let pk_hash160 = hash160::Hash::hash(&pk.serialize()[..]);
+        assert_eq!(hex::encode(&pk_hash160.into_inner()[..]), "3ca33c2e4446f4a305f23c80df8ad1afdcf652f9");
 
         // Change output script should be 00143ca33c2e4446f4a305f23c80df8ad1afdcf652f9
         let sc_change = v0_p2wpkh(&pk);
@@ -480,7 +480,7 @@ mod tests {
         // We use deterministic signatures so it should be reproducible
         let sig_type = 1_u8; // SIGHASH_ALL
         let tx_sig_hash = tx.signature_hash(0, &p2pkh(&pk), sig_type as u32);
-        let sig = sec.sign(&Message::from_slice(&tx_sig_hash.as_bytes()[..]).unwrap(), &sk);
+        let sig = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &sk);
         let mut sig_serialised = sig.serialize_der();
         assert_eq!(hex::encode(&sig_serialised), "304502210090587b6201e166ad6af0227d3036a9454223d49a1f11839c1a362184340ef0240220577f7cd5cca78719405cbf1de7414ac027f0239ef6e214c90fcaab0454d84b3b");
         // We need to add sigtype to the end of the signature
@@ -488,7 +488,7 @@ mod tests {
         tx.input[0].script_sig = p2pkh_unlock_script(&pk, &sig_serialised);
 
         // Hash of funding transaction should be 8984484a580b825b9972d7adb15050b3ab624ccd731946b3eeddb92f4e7ef6be
-        assert_eq!(tx.txid().be_hex_string(), "8984484a580b825b9972d7adb15050b3ab624ccd731946b3eeddb92f4e7ef6be");
+        assert_eq!(tx.txid().to_hex(), "8984484a580b825b9972d7adb15050b3ab624ccd731946b3eeddb92f4e7ef6be");
         // Transaction should be 0200000001adbb20ea41a8423ea937e76e8151636bf6093b70eaff942930d20576600521fd000000006b48304502210090587b6201e166ad6af0227d3036a9454223d49a1f11839c1a362184340ef0240220577f7cd5cca78719405cbf1de7414ac027f0239ef6e214c90fcaab0454d84b3b012103535b32d5eb0a6ed0982a0479bbadc9868d9836f6ba94dd5a63be16d875069184ffffffff028096980000000000220020c015c4a6be010e21657068fc2e6a9d02b27ebe4d490a25846f7237f104d1a3cd20256d29010000001600143ca33c2e4446f4a305f23c80df8ad1afdcf652f900000000
         let mut a = vec![];
         tx.consensus_encode(&mut a).unwrap();
@@ -580,12 +580,12 @@ mod tests {
 
         let sec = Secp256k1::new();
         let tx_sig_hash = bip143::SighashComponents::new(&tx).sighash_all(&tx.input[0], &funding_lock_script, ex.funding_amount_satoshi as u64);
-        let sig_local = sec.sign(&Message::from_slice(&tx_sig_hash.as_bytes()[..]).unwrap(), &ex.local_funding_privkey);
+        let sig_local = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &ex.local_funding_privkey);
         let mut sig_local_serialised = sig_local.serialize_der();
         assert_eq!(hex::encode(&sig_local_serialised), "3044022051b75c73198c6deee1a875871c3961832909acd297c6b908d59e3319e5185a46022055c419379c5051a78d00dbbce11b5b664a0c22815fbcc6fcef6b1937c3836939");
         sig_local_serialised.push(1);
 
-        let sig_remote = sec.sign(&Message::from_slice(&tx_sig_hash.as_bytes()[..]).unwrap(), &ex.internal.remote_funding_privkey);
+        let sig_remote = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &ex.internal.remote_funding_privkey);
         let mut sig_remote_serialised = sig_remote.serialize_der();
         assert_eq!(hex::encode(&sig_remote_serialised), "3045022100f51d2e566a70ba740fc5d8c0f07b9b93d2ed741c3c0860c613173de7d39e7968022041376d520e9c0e1ad52248ddf4b22e12be8763007df977253ef45a4ca3bdb7c0");
         sig_remote_serialised.push(1);
@@ -629,27 +629,27 @@ mod tests {
         let locktime = get_locktime(obscured_commit_number);
 
         // Try to recreate output 0
-        assert_eq!(hex::encode(Hash160::from_data(&(ex.local_revocation_pubkey.serialize())).as_bytes()), "14011f7254d96b819c76986c277d115efce6f7b5");
-        assert_eq!(hex::encode(Hash160::from_data(&ex.htlcs[0].payment_preimage).as_bytes()), "b8bcb07f6344b42ab04250c86a6e8b75d3fdbbc6");
+        assert_eq!(hex::encode(hash160::Hash::hash(&(ex.local_revocation_pubkey.serialize())).into_inner()), "14011f7254d96b819c76986c277d115efce6f7b5");
+        assert_eq!(hex::encode(hash160::Hash::hash(&ex.htlcs[0].payment_preimage).into_inner()), "b8bcb07f6344b42ab04250c86a6e8b75d3fdbbc6");
 
         // It seems like it is remotepubkey
         let remote_htlc_pubkey = s2pubkey("0394854aa6eab5b2a8122cc726e9dded053a2184d88256816826d6231c068d4a5b");
         // It seems like it is localpubkey
         let local_htlc_pubkey = s2pubkey("030d417a46946384f88d5f3337267c5e579765875dc4daca813e21734b140639e7");
 
-        let htlc0_script = accepted_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256(&ex.htlcs[0].payment_preimage), ex.htlcs[0].expiry as u32);
+        let htlc0_script = accepted_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256::Hash::hash(&ex.htlcs[0].payment_preimage).into_inner(), ex.htlcs[0].expiry as u32);
         assert_eq!(htlc0_script, s2script("76a91414011f7254d96b819c76986c277d115efce6f7b58763ac67210394854aa6eab5b2a8122cc726e9dded053a2184d88256816826d6231c068d4a5b7c8201208763a914b8bcb07f6344b42ab04250c86a6e8b75d3fdbbc688527c21030d417a46946384f88d5f3337267c5e579765875dc4daca813e21734b140639e752ae677502f401b175ac6868"));
 
-        let htlc2_script = offered_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256(&ex.htlcs[2].payment_preimage));
+        let htlc2_script = offered_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256::Hash::hash(&ex.htlcs[2].payment_preimage).into_inner());
         assert_eq!(htlc2_script, s2script("76a91414011f7254d96b819c76986c277d115efce6f7b58763ac67210394854aa6eab5b2a8122cc726e9dded053a2184d88256816826d6231c068d4a5b7c820120876475527c21030d417a46946384f88d5f3337267c5e579765875dc4daca813e21734b140639e752ae67a914b43e1b38138a41b37f7cd9a1d274bc63e3a9b5d188ac6868"));
 
-        let htlc1_script = accepted_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256(&ex.htlcs[1].payment_preimage), ex.htlcs[1].expiry as u32);
+        let htlc1_script = accepted_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256::Hash::hash(&ex.htlcs[1].payment_preimage).into_inner(), ex.htlcs[1].expiry as u32);
         assert_eq!(htlc1_script, s2script("76a91414011f7254d96b819c76986c277d115efce6f7b58763ac67210394854aa6eab5b2a8122cc726e9dded053a2184d88256816826d6231c068d4a5b7c8201208763a9144b6b2e5444c2639cc0fb7bcea5afba3f3cdce23988527c21030d417a46946384f88d5f3337267c5e579765875dc4daca813e21734b140639e752ae677502f501b175ac6868"));
 
-        let htlc3_script = offered_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256(&ex.htlcs[3].payment_preimage));
+        let htlc3_script = offered_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256::Hash::hash(&ex.htlcs[3].payment_preimage).into_inner());
         assert_eq!(htlc3_script, s2script("76a91414011f7254d96b819c76986c277d115efce6f7b58763ac67210394854aa6eab5b2a8122cc726e9dded053a2184d88256816826d6231c068d4a5b7c820120876475527c21030d417a46946384f88d5f3337267c5e579765875dc4daca813e21734b140639e752ae67a9148a486ff2e31d6158bf39e2608864d63fefd09d5b88ac6868"));
 
-        let htlc4_script = accepted_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256(&ex.htlcs[4].payment_preimage), ex.htlcs[4].expiry as u32);
+        let htlc4_script = accepted_htlc(&ex.local_revocation_pubkey, &remote_htlc_pubkey, &local_htlc_pubkey, sha256::Hash::hash(&ex.htlcs[4].payment_preimage).into_inner(), ex.htlcs[4].expiry as u32);
         assert_eq!(htlc4_script, s2script("76a91414011f7254d96b819c76986c277d115efce6f7b58763ac67210394854aa6eab5b2a8122cc726e9dded053a2184d88256816826d6231c068d4a5b7c8201208763a91418bc1a114ccf9c052d3d23e28d3b0a9d1227434288527c21030d417a46946384f88d5f3337267c5e579765875dc4daca813e21734b140639e752ae677502f801b175ac6868"));
 
         let to_local = to_local_script(&ex.local_delayedpubkey, ex.local_delay as u64, &ex.local_revocation_pubkey);
@@ -711,12 +711,12 @@ mod tests {
 
         let sec = Secp256k1::new();
         let tx_sig_hash = bip143::SighashComponents::new(&tx).sighash_all(&tx.input[0], &funding_lock_script, ex.funding_amount_satoshi as u64);
-        let sig_local = sec.sign(&Message::from_slice(&tx_sig_hash.as_bytes()[..]).unwrap(), &ex.local_funding_privkey);
+        let sig_local = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &ex.local_funding_privkey);
         let mut sig_local_serialised = sig_local.serialize_der();
         assert_eq!(hex::encode(&sig_local_serialised), "30440220275b0c325a5e9355650dc30c0eccfbc7efb23987c24b556b9dfdd40effca18d202206caceb2c067836c51f296740c7ae807ffcbfbf1dd3a0d56b6de9a5b247985f06");
         sig_local_serialised.push(1);
 
-        let sig_remote = sec.sign(&Message::from_slice(&tx_sig_hash.as_bytes()[..]).unwrap(), &ex.internal.remote_funding_privkey);
+        let sig_remote = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &ex.internal.remote_funding_privkey);
         let mut sig_remote_serialised = sig_remote.serialize_der();
         assert_eq!(hex::encode(&sig_remote_serialised), "304402204fd4928835db1ccdfc40f5c78ce9bd65249b16348df81f0c44328dcdefc97d630220194d3869c38bc732dd87d13d2958015e2fc16829e74cd4377f84d215c0b70606");
         sig_remote_serialised.push(1);

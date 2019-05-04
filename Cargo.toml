@@ -6,6 +6,7 @@ members = [
     "processor", "onion", "channel_machine", "wire-compatibility",
     "cmd/dump-reader",
 ]
+exclude = ["electrs"]
 
 [package]
 name = "lpd"
@@ -44,8 +45,8 @@ hex-literal = "0.1.1"
 tokio = "0.1.11"
 futures = "0.1.25"
 
-bitcoin = "0.16"
-rust-crypto = "0.2.36"
+bitcoin = "0.18"
+bitcoin_hashes = "0.3"
 
 serde = "1.0"
 
