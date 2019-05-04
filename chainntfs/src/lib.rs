@@ -2,12 +2,13 @@ extern crate bitcoin;
 extern crate zmq;
 extern crate futures;
 extern crate tokio_core;
+extern crate bitcoin_hashes;
 
 use bitcoin::{
     consensus::deserialize,
-    util::hash::Sha256dHash,
     Block, Transaction, BitcoinHash, OutPoint,
 };
+use bitcoin_hashes::sha256d;
 use futures::{Poll, Async, Stream};
 
 use std::sync::mpsc::{self, Sender, Receiver};
@@ -103,13 +104,13 @@ pub enum ConfirmationEvent {
 
 #[derive(Debug)]
 pub struct ConfirmationEventMempool {
-    txid: Sha256dHash,
+    txid: sha256d::Hash,
 }
 
 #[derive(Debug)]
 pub struct ConfirmationEventConfirmed {
-    txid: Sha256dHash,
-    block_hash: Sha256dHash,
+    txid: sha256d::Hash,
+    block_hash: sha256d::Hash,
 }
 
 #[derive(Debug)]
@@ -120,17 +121,17 @@ pub enum SpendEvent {
 #[derive(Debug)]
 pub struct SpendEventMempool {
     out_point: OutPoint,
-    txid: Sha256dHash,
+    txid: sha256d::Hash,
 }
 #[derive(Debug)]
 pub struct SpendEventConfirmed {
     out_point: OutPoint,
-    txid: Sha256dHash,
-    block_hash: Sha256dHash,
+    txid: sha256d::Hash,
+    block_hash: sha256d::Hash,
 }
 
 struct ConfirmationSubscription {
-    pub txid: Sha256dHash,
+    pub txid: sha256d::Hash,
     pub num_confs: u8,
     sender: Sender<ConfirmationEvent>,
 }
@@ -157,7 +158,7 @@ impl ZMQMessageConsumer {
 
     pub fn register_confirmations_ntfn(
         &mut self,
-        txid: Sha256dHash,
+        txid: sha256d::Hash,
         num_confs: u8,
     ) -> Receiver<ConfirmationEvent> {
         let (sender, receiver): (Sender<ConfirmationEvent>, Receiver<ConfirmationEvent>) = mpsc::channel();
