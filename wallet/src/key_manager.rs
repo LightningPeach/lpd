@@ -23,7 +23,7 @@ impl KeyManager {
             scope.coin,
         ];
 
-        let scoped_key = self.master_key.derive_priv(&Secp256k1::new(), path)?;
+        let scoped_key = self.master_key.derive_priv(&Secp256k1::new(), &path)?;
         Ok(ScopedManager::from_scoped_key(scoped_key))
     }
 

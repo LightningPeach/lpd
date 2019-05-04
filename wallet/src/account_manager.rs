@@ -1,5 +1,6 @@
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, ChildNumber};
-use secp256k1::{Secp256k1, PublicKey};
+use bitcoin::util::key::PublicKey;
+use secp256k1::{Secp256k1};
 
 use std::error::Error;
 
@@ -26,7 +27,7 @@ impl AccountManager {
 
         self.external_index += 1;
 
-        let extended_priv_key = self.account_key.derive_priv(&Secp256k1::new(),  path)?;
+        let extended_priv_key = self.account_key.derive_priv(&Secp256k1::new(),  &path)?;
         let extended_pub_key = ExtendedPubKey::from_private(&Secp256k1::new(), &extended_priv_key);
         Ok(extended_pub_key.public_key)
     }
@@ -39,7 +40,7 @@ impl AccountManager {
 
         self.internal_index += 1;
 
-        let extended_priv_key =self.account_key.derive_priv(&Secp256k1::new(), path)?;
+        let extended_priv_key =self.account_key.derive_priv(&Secp256k1::new(), &path)?;
         let extended_pub_key = ExtendedPubKey::from_private(&Secp256k1::new(), &extended_priv_key);
         Ok(extended_pub_key.public_key)
     }
