@@ -20,7 +20,7 @@ impl ScopedManager {
             account
         ];
 
-        let account_key = self.scoped_key.derive_priv(&Secp256k1::new(),  path)?;
+        let account_key = self.scoped_key.derive_priv(&Secp256k1::new(),  &path)?;
         Ok(AccountManager::from_account_key(account_key))
     }
 }

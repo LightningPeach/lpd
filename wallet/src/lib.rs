@@ -1,5 +1,6 @@
 extern crate bitcoin;
 extern crate secp256k1;
+extern crate bitcoin_hashes;
 extern crate hex;
 extern crate wire;
 
@@ -9,13 +10,15 @@ mod account_manager;
 mod fee_estimator;
 
 use bitcoin::util::bip32::ChildNumber;
-use bitcoin::util::hash::{Hash160, Sha256dHash};
+use bitcoin_hashes::{hash160, sha256d};
+use bitcoin_hashes::Hash;
 use bitcoin::util::base58;
 use secp256k1::{Secp256k1, PublicKey};
 
 use std::error::Error;
 
 use key_manager::{KeyManager, KeyScope};
+use bitcoin::util::psbt::serialize::Serialize;
 
 const BIP0084_PURPOSE: u32 = 84;
 
@@ -43,7 +46,7 @@ impl HDWallet {
 
     // BIP0142 format
     fn p2wkh_addr_from_public_key(pk: PublicKey) -> String {
-        let pk_hash160 = Hash160::from_data(&pk.serialize_uncompressed()[..]);
+        let pk_hash160 = hash160::Hash::hash(&pk.serialize_uncompressed()[..]).into_inner();
 
         let mut addr = [0; 23];
         // [1-byte address version]
@@ -95,7 +98,7 @@ fn test_bip0084() {
         .account_manager(DEFAULT_ACCOUNT).unwrap();
 
     let pk = account_manager.next_external_pk().unwrap();
-    let pk_hex = hex::encode(&pk.serialize()[..]);
+    let pk_hex = hex::encode(&pk.serialize());
     assert_eq!(pk_hex, "0330d54fd0dd420a6e5f8d3624f5f3482cae350f79d5f0753bf5beef9c2d91af3c");
 
     let pk_hex = "0450863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B23522CD470243453A299FA9E77237716103ABC11A1DF38855ED6F2EE187E9C582BA6";

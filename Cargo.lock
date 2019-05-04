@@ -2911,6 +2911,7 @@ name = "wallet"
 version = "0.1.0"
 dependencies = [
  "bitcoin 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bitcoin_hashes 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "secp256k1 0.12.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "wire 0.1.0",
