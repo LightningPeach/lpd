@@ -9,3 +9,4 @@ zmq = "0.8.2"
 bitcoin_rpc_client = { path = "../../bitcoinrpc-rust-client" }
 futures = "0.1.13"
 tokio-core = "0.1.7"
+bitcoin_hashes = "0.3"

@@ -4,11 +4,12 @@ extern crate bitcoin_rpc_client;
 extern crate futures;
 extern crate tokio_core;
 extern crate chainntfs;
+extern crate bitcoin_hashes;
 
 use bitcoin::{
-    util::hash::Sha256dHash,
     OutPoint
 };
+use bitcoin_hashes::sha256d;
 use bitcoin_rpc_client::{
     BitcoinCoreClient, BitcoinRpcApi
 };
@@ -56,7 +57,7 @@ fn main() {
     let txid = client.send_to_address(&addr, 1.0).unwrap().unwrap();
     let num_confs = 1;
     let conf_rx = consumer.register_confirmations_ntfn(
-        Sha256dHash::from(txid),
+        txid,
         num_confs,
     );
 
@@ -66,7 +67,7 @@ fn main() {
         let coinbase_txid = block.tx[0].clone();
         spend_rx_vec.push(consumer.register_spend_ntfn(
             OutPoint{
-                txid: Sha256dHash::from(coinbase_txid),
+                txid: coinbase_txid,
                 vout: 0,
             },
         ));
