@@ -80,7 +80,8 @@ impl ChannelHistory {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelPolicy {
     timestamp: u32,
-    flags: ChannelUpdateFlags,
+    message_flags: u8,
+    channel_flags: u8,
     time_lock_delta: u16,
     htlc_minimum: MilliSatoshi,
     base_fee: u32,
@@ -286,7 +287,8 @@ impl<'a> System<'a> for GenericSystem<UpdateChannel, ()> {
                     };
                     history.records.push(ChannelPolicy {
                         timestamp: update_channel.timestamp,
-                        flags: update_channel.flags,
+                        channel_flags: update_channel.channel_flags,
+                        message_flags: update_channel.message_flags,
                         time_lock_delta: update_channel.time_lock_delta,
                         htlc_minimum: update_channel.htlc_minimum,
                         base_fee: update_channel.base_fee,
