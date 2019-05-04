@@ -695,7 +695,7 @@ impl Machine {
     }
 
 
-    pub fn read<T>(&mut self, src: &mut BytesMut) -> Result<Option<T>, WireError>
+    pub fn read<T>(&mut self, src: &mut BytesMut) -> Result<Option<(T, Vec<u8>)>, WireError>
         where
             T: DeserializeOwned + fmt::Debug,
     {
@@ -706,7 +706,7 @@ impl Machine {
         r
     }
 
-    pub fn read_int<T>(&mut self, src: &mut BytesMut) -> Result<Option<T>, WireError>
+    pub fn read_int<T>(&mut self, src: &mut BytesMut) -> Result<Option<(T, Vec<u8>)>, WireError>
     where
         T: DeserializeOwned,
     {
