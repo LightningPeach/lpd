@@ -6,12 +6,12 @@ extern crate wire;
 
 #[cfg(test)]
 mod test{
-    use std::io::{Cursor};    
+    use std::io::{Cursor};
     use wire::*;
     use common_types::secp256k1_m::{Data, Signed};
     use binformat::{BinarySD, SerdeVec};
-    
-    
+
+
     // Encode/decode compatibility check between:
     // LND message: AcceptChannel
     // LPD message: AcceptChannel
@@ -25,7 +25,7 @@ mod test{
             dust_limit: Satoshi::from(100),
             max_htlc_value_in_flight: MilliSatoshi::from(101000),
             chanel_reserve: Satoshi::from(10000),
-            htlc_minimum: MilliSatoshi::from(1001), 
+            htlc_minimum: MilliSatoshi::from(1001),
             minimum_accept_depth: 2,
             csv_delay: CsvDelay::from(10),
             max_accepted_htlc_number: 7,
@@ -43,16 +43,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: AnnounceSignatures
     // LPD message: AnnounceSignatures
@@ -72,16 +72,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: ChannelAnnouncement
     // LPD message: AnnouncementChannel
@@ -122,16 +122,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: ReestablishChannel
     // LPD message: ReestablishChannel
@@ -152,16 +152,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: ChannelUpdate
     // LPD message: UpdateChannel
@@ -192,16 +192,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: ClosingSigned
     // LPD message: ClosingSigned
@@ -220,16 +220,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: CommitSig
     // LPD message: CommitmentSigned
@@ -251,16 +251,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: FundingCreated
     // LPD message: FundingCreated
@@ -280,16 +280,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: FundingLocked
     // LPD message: FundingLocked
@@ -307,16 +307,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: FundingSigned
     // LPD message: FundingSigned
@@ -334,16 +334,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: GossipTimestampRange
     // LPD message: GossipTimestampRange
@@ -362,16 +362,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: Init
     // LPD message: Init
@@ -390,16 +390,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: NodeAnnouncement
     // LPD message: AnnouncementNode
@@ -431,16 +431,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: OpenChannel
     // LPD message: OpenChannel
@@ -476,16 +476,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: Ping
     // LPD message: Ping
@@ -503,16 +503,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: Pong
     // LPD message: Pong
@@ -529,16 +529,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: QueryChannelRange
     // LPD message: QueryChannelRange
@@ -557,16 +557,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: QueryShortChanIDs
     // LPD message: QueryShortChannelIds
@@ -588,13 +588,13 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Message encoding is not unique (e.g. it uses zlib) so serialisation test is skipped
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: ReplyChannelRange
     // LPD message: ReplyChannelRange
@@ -619,13 +619,13 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Message encoding is not unique (e.g. it uses zlib) so serialisation test is skipped
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: RevokeAndAck
     // LPD message: RevokeAndAck
@@ -636,7 +636,7 @@ mod test{
 
         let msg_correct = RevokeAndAck{
             channel_id: ChannelId::from_hex("0100000000000000000000000000000000000000000000000000000000000000").unwrap(),
-            revocation_preimage: u8_32_from_hex("0002000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            revocation_preimage: Hash256::from_hex("0002000000000000000000000000000000000000000000000000000000000000").unwrap(),
             next_per_commitment_point: RawPublicKey::from_hex("026c15505761178eedf56cd210e134b88cdec455b204760e7aed58ad4b961173f4").unwrap(),
         };
         let wrapped_msg_correct = Message::RevokeAndAck(msg_correct);
@@ -644,16 +644,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: ReplyShortChanIDsEnd
     // LPD message: ReplyShortChannelIdsEnd
@@ -671,16 +671,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: Shutdown
     // LPD message: ShutdownChannel
@@ -698,16 +698,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: UpdateAddHTLC
     // LPD message: UpdateAddHtlc
@@ -729,16 +729,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: UpdateFailHTLC
     // LPD message: UpdateFailHtlc
@@ -757,16 +757,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: UpdateFailMalformedHTLC
     // LPD message: UpdateFailMalformedHtlc
@@ -786,16 +786,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: UpdateFee
     // LPD message: UpdateFee
@@ -813,16 +813,16 @@ mod test{
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
     // Encode/decode compatibility check between:
     // LND message: UpdateFulfillHTLCS
     // LPD message: UpdateFulfillHtlc
@@ -834,21 +834,21 @@ mod test{
         let msg_correct = UpdateFulfillHtlc {
             channel_id: ChannelId::from_hex("0200000000000000000000000000000000000000000000000000000000000000").unwrap(),
             id: HtlcId::from_u64(121),
-            payment_preimage: u8_32_from_hex("0064000000000000000000000000000000000000000000000000000000000000").unwrap()
+            payment_preimage: Hash256::from_hex("0064000000000000000000000000000000000000000000000000000000000000").unwrap()
         };
         let wrapped_msg_correct = Message::UpdateFulfillHtlc(msg_correct);
 
         let mut cursor = Cursor::new(msg_bytes.clone());
         let msg = BinarySD::deserialize::<Message, _>(&mut cursor).unwrap();
         assert_eq!(&msg, &wrapped_msg_correct);
-        
-        
+
+
         // Now check serialization
         let mut new_msg_bytes = vec![];
         BinarySD::serialize(&mut new_msg_bytes, &wrapped_msg_correct).unwrap();
         assert_eq!(new_msg_bytes, msg_bytes);
-        
+
     }
 
-    
+
 }

@@ -76,7 +76,7 @@ mod debug {
 
     impl fmt::Debug for Hash256 {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            write!(f, "Hash256 [ {} ]", hex::encode(&self.data[0..]))
+            write!(f, "Hash256({})", hex::encode(&self.data[0..]))
         }
     }
 
