@@ -32,17 +32,11 @@ pub struct CipherState {
 
 impl fmt::Debug for CipherState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            r#"
-        nonce:      {:?}
-	    secret_key: {:?}
-	    salt:       {:?}
-        "#,
-            self.nonce,
-            hex::encode(self.secret_key),
-            hex::encode(self.salt),
-        )
+        f.debug_struct("CipherState")
+            .field("nonce", &self.nonce)
+            .field("secret_key", &hex::encode(&self.secret_key))
+            .field("salt", &hex::encode(&self.salt))
+            .finish()
     }
 }
 

@@ -630,15 +630,11 @@ pub struct Machine {
 
 impl fmt::Debug for Machine {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            r#"
-        send_cipher:     {:?}
-        recv_cipher:     {:?}
-        remote_static:   {:?}
-        "#,
-            self.send_cipher, self.receive_cipher, self.remote_static,
-        )
+        f.debug_struct("Machine")
+            .field("send_cipher", &self.send_cipher)
+            .field("receive_cipher", &self.receive_cipher)
+            .field("remote_static", &self.remote_static)
+            .finish()
     }
 }
 

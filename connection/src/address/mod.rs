@@ -36,10 +36,25 @@ pub enum TransportError {
 impl std::fmt::Debug for TransportError {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            TransportError::IOError{inner, description} => write!(f, "IOError({:?}, {:?})", description, inner),
-            TransportError::HandshakeError {inner, description} => write!(f, "HandshakeError({:?}, {:?})", description, inner),
-            TransportError::TransportError {inner, description} => write!(f, "TransportError({:?}, {:?})", description, inner),
-            TransportError::Other {description} => write!(f, "Other({:?})", description),
+            TransportError::IOError{inner, description} => f
+                .debug_struct("IOError")
+                .field("inner", inner)
+                .field("description", description)
+                .finish(),
+            TransportError::HandshakeError {inner, description} => f
+                .debug_struct("HandshakeError")
+                .field("inner", inner)
+                .field("description", description)
+                .finish(),
+            TransportError::TransportError {inner, description} => f
+                .debug_struct("TransportError")
+                .field("inner", inner)
+                .field("description", description)
+                .finish(),
+            TransportError::Other {description} => f
+                .debug_struct("Other")
+                .field("description", description)
+                .finish(),
         }
     }
 }
