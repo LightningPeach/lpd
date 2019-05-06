@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+# Opens channel with the first peer
+
 CHANNEL_SIZE=100000
 BASE_PATH=$(dirname $0)
 PRIV_KEY=$($BASE_PATH/lncli1.sh listpeers | jq -e -r '.peers[0].pub_key')

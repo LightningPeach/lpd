@@ -1,110 +1,117 @@
 # Scripts for helping developing lpd
 
-This directory contains shell script for simplification of developing code
+This directory contains a few scripts. You launch them and obtain regtest network with some preconfiguration, which you can use for work.
+
 They use slightly modified version of lnd with enabled message dumping. Basically it writes in file all messages received or sent.
+
 To debug Rust programs CLion is needed, Intellij with Rust plugin will not support debugging.
 
 # Assumed environment
-- Linux
+- Linux (or Mac)
 - Clion (not necessary)
 - Rust > 1.31
-- zsh It is possible to use other shells. 
+- zsh (It is possible to use other shells but it requires changing `zsh` to `your_shell` everywhere) 
 - tilix https://gnunn1.github.io/tilix-web/ - modern terminal. 
 
 # Installation
-1. Install lnd TODO(mkl): link to it. lnd is considered as reference implementation. lpd should be fully compatible with it.
+1. Install lnd. lnd is considered as reference implementation. lpd should be fully compatible with it.
    https://github.com/lightningnetwork/lnd/blob/master/docs/INSTALL.md
-2. Install tilix (optional)
+2. Install tilix
    https://gnunn1.github.io/tilix-web/
 3. Install lmsg (optional): ...
+4. add this to '~/.zshrc'
+   ```
+   if [ -n "$EVAL_AT_START" ];
+   then
+   eval "$EVAL_AT_START"
+   fi
+   ```
 
 
 # Common tasks
 
-Note: some of this scripts kill already running bitcoind, lnd. 
-It often occurs the folowing tasks:
-1. Create new regtest bitcoin blockchain. Mine some blocks. Launch lnd
-2. Create new regtest bitcoin blockchain. Mine some blocks. Launch few lnds. Create channel between them
-3. Create new regtest bitcoin blockchain. Mine some blocks. Launch electrum server. Launch lnd. Money some money to it. 
+Note: this scripts kill already running bitcoind, lnd, electrs.
+ 
+1. Create new regtest bitcoin blockchain. Start electrs. Mine some blocks. Launch lnd. **Solution: `01-create-bitcoind-lnd3.sh`**
+
+2. Start regtest bitcoin blockchain. Start electrs. Launch lnd. **Solution: go to dir with env and launch `01-start-bitcoind-lnd3.sh`**
+
+3. Create new regtest bitcoin blockchain. Start electrs. Mine some blocks. Launch two lnds. Create channel between them and make payment. **Solution: `02-create-bitcoind-lnd1-lnd2.sh`**
+
+4. Start regtest bitcoin blockchain. Start electrs. Launch lnds. **Solution: go to dir with env and launch `02-start-bitcoind-lnd1-lnd2.sh`**
 
 # List of scripts
+All environmen variables used here have prefix `DE_` (from Dev Environment).
+During launch each program is launched in its own terminal session (similar to as it would be done by hand)
 
-## _start-tilix-debug.sh 
-is internal script. In creates 3 tilix sessions:
- - one with terminal
- - one with launched bitcoind
- - one with launched lnd (lnd3) 
+## `01-create-bitcoind-lnd3.sh` 
+creates new env(bitcoind, electrs, lnd3) in temporary dir
+Internally:
+    1. Create new temporaty dir
+    2. Copy *.sh files into it
+    3. Start new terminal with `_01-start-bitcoind-lnd3.sh` and DE_CREATE_NEW_ENV=1
 
-Then mines one block so lnd updates its status.
+## `01-start-bitcoind-lnd3.sh` 
+starts env (bitcoind, lnd, electrs) in current dir
+Internally:
+ 1. Start new terminal with `_01-start-bitcoind-lnd3.sh`. NOTE: `DE_CREATE_NEW_ENV=1` is NOT set
 
-##_start-tilix-new-env.sh  
-Creates a new environment. Note: it kills all bitcoind, lnd at start.
-1. Create new session. Launch bitcoind in it.
-2. Mine 500 blocks. So Segwit get activated
-3. Launch lnd1, wait some time
-4. Launch lnd2, wait some time
-5. Generate 1 block so lnd updates its statuses
-6. Mine some blocks to address of the first lnd
-7. Mine 100 blocks to enable spending of coinbase outputs
-8. Connect 2nd lnd to first
-9. Open channel from first channel to second 
-10. Generate 3 blocks
-11. Make payment from 1st lnd to 2nd
+## `_01-start-bitcoind-lnd3.sh` - used inernally
+It is internal script and should be not launched directly. It launches programs in terminals. If DE_CREATE_NEW_ENV is set mines initial blocks, ...
 
-##bitcoin-cli.sh 
+## `02-create-bitcoind-lnd1-lnd2.sh`
+create new env(bitcoind, lnd1, lnd2, electrs) in temporary dir. Opens channel from lnd1 to lnd2. Make one payment from lnd1 to lnd2
+Internally:
+1. Create new temporary dir
+2. Copy *.sh files into it
+3. Start new terminal with `_02-start-bitcoind-lnd1-lnd2.sh` and DE_CREATE_NEW_ENV=1
+
+## `02-start-bitcoind-lnd1-lnd2.sh` 
+start env(bitcoind, lnd1, lnd2, electrs) is current dir.
+
+## `_02-start-bitcoind-lnd1-lnd2.sh` - used internally 
+It is internal script and should be not launched directly. It launches programs in terminals. If  `DE_CREATE_NEW_ENV=1` do some initial work: mine blocks, connect lnd1 to lnd2, ...
+
+## `bitcoin-cli.sh` 
 is wrapper around bitcoin-cli with connection parameters
 
-## lncli1.sh 
+## `lncli1.sh` 
 is a wrapper around lncli so it connects to lnd1
 
-## lncli2.sh 
+## `lncli2.sh` 
 is a wrapper around lncli so it connects to lnd2
 
-## lncli3.sh 
+## `lncli3.sh` 
 is a wrapper around lncli so it connects to lnd3
 
-## new_temp_env.sh 
-launch new environment in temporary dir.
-1. Creates temp dir
-2. Copies scripts into it
-3. Launches new tilix session from this dir using _start-tilix-new-env.sh
+## `open_channel.sh` 
+opens channel with (first) peer of lnd3. 
 
-## open_channel.sh 
-opens channel with (first) peer of lnd1. 
-
-## start-bitcoind.sh 
+## `start-bitcoind.sh` 
 starts bitcoind
 
-## start-electrs.sh 
-starts electrs (TODO: link to explanation what is it)
+## `start-electrs.sh` 
+starts electrs
 
-## start-lnd-1.sh 
+## `start-lnd-1.sh`
 starts lnd1
 
-## start-lnd-1-redirect.sh 
+## `start-lnd-1-redirect.sh` 
 start lnd1 with redirecting stout and stderr in a file
 
-## start-lnd-2.sh 
+## `start-lnd-2.sh` 
 starts lnd2
 
-## start-lnd-3.sh 
+## `start-lnd-3.sh` 
 starts lnd3
 
-## start-tilix-debug.sh 
-starts tilix debug session ( TODO(mkl): explain)
-
-
-## start-tilix-new-env.sh 
-starts tilix new env session ( TODO(mkl): explain )
-
  
-Tilix commands:
+# Why Tilix is used:
 
-# Create new session (basically tab)
-(maybe add example)
+## Create new session (basically tab)
 $ tilix -a app-new-session 
 
-To launch shell and then launch command in it 
+## To launch shell and then launch command in it 
 $ tilix -x 'zsh -c "EVAL_AT_START=./start-lnd-3.sh zsh"'
 
 To work it uses 
@@ -116,7 +123,8 @@ eval "$EVAL_AT_START"
 fi
 ```
 
-Developing node requires some tools:
+# Developing node requires some tools
+
 1. `bitcoind` - original Bitcoin implementation. There are others like `btcd` and `parity`.
 2. `lnd` - one of existing Lightning implementations. We consider it as a reference. `lpd` should be fully compatible with `lnd`
 3. `electrs` - Electrum server in Rust. https://github.com/romanz/electrs . Currently lpd uses wallet that uses electrum
@@ -124,21 +132,8 @@ Developing node requires some tools:
 5. `lmsg` - (optional) Tool for creating, decoding/encoding Lightning messages
 
 
-This directory contains a few scripts. You launch them and obtain regtest network with some preconfiguration, which you can use for work.
- 
-TODO(mkl):
-1. Explain what components are used
-2. How to install
- - bitcoind 
- - lnd
- - electrs
- - tilix
-3. How parts fit together
-4. Move all constants into variables
-5. What tasks should be done to configure lnd ?
 
-
-Explain main tools in this package:
+# Main executables in lpd:
 1. server rpc/server  - contains implementation of node
 2. client rpc/client  - contains client for this node
 3. wire-compatibility - tool for encoding/decoding Lightning messages. It is used to check compatibility 
