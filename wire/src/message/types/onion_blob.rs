@@ -108,7 +108,17 @@ mod debug {
 
     impl Debug for OnionBlob {
         fn fmt(&self, f: &mut Formatter) -> Result {
-            self.data.fmt(f)
+            let mut w = f.debug_struct("OnionBlob");
+            let mut w = w.field("public_key", &hex::encode(&self.data[0..33]));
+            let mut position = 33;
+            for i in 0..20 {
+                let name = format!("hop {:2}", i);
+                w = w
+                    .field(name.as_str(), &hex::encode(&self.data[position..(position + 33)]))
+                    .field("mac", &hex::encode(&self.data[(position + 33)..(position + 65)]));
+                position += 65;
+            }
+            w.field("total_mac", &hex::encode(&self.data[position..(position + 32)])).finish()
         }
     }
 }

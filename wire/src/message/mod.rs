@@ -110,7 +110,7 @@ macro_rules! message {
                 match self {
                     $(
                         &$variant(ref payload) => {
-                            write!(f, "{:?}", payload)
+                            payload.fmt(f)
                         },
                     )*
                 }
