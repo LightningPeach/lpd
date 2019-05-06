@@ -26,17 +26,11 @@ pub struct SymmetricState {
 
 impl fmt::Debug for SymmetricState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            r#"
-        cipher_state:     {:?}
-        chaining_key:     {:?}
-        handshake_digest: {:?}
-        "#,
-            self.cipher_state,
-            hex::encode(self.chaining_key),
-            hex::encode(self.handshake_digest),
-        )
+        f.debug_struct("CipherState")
+            .field("cipher_state", &self.cipher_state)
+            .field("chaining_key", &hex::encode(&self.chaining_key))
+            .field("handshake_digest", &hex::encode(&self.handshake_digest))
+            .finish()
     }
 }
 

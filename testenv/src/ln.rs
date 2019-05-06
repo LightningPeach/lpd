@@ -44,7 +44,10 @@ pub struct LnRunning {
 
 impl fmt::Debug for LnRunning {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "LnRunning{{\nconfig:{:?},\ninstance:{:?}\n}}", self.config, self.instance)
+        f.debug_struct("LnRunning")
+            .field("config", &self.config)
+            .field("instance", &self.instance)
+            .finish()
     }
 }
 
