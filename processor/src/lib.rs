@@ -2,21 +2,11 @@
 
 use binformat::WireError;
 use wire::{Message, MessageExt};
+use internal_event::Event;
 
 use tokio::prelude::{Future, Sink, Poll};
 use futures::sink;
 use either::Either;
-
-#[derive(Debug)]
-pub enum Event {
-    DirectCommand(DirectCommand),
-    TimerTick,
-}
-
-#[derive(Debug)]
-pub enum DirectCommand {
-    _Nothing,
-}
 
 pub trait MessageFiltered
 where

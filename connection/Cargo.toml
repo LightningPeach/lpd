@@ -9,6 +9,7 @@ wallet_lib = { package = "wallet", git = "https://github.com/LightningPeach/rust
 brontide = { path = "../brontide" }
 binformat = { path = "../binformat" }
 wire = { path = "../wire" }
+internal-event = { path = "../internal-event" }
 processor = { path = "../processor" }
 state = { path = "../state" }
 interface = { path = "../rpc/interface", optional = true }

@@ -438,6 +438,7 @@ dependencies = [
  "futures 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "interface 0.0.0",
+ "internal-event 0.1.0",
  "processor 0.1.0",
  "rayon 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocksdb 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1106,6 +1107,7 @@ dependencies = [
  "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "interface 0.0.0",
+ "internal-event 0.1.0",
  "protobuf 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "secp256k1 0.12.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "state 0.1.0",
@@ -1125,6 +1127,14 @@ dependencies = [
  "grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "protobuf 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "protoc-rust-grpc 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "internal-event"
+version = "0.1.0"
+dependencies = [
+ "secp256k1 0.12.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wire 0.1.0",
 ]
 
 [[package]]
@@ -1696,6 +1706,7 @@ dependencies = [
  "binformat 0.1.0",
  "either 1.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "internal-event 0.1.0",
  "tokio 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "wire 0.1.0",
 ]

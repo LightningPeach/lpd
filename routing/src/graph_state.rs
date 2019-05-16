@@ -14,7 +14,7 @@ use either::Either;
 #[cfg(feature = "rpc")]
 use secp256k1::PublicKey;
 
-use wire::{Message, MessageExt, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel, FeatureBit};
+use wire::{Message, MessageExt, Init, AnnouncementNode, AnnouncementChannel, UpdateChannel};
 use processor::{MessageFiltered, MessageConsumer, ConsumingFuture};
 
 use binformat::WireError;
@@ -225,7 +225,7 @@ impl MessageConsumer for SharedState {
         // TODO(mkl): move init processing somewhere
         match message.left().unwrap() {
             TopologyMessage::Init(_) => {
-                let local = RawFeatureVector::new().set_bit(FeatureBit::DataLossProtectRequired).set_bit(FeatureBit::DataLossProtectOptional);
+                let local = RawFeatureVector::new().set_bit(DataLossProtectRequired).set_bit(DataLossProtectOptional);
                 let init = Message::Init(Init::new(RawFeatureVector::new(), local));
                 return ConsumingFuture::from_send(self, sink.send(init.into()));
             },
