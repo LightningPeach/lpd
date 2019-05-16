@@ -88,7 +88,7 @@ fn main() -> Result<(), Error> {
         server.http.set_cpu_pool_threads(4);
         server.add_service(wallet_service(wallet.clone(), tx.clone()));
         server.add_service(routing_service(node.clone(), tx.clone()));
-        server.add_service(channel_service());
+        server.add_service(channel_service(tx.clone()));
         server.add_service(payment_service());
         server.build().map_err(Grpc)?
     };

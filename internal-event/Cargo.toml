@@ -1,13 +1,10 @@
 [package]
-name = "processor"
+name = "internal-event"
 version = "0.1.0"
 authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
 edition = "2018"
 
 [dependencies]
-either = "1.5"
-tokio = "0.1"
-futures = "0.1"
-binformat = { path = "../binformat" }
 wire = { path = "../wire" }
-internal-event = { path = "../internal-event" }
+
+secp256k1 = "0.12.2"

@@ -4,7 +4,7 @@ use std::{net::SocketAddr, io};
 use secp256k1::{SecretKey, PublicKey};
 use tokio::{
     prelude::{Future, Stream, Poll},
-    net::{TcpStream, TcpListener, tcp::{ConnectFuture, Incoming}},
+    net::{TcpStream, TcpListener, tcp::ConnectFuture},
 };
 use brontide::{BrontideStream, HandshakeError};
 use crate::address::TransportError;

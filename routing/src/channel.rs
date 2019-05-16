@@ -1,5 +1,5 @@
 use wire::{
-    Hash256, ShortChannelId, MilliSatoshi, ChannelUpdateFlags, RawFeatureVector,
+    Hash256, ShortChannelId, MilliSatoshi, RawFeatureVector,
     AnnouncementChannel, UpdateChannel,
 };
 

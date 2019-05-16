@@ -1,6 +1,6 @@
 use common_types::Hash256;
 use std::sync::{Arc, Mutex};
-use wallet_lib::interface::{WalletLibraryInterface, Wallet};
+use wallet_lib::interface::Wallet;
 
 pub struct Blockchain {
     wallet: Arc<Mutex<Box<dyn Wallet + Send>>>,
@@ -27,7 +27,7 @@ impl Blockchain {
 
     pub fn sync(&mut self) {
         let mut wallet = self.wallet.lock().unwrap();
-        wallet.sync_with_tip();
+        let _ = wallet.sync_with_tip();
         self.block_height = wallet.wallet_lib().get_last_seen_block_height_from_memory() as _;
     }
 }

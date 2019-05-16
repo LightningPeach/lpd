@@ -10,6 +10,7 @@ protobuf = "2.3"
 
 interface = { path = "../interface" }
 wire = { path = "../../wire" }
+internal-event = { path = "../../internal-event" }
 connection = { path = "../../connection", features = ["rpc"] }
 state = { path = "../../state" }
 wallet_lib = { package = "wallet", git = "https://github.com/LightningPeach/rust-wallet.git" }

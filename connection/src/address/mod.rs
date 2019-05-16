@@ -11,7 +11,7 @@ use brontide::{BrontideStream, HandshakeError, Machine};
 use futures::sync::{oneshot, mpsc};
 use either::Either;
 use std::collections::BTreeMap;
-use processor::{Event, DirectCommand};
+use internal_event::{Event, DirectCommand};
 use std::fmt::Formatter;
 
 
@@ -149,7 +149,7 @@ where
                 }
             }
             // TODO(mkl): why it is called
-            Err(err) => {
+            Err(_err) => {
                 // We got here when sender of self.termination is dropped
                 println!("self.termination.poll() is canceled");
                 Ok(Ready(None))
