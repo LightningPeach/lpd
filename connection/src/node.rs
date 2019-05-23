@@ -5,7 +5,7 @@ use wallet_lib::interface::Wallet;
 use secp256k1::{SecretKey, PublicKey};
 use tokio::prelude::{Future, AsyncRead, AsyncWrite, Sink};
 use tokio::executor::Spawn;
-use futures::sync::mpsc::Receiver;
+use futures::sync::mpsc;
 use secp256k1::Signature;
 use wire::{Message, MessageExt};
 use processor::{MessageConsumer, ConsumingFuture};
@@ -26,9 +26,11 @@ use either::Either;
 
 #[cfg(feature = "rpc")]
 use interface::routing::{LightningNode, ChannelEdge, Info};
+use std::collections::HashMap;
 
 pub struct Node {
     peers: Vec<PublicKey>,
+    channels: HashMap<PublicKey, mpsc::Receiver<ChannelStatus>>,
     shared_state: SharedState,
     db: Arc<RwLock<DB>>,
     secret: SecretKey,
@@ -36,11 +38,13 @@ pub struct Node {
     wallet: Arc<Mutex<Box<dyn Wallet + Send>>>,
 }
 
+/// Represents the channel, but not the peer
 pub struct Remote {
     db: Arc<RwLock<DB>>,
     wallet: Arc<Mutex<Box<dyn Wallet + Send>>>,
     public: PublicKey,
     channel: ChannelState,
+    sender: mpsc::Sender<ChannelStatus>,
 }
 
 impl MessageConsumer for Remote {
@@ -84,6 +88,14 @@ impl MessageConsumer for Remote {
     }
 }
 
+// TODO: move it to proper place
+#[derive(Debug)]
+pub enum ChannelStatus {
+    Pending,
+    Confirmation,
+    Open,
+}
+
 impl Node {
     pub fn new<P: AsRef<Path>>(wallet: Arc<Mutex<Box<dyn Wallet + Send>>>, secret: [u8; 32], path: P) -> Self {
         use state::DBBuilder;
@@ -93,6 +105,7 @@ impl Node {
 
         Node {
             peers: Vec::new(),
+            channels: HashMap::new(),
             shared_state: SharedState(Arc::new(RwLock::new(State::new(p_db.clone())))),
             db: p_db,
             secret: SecretKey::from_slice(&secret[..]).unwrap(),
@@ -105,12 +118,15 @@ impl Node {
         if self.peers.contains(&remote_public) {
             Either::Left(remote_public)
         } else {
+            let (sender, receiver) = mpsc::channel(16);
             self.peers.push(remote_public.clone());
+            self.channels.insert(remote_public.clone(), receiver);
             Either::Right(Remote {
                 db: self.db.clone(),
                 wallet: self.wallet.clone(),
                 public: remote_public,
                 channel: ChannelState::new(),
+                sender: sender,
             })
         }
     }
@@ -147,7 +163,7 @@ impl Node {
         tokio::spawn(connection)
     }
 
-    pub fn listen<A>(p_self: Arc<RwLock<Self>>, address: &A, control: Receiver<Command<A>>) -> Result<(), TransportError>
+    pub fn listen<A>(p_self: Arc<RwLock<Self>>, address: &A, control: mpsc::Receiver<Command<A>>) -> Result<(), TransportError>
     where
         A: AbstractAddress + Send  + 'static,
     {
@@ -185,6 +201,10 @@ impl Node {
         let data = Data(SerdeRawVec(message));
         let signed: Signed<_, RawSignature> = ac::Signed::sign(data, &context, &secret_key);
         signed.signature.0
+    }
+
+    pub fn take_channel_status_stream(&mut self, remote_public: &PublicKey) -> Option<mpsc::Receiver<ChannelStatus>> {
+        self.channels.remove(remote_public)
     }
 
     // TODO: add missing fields:
