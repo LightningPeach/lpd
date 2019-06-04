@@ -55,6 +55,16 @@ pub struct ChannelId {
 }
 
 impl ChannelId {
+    pub fn new(funding_txid: [u8; 32], funding_output_index: OutputIndex) -> Self {
+        use byteorder::{BigEndian, ByteOrder};
+
+        let mut data = funding_txid;
+        BigEndian::write_u16(&mut data[0..2], funding_output_index.to_u16());
+        ChannelId {
+            data: data,
+        }
+    }
+
     // TODO(mkl): maybe rename
     // TODO(mkl): maybe add to_bytes/from_bytes methods to conversion from/to u32
     pub fn all() -> Self {

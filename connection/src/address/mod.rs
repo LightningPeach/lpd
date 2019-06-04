@@ -11,8 +11,9 @@ use brontide::{BrontideStream, HandshakeError, Machine};
 use futures::sync::{oneshot, mpsc};
 use either::Either;
 use std::collections::BTreeMap;
-use internal_event::{Event, DirectCommand};
+use internal_event::{Event, DirectCommand, ChannelCommand};
 use std::fmt::Formatter;
+use wire::ChannelId;
 
 
 pub enum TransportError {
@@ -170,6 +171,10 @@ where
         destination: PublicKey,
         command: DirectCommand,
     },
+    ChannelCommand {
+        destination: ChannelId,
+        command: ChannelCommand,
+    },
     BroadcastTick,
     Terminate,
 }
@@ -235,6 +240,14 @@ where
                             ctx.unbounded_send(Event::DirectCommand(command)).unwrap()
                         );
                     Ok(NotReady)
+                },
+                Command::ChannelCommand {
+                    destination: channel_id,
+                    command: command,
+                } => {
+                    // TODO: send the command to proper processor
+                    let _ = (channel_id, command);
+                    unimplemented!()
                 },
                 Command::BroadcastTick => {
                     self.pipes.values()
