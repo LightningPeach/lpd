@@ -182,7 +182,7 @@ where
         let _ = (o, p);
 
         let resp = SyncWithTipResponse::new();
-        self.af.lock().unwrap().sync_with_tip();
+        let _ = self.af.lock().unwrap().sync_with_tip();
         SingleResponse::completed(resp)
     }
 

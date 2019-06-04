@@ -13,7 +13,7 @@ use std::net::SocketAddr;
 use std::fmt::Debug;
 use futures::sync::mpsc::Sender;
 use secp256k1::PublicKey;
-use internal_event::DirectCommand;
+use internal_event::{DirectCommand, ChannelCommand};
 
 pub fn service(node: Arc<RwLock<Node>>, control: Sender<Command<SocketAddr>>) -> ServerServiceDefinition {
     ChannelServiceServer::new_service_def(ChannelImpl {
@@ -90,7 +90,39 @@ impl ChannelService for ChannelImpl<SocketAddr> {
     }
 
     fn close(&self, o: RequestOptions, p: CloseChannelRequest) -> StreamingResponse<CloseStatusUpdate> {
-        let _ = (o, p);
-        unimplemented!()
+        use futures::{Sink, Future, future, stream::Stream};
+        use wire::ChannelId;
+
+        let _ = o;
+
+        fn channel_id(request: CloseChannelRequest) -> Result<ChannelId, Error> {
+
+            let mut request = request;
+            let mut point = request.take_channel_point();
+            let mut channel_id = point.take_funding_txid_bytes();
+            if channel_id.is_empty() {
+                channel_id = point.take_funding_txid_str().into_bytes();
+            }
+            if channel_id.len() != 32 {
+                return Err(Error::Panic("wrong size of founding txid".to_owned()))
+            }
+            let mut data = [0; 32];
+            data.copy_from_slice(channel_id.as_slice());
+            Ok(ChannelId {
+                data: data,
+            })
+        }
+
+        match channel_id(p) {
+            Err(e) => StreamingResponse::no_metadata(future::err(e).into_stream()),
+            Ok(channel_id) => {
+                let command = Command::<SocketAddr>::ChannelCommand {
+                    destination: channel_id,
+                    command: ChannelCommand::CloseChannel,
+                };
+
+                unimplemented!()
+            }
+        }
     }
 }

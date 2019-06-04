@@ -10,3 +10,8 @@ pub enum Event {
 pub enum DirectCommand {
     NewChannel,
 }
+
+#[derive(Debug)]
+pub enum ChannelCommand {
+    CloseChannel,
+}
