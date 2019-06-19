@@ -11,6 +11,17 @@ pub use self::pure_rust::*;
 
 #[cfg(target_arch = "wasm32")]
 mod pure_rust {
+    pub use secp256k1_r::Error;
+
+    #[derive(Debug, Clone, Eq, PartialEq)]
+    pub struct Secp256k1;
+
+    impl Secp256k1 {
+        pub fn new() -> Self {
+            Secp256k1
+        }
+    }
+
     pub mod constants {
         /// The size (in bytes) of a message
         pub const MESSAGE_SIZE: usize = secp256k1_r::util::MESSAGE_SIZE;
@@ -108,6 +119,7 @@ mod pure_rust {
 
     pub mod key {
         use std::{fmt, ops};
+        use super::{Error, Secp256k1};
 
         #[derive(Debug, Clone, Eq, PartialEq)]
         pub struct SecretKey(pub(crate) [u8; secp256k1_r::util::SECRET_KEY_SIZE]);
@@ -172,6 +184,35 @@ mod pure_rust {
             }
         }
 
+        impl SecretKey {
+            #[inline]
+            pub fn from_slice(data: &[u8]) -> Result<SecretKey, Error> {
+                if data.len() == super::constants::SECRET_KEY_SIZE {
+                    let mut a = [0; 32];
+                    a.copy_from_slice(data);
+                    Ok(SecretKey(a))
+                } else {
+                    Err(Error::InvalidSecretKey)
+                }
+            }
+
+            pub fn add_assign(&mut self, other: &[u8]) -> Result<(), Error> {
+                let mut a: secp256k1_r::SecretKey = self.clone().into();
+                let b = secp256k1_r::SecretKey::parse_slice(other)?;
+                a.tweak_add_assign(&b)?;
+                self.0 = a.serialize();
+                Ok(())
+            }
+
+            pub fn mul_assign(&mut self, other: &[u8]) -> Result<(), Error> {
+                let mut a: secp256k1_r::SecretKey = self.clone().into();
+                let b = secp256k1_r::SecretKey::parse_slice(other)?;
+                a.tweak_mul_assign(&b)?;
+                self.0 = a.serialize();
+                Ok(())
+            }
+        }
+
         #[derive(Debug, Clone, Eq, PartialEq)]
         pub struct PublicKey(pub(crate) secp256k1_r::PublicKey);
 
@@ -181,6 +222,18 @@ mod pure_rust {
                     write!(f, "{:02x}", *ch)?;
                 }
                 Ok(())
+            }
+        }
+
+        impl PublicKey {
+            pub fn from_secret_key(_secp: &Secp256k1, sk: &SecretKey) -> PublicKey {
+                let sk = sk.clone().into();
+                let pk = secp256k1_r::PublicKey::from_secret_key(&sk);
+                PublicKey(pk)
+            }
+
+            pub fn from_slice(data: &[u8]) -> Result<PublicKey, Error> {
+                secp256k1_r::PublicKey::parse_slice(data, None).map(PublicKey)
             }
         }
     }
