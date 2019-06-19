@@ -1,0 +1,13 @@
+[package]
+name = "secp256k1"
+version = "0.1.0"
+authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
+edition = "2018"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.secp256k1-c]
+package = "secp256k1"
+version = "0.13"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.secp256k1-r]
+package = "libsecp256k1"
+version = "0.2"
