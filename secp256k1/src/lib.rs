@@ -12,6 +12,7 @@ pub use self::pure_rust::*;
 #[cfg(target_arch = "wasm32")]
 mod pure_rust {
     pub use secp256k1_r::Error;
+    pub use self::key::*;
 
     #[derive(Debug, Clone, Eq, PartialEq)]
     pub struct Secp256k1;
