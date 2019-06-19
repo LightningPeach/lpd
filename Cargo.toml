@@ -4,7 +4,7 @@ members = [
     "routing", "bitcoin-types", "common-types",
     "testenv", "rpc/interface", "rpc/implementation", "rpc/server", "rpc/client", "connection", "state", "binformat",
     "processor", "onion", "channel_machine", "internal-event",
-    "wire-compatibility", "cmd/dump-reader", "secp256k1"
+    "wire-compatibility", "cmd/dump-reader", "secp256k1", "wasm-secp256k1-demo",
 ]
 exclude = ["electrs"]
 
