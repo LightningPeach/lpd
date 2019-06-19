@@ -64,7 +64,7 @@ mod pure_rust {
 
         impl SharedSecret {
             pub fn new(point: &PublicKey, scalar: &SecretKey) -> SharedSecret {
-                SharedSecret(secp256k1_r::SharedSecret::new(&point.0, &scalar.0).unwrap())
+                SharedSecret(secp256k1_r::SharedSecret::new(&point.0, &scalar.clone().into()).unwrap())
             }
         }
 
@@ -110,11 +110,17 @@ mod pure_rust {
         use std::{fmt, ops};
 
         #[derive(Debug, Clone, Eq, PartialEq)]
-        pub struct SecretKey(pub(crate) secp256k1_r::SecretKey);
+        pub struct SecretKey(pub(crate) [u8; secp256k1_r::util::SECRET_KEY_SIZE]);
+
+        impl From<SecretKey> for secp256k1_r::SecretKey {
+            fn from(v: SecretKey) -> Self {
+                secp256k1_r::SecretKey::parse(&v.0).unwrap()
+            }
+        }
 
         impl fmt::Display for SecretKey {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                for ch in &self.0.serialize()[..] {
+                for ch in &self.0[..] {
                     write!(f, "{:02x}", *ch)?;
                 }
                 Ok(())
@@ -126,8 +132,7 @@ mod pure_rust {
 
             #[inline]
             fn index(&self, index: usize) -> &u8 {
-                let _ = index;
-                unimplemented!()
+                &self.0[index]
             }
         }
 
@@ -136,8 +141,7 @@ mod pure_rust {
 
             #[inline]
             fn index(&self, index: ops::Range<usize>) -> &[u8] {
-                let _ = index;
-                unimplemented!()
+                &self.0[index]
             }
         }
 
@@ -146,8 +150,7 @@ mod pure_rust {
 
             #[inline]
             fn index(&self, index: ops::RangeFrom<usize>) -> &[u8] {
-                let _ = index;
-                unimplemented!()
+                &self.0[index.start..]
             }
         }
 
@@ -156,8 +159,7 @@ mod pure_rust {
 
             #[inline]
             fn index(&self, index: ops::RangeTo<usize>) -> &[u8] {
-                let _ = index;
-                unimplemented!()
+                &self.0[..index.end]
             }
         }
 
@@ -166,7 +168,7 @@ mod pure_rust {
 
             #[inline]
             fn index(&self, _: ops::RangeFull) -> &[u8] {
-                unimplemented!()
+                &self.0[..]
             }
         }
 
