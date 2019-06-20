@@ -236,6 +236,35 @@ mod pure_rust {
             pub fn from_slice(data: &[u8]) -> Result<PublicKey, Error> {
                 secp256k1_r::PublicKey::parse_slice(data, None).map(PublicKey)
             }
+
+            pub fn serialize(&self) -> [u8; super::constants::PUBLIC_KEY_SIZE] {
+                self.0.serialize_compressed()
+            }
+
+            pub fn add_exp_assign(
+                &mut self,
+                _secp: &Secp256k1,
+                other: &[u8]
+            ) -> Result<(), Error> {
+                if other.len() != 32 {
+                    return Err(Error::InvalidInputLength);
+                }
+
+                self.0.tweak_add_assign(&secp256k1_r::SecretKey::parse_slice(other)?)
+            }
+
+            pub fn mul_assign(
+                &mut self,
+                _secp: &Secp256k1,
+                other: &[u8],
+            ) -> Result<(), Error> {
+                if other.len() != 32 {
+                    return Err(Error::InvalidInputLength);
+                }
+
+                self.0.tweak_mul_assign(&secp256k1_r::SecretKey::parse_slice(other)?)
+            }
+
         }
     }
 }
