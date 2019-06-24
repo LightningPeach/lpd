@@ -7,7 +7,16 @@ edition = "2018"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.secp256k1-c]
 package = "secp256k1"
 version = "0.13"
+features = ["rand"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.secp256k1-r]
 package = "libsecp256k1"
 version = "0.2"
+
+[dependencies.rand]
+version = "0.6"
+optional = true
+default-features = false
+
+[features]
+fuzztarget = ["secp256k1-c/fuzztarget"]
