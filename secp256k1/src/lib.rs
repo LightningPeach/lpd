@@ -11,15 +11,42 @@ pub use self::pure_rust::*;
 
 #[cfg(target_arch = "wasm32")]
 mod pure_rust {
+    use std::marker::PhantomData;
     pub use secp256k1_r::Error;
     pub use self::key::*;
 
-    #[derive(Debug, Clone, Eq, PartialEq)]
-    pub struct Secp256k1;
+    /// Marker trait for indicating that an instance of `Secp256k1` can be used for signing.
+    pub trait Signing {}
 
-    impl Secp256k1 {
+    /// Marker trait for indicating that an instance of `Secp256k1` can be used for verification.
+    pub trait Verification {}
+
+    /// Represents the set of capabilities needed for signing.
+    pub struct SignOnly {}
+
+    /// Represents the set of capabilities needed for verification.
+    pub struct VerifyOnly {}
+
+    /// Represents the set of all capabilities.
+    pub struct All {}
+
+    impl Signing for SignOnly {}
+    impl Signing for All {}
+
+    impl Verification for VerifyOnly {}
+    impl Verification for All {}
+
+    /// The secp256k1 engine, used to execute all signature operations
+    #[derive(Debug, Clone, Eq, PartialEq)]
+    pub struct Secp256k1<C> {
+        phantom: PhantomData<C>
+    }
+
+    impl<C> Secp256k1<C> {
         pub fn new() -> Self {
-            Secp256k1
+            Secp256k1 {
+                phantom: PhantomData,
+            }
         }
     }
 
@@ -121,8 +148,9 @@ mod pure_rust {
     pub mod key {
         use std::{fmt, ops};
         use super::{Error, Secp256k1};
+        use crate::{Signing, Verification};
 
-        #[derive(Debug, Clone, Eq, PartialEq)]
+        #[derive(Debug, Copy, Clone, Eq, PartialEq)]
         pub struct SecretKey(pub(crate) [u8; secp256k1_r::util::SECRET_KEY_SIZE]);
 
         impl From<SecretKey> for secp256k1_r::SecretKey {
@@ -214,7 +242,7 @@ mod pure_rust {
             }
         }
 
-        #[derive(Debug, Clone, Eq, PartialEq)]
+        #[derive(Debug, Copy, Clone, Eq, PartialEq)]
         pub struct PublicKey(pub(crate) secp256k1_r::PublicKey);
 
         impl fmt::Display for PublicKey {
@@ -227,7 +255,7 @@ mod pure_rust {
         }
 
         impl PublicKey {
-            pub fn from_secret_key(_secp: &Secp256k1, sk: &SecretKey) -> PublicKey {
+            pub fn from_secret_key<C: Signing>(_secp: &Secp256k1<C>, sk: &SecretKey) -> PublicKey {
                 let sk = sk.clone().into();
                 let pk = secp256k1_r::PublicKey::from_secret_key(&sk);
                 PublicKey(pk)
@@ -241,9 +269,9 @@ mod pure_rust {
                 self.0.serialize_compressed()
             }
 
-            pub fn add_exp_assign(
+            pub fn add_exp_assign<C: Verification>(
                 &mut self,
-                _secp: &Secp256k1,
+                _secp: &Secp256k1<C>,
                 other: &[u8]
             ) -> Result<(), Error> {
                 if other.len() != 32 {
@@ -253,9 +281,9 @@ mod pure_rust {
                 self.0.tweak_add_assign(&secp256k1_r::SecretKey::parse_slice(other)?)
             }
 
-            pub fn mul_assign(
+            pub fn mul_assign<C: Verification>(
                 &mut self,
-                _secp: &Secp256k1,
+                _secp: &Secp256k1<C>,
                 other: &[u8],
             ) -> Result<(), Error> {
                 if other.len() != 32 {
