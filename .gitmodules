@@ -1,3 +1,6 @@
 [submodule "bincode"]
 	path = bincode
 	url = git@github.com:LightningPeach/bincode.git
+[submodule "bitcoin"]
+	path = bitcoin
+	url = https://github.com/rust-bitcoin/rust-bitcoin.git
