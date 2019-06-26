@@ -216,6 +216,13 @@ mod pure_rust {
             let message = secp256k1_r::Message::parse(&msg.0);
             Signature(secp256k1_r::sign(&message, &sk).unwrap().0)
         }
+
+        #[cfg(any(test, feature = "rand"))]
+        pub fn generate_keypair<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> (key::SecretKey, key::PublicKey) {
+            let sk = key::SecretKey::new(rng);
+            let pk = key::PublicKey::from_secret_key(self, &sk);
+            (sk, pk)
+        }
     }
 
     pub mod constants {
@@ -407,6 +414,13 @@ mod pure_rust {
         }
 
         impl SecretKey {
+            #[cfg(any(test, feature = "rand"))]
+            pub fn new<R: rand::Rng + ?Sized>(rng: &mut R) -> SecretKey {
+                let mut data = [0u8; 32];
+                rng.fill_bytes(&mut data);
+                SecretKey(data)
+            }
+
             #[inline]
             pub fn from_slice(data: &[u8]) -> Result<SecretKey, Error> {
                 if data.len() == super::constants::SECRET_KEY_SIZE {
