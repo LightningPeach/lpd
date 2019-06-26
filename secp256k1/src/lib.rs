@@ -12,8 +12,87 @@ pub use self::pure_rust::*;
 #[cfg(target_arch = "wasm32")]
 mod pure_rust {
     use std::marker::PhantomData;
-    pub use secp256k1_r::Error;
+    use std::{fmt, error};
     pub use self::key::*;
+    use core::fmt::Pointer;
+
+    #[derive(Copy, PartialEq, Eq, Clone, Debug)]
+    pub enum Error {
+        /// Signature failed verification
+        IncorrectSignature,
+        /// Badly sized message ("messages" are actually fixed-sized digests; see the `MESSAGE_SIZE`
+        /// constant)
+        InvalidMessage,
+        /// Bad public key
+        InvalidPublicKey,
+        /// Bad signature
+        InvalidSignature,
+        /// Bad secret key
+        InvalidSecretKey,
+        /// Bad recovery id
+        InvalidRecoveryId,
+        /// Invalid tweak for add_*_assign or mul_*_assign
+        InvalidTweak,
+        ///
+        InvalidInputLength,
+    }
+
+    impl From<secp256k1_r::Error> for Error {
+        fn from(v: secp256k1_r::Error) -> Self {
+            use secp256k1_r::Error::*;
+
+            match v {
+                InvalidSignature => Error::InvalidSignature,
+                InvalidPublicKey => Error::InvalidPublicKey,
+                InvalidSecretKey => Error::InvalidSecretKey,
+                InvalidRecoveryId => Error::InvalidRecoveryId,
+                InvalidMessage => Error::InvalidMessage,
+                InvalidInputLength => Error::InvalidInputLength,
+                TweakOutOfRange => Error::InvalidTweak,
+            }
+        }
+    }
+
+    impl From<Error> for secp256k1_r::Error {
+        fn from(v: Error) -> Self {
+            use secp256k1_r::Error::*;
+
+            match v {
+                Error::IncorrectSignature => InvalidSignature,
+                Error::InvalidSignature => InvalidSignature,
+                Error::InvalidPublicKey => InvalidPublicKey,
+                Error::InvalidSecretKey => InvalidSecretKey,
+                Error::InvalidRecoveryId => InvalidRecoveryId,
+                Error::InvalidMessage => InvalidMessage,
+                Error::InvalidInputLength => InvalidInputLength,
+                Error::InvalidTweak => TweakOutOfRange,
+            }
+        }
+    }
+
+    impl Error {
+        fn as_str(&self) -> &str {
+            match *self {
+                Error::IncorrectSignature => "secp: signature failed verification",
+                Error::InvalidMessage => "secp: message was not 32 bytes (do you need to hash?)",
+                Error::InvalidPublicKey => "secp: malformed public key",
+                Error::InvalidSignature => "secp: malformed signature",
+                Error::InvalidSecretKey => "secp: malformed or out-of-range secret key",
+                Error::InvalidRecoveryId => "secp: bad recovery id",
+                Error::InvalidInputLength => "secp: bad input length",
+                Error::InvalidTweak => "secp: bad tweak",
+            }
+        }
+    }
+
+    impl fmt::Display for Error {
+        fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            f.write_str(self.as_str())
+        }
+    }
+
+    impl error::Error for Error {
+    }
 
     /// Marker trait for indicating that an instance of `Secp256k1` can be used for signing.
     pub trait Signing {}
@@ -311,6 +390,7 @@ mod pure_rust {
                 secp256k1_r::PublicKey::parse_slice(data, None)
                     .map(|x| x.serialize())
                     .map(PublicKey)
+                    .map_err(Error::from)
             }
 
             pub fn serialize(&self) -> [u8; super::constants::PUBLIC_KEY_SIZE] {
@@ -328,7 +408,8 @@ mod pure_rust {
 
                 let mut pk = secp256k1_r::PublicKey::from(self.clone());
 
-                pk.tweak_add_assign(&secp256k1_r::SecretKey::parse_slice(other)?)?;
+                pk.tweak_add_assign(&secp256k1_r::SecretKey::parse_slice(other)?)
+                    .map_err(Error::from)?;
                 self.0.clone_from_slice(&pk.serialize()[..]);
                 Ok(())
             }
@@ -344,7 +425,8 @@ mod pure_rust {
 
                 let mut pk = secp256k1_r::PublicKey::from(self.clone());
 
-                pk.tweak_mul_assign(&secp256k1_r::SecretKey::parse_slice(other)?)?;
+                pk.tweak_mul_assign(&secp256k1_r::SecretKey::parse_slice(other)?)
+                    .map_err(Error::from)?;
                 self.0.clone_from_slice(&pk.serialize()[..]);
                 Ok(())
             }
