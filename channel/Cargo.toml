@@ -11,7 +11,7 @@ name = "channel"
 
 [dependencies]
 rand = "0.6"
-secp256k1 = "0.12"
+secp256k1 = { path = "../secp256k1" }
 hex = "0.3"
-bitcoin = "0.18"
+bitcoin = { path = "../bitcoin" }
 bitcoin_hashes = "0.3"
