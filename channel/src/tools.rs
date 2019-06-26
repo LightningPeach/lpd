@@ -16,8 +16,9 @@ use bitcoin::consensus::serialize;
 
 use secp256k1::{SecretKey, PublicKey, Signature};
 
-pub const OP_CHECKSEQUENCEVERIFY: bitcoin::blockdata::opcodes::All = OP_NOP3;
-pub const OP_CHECKLOCKTIMEVERIFY: bitcoin::blockdata::opcodes::All = OP_NOP2;
+/// TODO: is it correct?
+const OP_CHECKSEQUENCEVERIFY: bitcoin::blockdata::opcodes::All = OP_NOP;
+const OP_CHECKLOCKTIMEVERIFY: bitcoin::blockdata::opcodes::All = OP_NOP;
 
 pub fn s2dh256(s: &str) -> sha256d::Hash {
     match sha256d::Hash::from_hex(s) {
@@ -332,9 +333,9 @@ pub fn spending_witness_2x2_multisig(pk1: &PublicKey, pk2: &PublicKey, sig1: &Si
     witness.push(vec![]);
 
     // We need to add SIGHASH_ALL to signatures
-    let mut sig1_ser = sig1.serialize_der();
+    let mut sig1_ser = sig1.serialize_der().as_ref().to_vec();
     sig1_ser.push(1);
-    let mut sig2_ser = sig2.serialize_der();
+    let mut sig2_ser = sig2.serialize_der().as_ref().to_vec();
     sig2_ser.push(1);
 
     if pk1.serialize()[..] < pk2.serialize()[..] {
