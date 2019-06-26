@@ -208,6 +208,16 @@ mod pure_rust {
         }
     }
 
+    impl<C: Signing> Secp256k1<C> {
+        /// Constructs a signature for `msg` using the secret key `sk` and RFC6979 nonce
+        /// Requires a signing-capable context.
+        pub fn sign(&self, msg: &Message, sk: &key::SecretKey) -> Signature {
+            let sk: secp256k1_r::SecretKey = sk.clone().into();
+            let message = secp256k1_r::Message::parse(&msg.0);
+            Signature(secp256k1_r::sign(&message, &sk).unwrap().0)
+        }
+    }
+
     pub mod constants {
         /// The size (in bytes) of a message
         pub const MESSAGE_SIZE: usize = secp256k1_r::util::MESSAGE_SIZE;
