@@ -482,7 +482,7 @@ mod tests {
         let sig_type = 1_u8; // SIGHASH_ALL
         let tx_sig_hash = tx.signature_hash(0, &p2pkh(&pk), sig_type as u32);
         let sig = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &sk);
-        let mut sig_serialised = sig.serialize_der();
+        let mut sig_serialised = sig.serialize_der().as_ref().to_vec();
         assert_eq!(hex::encode(&sig_serialised), "304502210090587b6201e166ad6af0227d3036a9454223d49a1f11839c1a362184340ef0240220577f7cd5cca78719405cbf1de7414ac027f0239ef6e214c90fcaab0454d84b3b");
         // We need to add sigtype to the end of the signature
         sig_serialised.push(sig_type);
@@ -582,12 +582,12 @@ mod tests {
         let sec = Secp256k1::new();
         let tx_sig_hash = bip143::SighashComponents::new(&tx).sighash_all(&tx.input[0], &funding_lock_script, ex.funding_amount_satoshi as u64);
         let sig_local = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &ex.local_funding_privkey);
-        let mut sig_local_serialised = sig_local.serialize_der();
+        let mut sig_local_serialised = sig_local.serialize_der().as_ref().to_vec();
         assert_eq!(hex::encode(&sig_local_serialised), "3044022051b75c73198c6deee1a875871c3961832909acd297c6b908d59e3319e5185a46022055c419379c5051a78d00dbbce11b5b664a0c22815fbcc6fcef6b1937c3836939");
         sig_local_serialised.push(1);
 
         let sig_remote = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &ex.internal.remote_funding_privkey);
-        let mut sig_remote_serialised = sig_remote.serialize_der();
+        let mut sig_remote_serialised = sig_remote.serialize_der().as_ref().to_vec();
         assert_eq!(hex::encode(&sig_remote_serialised), "3045022100f51d2e566a70ba740fc5d8c0f07b9b93d2ed741c3c0860c613173de7d39e7968022041376d520e9c0e1ad52248ddf4b22e12be8763007df977253ef45a4ca3bdb7c0");
         sig_remote_serialised.push(1);
 
@@ -713,12 +713,12 @@ mod tests {
         let sec = Secp256k1::new();
         let tx_sig_hash = bip143::SighashComponents::new(&tx).sighash_all(&tx.input[0], &funding_lock_script, ex.funding_amount_satoshi as u64);
         let sig_local = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &ex.local_funding_privkey);
-        let mut sig_local_serialised = sig_local.serialize_der();
+        let mut sig_local_serialised = sig_local.serialize_der().as_ref().to_vec();
         assert_eq!(hex::encode(&sig_local_serialised), "30440220275b0c325a5e9355650dc30c0eccfbc7efb23987c24b556b9dfdd40effca18d202206caceb2c067836c51f296740c7ae807ffcbfbf1dd3a0d56b6de9a5b247985f06");
         sig_local_serialised.push(1);
 
         let sig_remote = sec.sign(&Message::from_slice(&tx_sig_hash.into_inner()[..]).unwrap(), &ex.internal.remote_funding_privkey);
-        let mut sig_remote_serialised = sig_remote.serialize_der();
+        let mut sig_remote_serialised = sig_remote.serialize_der().as_ref().to_vec();
         assert_eq!(hex::encode(&sig_remote_serialised), "304402204fd4928835db1ccdfc40f5c78ce9bd65249b16348df81f0c44328dcdefc97d630220194d3869c38bc732dd87d13d2958015e2fc16829e74cd4377f84d215c0b70606");
         sig_remote_serialised.push(1);
 
