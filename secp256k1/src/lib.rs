@@ -559,6 +559,13 @@ mod pure_rust {
 
                 pk.serialize()
             }
+
+            pub fn combine(&self, other: &PublicKey) -> Result<PublicKey, Error> {
+                let pk = secp256k1_r::PublicKey::from(self.clone());
+                let other = secp256k1_r::PublicKey::from(other.clone());
+
+                Ok(PublicKey(secp256k1_r::PublicKey::combine(&[pk, other])?.serialize()))
+            }
         }
     }
 }
