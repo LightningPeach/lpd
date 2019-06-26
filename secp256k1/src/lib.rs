@@ -476,7 +476,7 @@ mod pure_rust {
             }
 
             pub fn serialize_uncompressed(&self) -> [u8; super::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE] {
-                let mut pk = secp256k1_r::PublicKey::from(self.clone());
+                let pk = secp256k1_r::PublicKey::from(self.clone());
 
                 pk.serialize()
             }
