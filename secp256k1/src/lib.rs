@@ -200,7 +200,7 @@ mod pure_rust {
         phantom: PhantomData<C>
     }
 
-    impl<C> Secp256k1<C> {
+    impl Secp256k1<All> {
         pub fn new() -> Self {
             Secp256k1 {
                 phantom: PhantomData,
