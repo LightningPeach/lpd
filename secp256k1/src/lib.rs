@@ -146,7 +146,7 @@ mod pure_rust {
     }
 
     pub mod key {
-        use std::{fmt, ops};
+        use std::{{fmt, ops}, cmp::Ordering, hash::{Hash, Hasher}};
         use super::{Error, Secp256k1};
         use crate::{Signing, Verification};
 
@@ -279,6 +279,27 @@ mod pure_rust {
         impl Eq for PublicKey {
         }
 
+        impl PartialOrd for PublicKey {
+            fn partial_cmp(&self, other: &PublicKey) -> Option<Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        impl Ord for PublicKey {
+            fn cmp(&self, other: &Self) -> Ordering {
+                self.0.iter().zip(other.0.iter())
+                    .fold(Ordering::Equal, |r, (a, b)| {
+                        r.then(a.cmp(b))
+                    })
+            }
+        }
+
+        impl Hash for PublicKey {
+            fn hash<H: Hasher>(&self, state: &mut H) {
+                state.write(&self.0[..])
+            }
+        }
+
         impl PublicKey {
             pub fn from_secret_key<C: Signing>(_secp: &Secp256k1<C>, sk: &SecretKey) -> PublicKey {
                 let sk = sk.clone().into();
@@ -328,6 +349,11 @@ mod pure_rust {
                 Ok(())
             }
 
+            pub fn serialize_uncompressed(&self) -> [u8; super::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE] {
+                let mut pk = secp256k1_r::PublicKey::from(self.clone());
+
+                pk.serialize()
+            }
         }
     }
 }
