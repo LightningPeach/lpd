@@ -103,7 +103,7 @@ mod pure_rust {
 
         impl SharedSecret {
             pub fn new(point: &PublicKey, scalar: &SecretKey) -> SharedSecret {
-                SharedSecret(secp256k1_r::SharedSecret::new(&point.0, &scalar.clone().into()).unwrap())
+                SharedSecret(secp256k1_r::SharedSecret::new(&point.clone().into(), &scalar.clone().into()).unwrap())
             }
         }
 
@@ -242,31 +242,58 @@ mod pure_rust {
             }
         }
 
-        #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-        pub struct PublicKey(pub(crate) secp256k1_r::PublicKey);
+        #[derive(Copy, Clone)]
+        pub struct PublicKey(pub(crate) [u8; secp256k1_r::util::FULL_PUBLIC_KEY_SIZE]);
+
+        impl From<PublicKey> for secp256k1_r::PublicKey {
+            fn from(v: PublicKey) -> Self {
+                secp256k1_r::PublicKey::parse(&v.0).unwrap()
+            }
+        }
 
         impl fmt::Display for PublicKey {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                for ch in &self.0.serialize()[..] {
+                for ch in &self.0[..] {
                     write!(f, "{:02x}", *ch)?;
                 }
                 Ok(())
             }
         }
 
+        impl fmt::Debug for PublicKey {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                for ch in &self.0[..] {
+                    write!(f, "{:02x}", *ch)?;
+                }
+                Ok(())
+            }
+        }
+
+        impl PartialEq for PublicKey {
+            fn eq(&self, other: &PublicKey) -> bool {
+                self.0.iter().zip(other.0.iter())
+                    .fold(true, |r, (a, b)| r && a.eq(b))
+            }
+        }
+
+        impl Eq for PublicKey {
+        }
+
         impl PublicKey {
             pub fn from_secret_key<C: Signing>(_secp: &Secp256k1<C>, sk: &SecretKey) -> PublicKey {
                 let sk = sk.clone().into();
                 let pk = secp256k1_r::PublicKey::from_secret_key(&sk);
-                PublicKey(pk)
+                PublicKey(pk.serialize())
             }
 
             pub fn from_slice(data: &[u8]) -> Result<PublicKey, Error> {
-                secp256k1_r::PublicKey::parse_slice(data, None).map(PublicKey)
+                secp256k1_r::PublicKey::parse_slice(data, None)
+                    .map(|x| x.serialize())
+                    .map(PublicKey)
             }
 
             pub fn serialize(&self) -> [u8; super::constants::PUBLIC_KEY_SIZE] {
-                self.0.serialize_compressed()
+                secp256k1_r::PublicKey::from(self.clone()).serialize_compressed()
             }
 
             pub fn add_exp_assign<C: Verification>(
@@ -278,7 +305,11 @@ mod pure_rust {
                     return Err(Error::InvalidInputLength);
                 }
 
-                self.0.tweak_add_assign(&secp256k1_r::SecretKey::parse_slice(other)?)
+                let mut pk = secp256k1_r::PublicKey::from(self.clone());
+
+                pk.tweak_add_assign(&secp256k1_r::SecretKey::parse_slice(other)?)?;
+                self.0.clone_from_slice(&pk.serialize()[..]);
+                Ok(())
             }
 
             pub fn mul_assign<C: Verification>(
@@ -290,7 +321,11 @@ mod pure_rust {
                     return Err(Error::InvalidInputLength);
                 }
 
-                self.0.tweak_mul_assign(&secp256k1_r::SecretKey::parse_slice(other)?)
+                let mut pk = secp256k1_r::PublicKey::from(self.clone());
+
+                pk.tweak_mul_assign(&secp256k1_r::SecretKey::parse_slice(other)?)?;
+                self.0.clone_from_slice(&pk.serialize()[..]);
+                Ok(())
             }
 
         }
