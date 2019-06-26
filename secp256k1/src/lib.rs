@@ -12,7 +12,7 @@ pub use self::pure_rust::*;
 #[cfg(target_arch = "wasm32")]
 mod pure_rust {
     use std::marker::PhantomData;
-    use std::{fmt, error};
+    use std::{fmt, error, ops::Deref};
     pub use self::key::*;
     use core::fmt::Pointer;
 
@@ -92,6 +92,85 @@ mod pure_rust {
     }
 
     impl error::Error for Error {
+    }
+
+    #[derive(Clone, PartialEq, Eq)]
+    pub struct Signature(secp256k1_r::Signature);
+
+    /// A DER serialized Signature
+    #[derive(Copy, Clone)]
+    pub struct SerializedSignature {
+        data: [u8; 72],
+        len: usize,
+    }
+
+    impl Default for SerializedSignature {
+        fn default() -> SerializedSignature {
+            SerializedSignature {
+                data: [0u8; 72],
+                len: 0,
+            }
+        }
+    }
+
+    impl PartialEq for SerializedSignature {
+        fn eq(&self, other: &SerializedSignature) -> bool {
+            &self.data[..self.len] == &other.data[..other.len]
+        }
+    }
+
+    impl Eq for SerializedSignature {}
+
+    impl AsRef<[u8]> for SerializedSignature {
+        fn as_ref(&self) -> &[u8] {
+            &self.data[..self.len]
+        }
+    }
+
+    impl Deref for SerializedSignature {
+        type Target = [u8];
+        fn deref(&self) -> &[u8] {
+            &self.data[..self.len]
+        }
+    }
+
+    impl Signature {
+        pub fn from_der(data: &[u8]) -> Result<Signature, Error> {
+            secp256k1_r::Signature::parse_der(data)
+                .map(Signature)
+                .map_err(Error::from)
+        }
+
+        pub fn serialize_der(&self) -> SerializedSignature {
+            let array = self.0.serialize_der();
+            let mut data = [0; 72];
+            data[0..array.len()].copy_from_slice(array.as_ref());
+
+            SerializedSignature {
+                data: data,
+                len: array.len(),
+            }
+        }
+    }
+
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+    pub struct Message([u8; constants::MESSAGE_SIZE]);
+
+    impl Message {
+        pub fn from_slice(data: &[u8]) -> Result<Message, Error> {
+            if data == [0; constants::MESSAGE_SIZE] {
+                return Err(Error::InvalidMessage);
+            }
+
+            match data.len() {
+                constants::MESSAGE_SIZE => {
+                    let mut ret = [0; constants::MESSAGE_SIZE];
+                    ret[..].copy_from_slice(data);
+                    Ok(Message(ret))
+                }
+                _ => Err(Error::InvalidMessage)
+            }
+        }
     }
 
     /// Marker trait for indicating that an instance of `Secp256k1` can be used for signing.
