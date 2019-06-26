@@ -225,9 +225,34 @@ mod pure_rust {
     }
 
     pub mod key {
-        use std::{{fmt, ops}, cmp::Ordering, hash::{Hash, Hasher}};
+        use std::{{fmt, ops}, cmp::Ordering, hash::{Hash, Hasher}, str};
         use super::{Error, Secp256k1};
         use crate::{Signing, Verification};
+
+        // copy-paste from secp256k1_c
+        fn from_hex(hex: &str, target: &mut [u8]) -> Result<usize, ()> {
+            if hex.len() % 2 == 1 || hex.len() > target.len() * 2 {
+                return Err(());
+            }
+
+            let mut b = 0;
+            let mut idx = 0;
+            for c in hex.bytes() {
+                b <<= 4;
+                match c {
+                    b'A'...b'F' => b |= c - b'A' + 10,
+                    b'a'...b'f' => b |= c - b'a' + 10,
+                    b'0'...b'9' => b |= c - b'0',
+                    _ => return Err(()),
+                }
+                if (idx & 1) == 1 {
+                    target[idx / 2] = b;
+                    b = 0;
+                }
+                idx += 1;
+            }
+            Ok(idx / 2)
+        }
 
         #[derive(Debug, Copy, Clone, Eq, PartialEq)]
         pub struct SecretKey(pub(crate) [u8; secp256k1_r::util::SECRET_KEY_SIZE]);
@@ -376,6 +401,25 @@ mod pure_rust {
         impl Hash for PublicKey {
             fn hash<H: Hasher>(&self, state: &mut H) {
                 state.write(&self.0[..])
+            }
+        }
+
+        impl str::FromStr for PublicKey {
+            type Err = Error;
+
+            fn from_str(s: &str) -> Result<PublicKey, Error> {
+                let mut res = [0; super::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE];
+                match from_hex(s, &mut res) {
+                    Ok(super::constants::PUBLIC_KEY_SIZE) => {
+                        PublicKey::from_slice(
+                            &res[0..super::constants::PUBLIC_KEY_SIZE]
+                        )
+                    }
+                    Ok(super::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE) => {
+                        PublicKey::from_slice(&res)
+                    }
+                    _ => Err(Error::InvalidPublicKey)
+                }
             }
         }
 
