@@ -13,10 +13,29 @@ features = ["rand"]
 package = "libsecp256k1"
 version = "0.2"
 
-[dependencies.rand]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.rand]
 version = "0.6"
 optional = true
 default-features = false
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.rand]
+version = "0.6"
+optional = true
+default-features = false
+features = ["wasm-bindgen"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.wasm-bindgen]
+version = "0.2"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies.wasm-bindgen-test]
+version = "0.2"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies.rand]
+version = "0.6"
+features = ["wasm-bindgen"]
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies.rand_core]
+version = "0.4"
 
 [features]
 fuzztarget = ["secp256k1-c/fuzztarget"]
