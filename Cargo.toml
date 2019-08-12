@@ -25,7 +25,6 @@ members = [
     "internal-event",
     "wire-compatibility",
     "cmd/dump-reader",
-    "secp256k1",
 ]
 exclude = ["electrs"]
 
@@ -60,14 +59,14 @@ wallet = { path = "wallet" }
 routing = { path = "routing" }
 
 rand = "0.5.4"
-secp256k1 = "0.12"
+secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust" }
 hex = "0.3.2"
-hex-literal = "0.1.1"
+hex-literal = "0.2"
 tokio = "0.1.11"
 futures = "0.1.25"
 
-bitcoin = "0.18"
-bitcoin_hashes = "0.3"
+bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
+bitcoin_hashes = "0.7"
 
 serde = "1.0"
 

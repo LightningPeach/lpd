@@ -94,7 +94,7 @@ impl AsRef<Signature> for RawSignature {
 impl RawSignature {
     // use der encoding
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.0.serialize_der()
+        self.0.serialize_der().to_vec()
     }
 
     // use der encoding

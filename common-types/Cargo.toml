@@ -10,8 +10,8 @@ rand = "0.6"
 sha2 = "0.8"
 digest = "0.8"
 hex = "0.3"
-hex-literal = "0.1"
-secp256k1 = { version = "0.12", features = ["serde"] }
+hex-literal = "0.2"
+secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust" }
 binformat = { path = "../binformat" }
 
 [features]

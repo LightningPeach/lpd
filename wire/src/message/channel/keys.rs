@@ -90,11 +90,11 @@ impl ChannelPrivateKeys {
 
 mod rand_m {
     use super::ChannelPrivateKeys;
-    use rand::Rand;
+    use rand::distributions::{Distribution, Standard};
     use rand::Rng;
 
-    impl Rand for ChannelPrivateKeys {
-        fn rand<R: Rng>(rng: &mut R) -> Self {
+    impl Distribution<ChannelPrivateKeys> for Standard {
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ChannelPrivateKeys {
             use secp256k1::SecretKey;
 
             ChannelPrivateKeys {
