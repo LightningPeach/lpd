@@ -13,12 +13,12 @@ tls-api-native-tls = "0.1.2"
 httpbis = "0.7.*"
 native-tls = "0.2"
 ctrlc = "3.1"
-secp256k1 = "0.12"
+secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust" }
 hex = "0.3"
 
 futures = "0.1"
 
-bitcoin = "0.18"
+bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
 
 implementation = { path = "../implementation" }
 connection = { path = "../../connection" }

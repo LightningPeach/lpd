@@ -22,14 +22,13 @@ version = "1.5"
 [dependencies.channel]
 path = "../channel"
 
-[dependencies.bitcoin]
-version = "0.18"
-
 [dependencies.secp256k1]
-version = "0.12"
+package = "secp256k1-pure-rust"
+git = "https://github.com/LightningPeach/secp256k1-wrapper.git"
 
 [dependencies.rand]
-version = "0.4"
+version = "0.6"
 
-[dependencies.bitcoin_hashes]
-version = "0.3"
+[dependencies]
+bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
+bitcoin_hashes = "0.7"

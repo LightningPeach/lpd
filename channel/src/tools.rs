@@ -11,7 +11,7 @@ use bitcoin::blockdata::opcodes::all::*;
 
 use bitcoin::consensus::encode::Decodable;
 
-use bitcoin::consensus::{Encodable, Encoder};
+use bitcoin::consensus::Encodable;
 use bitcoin::consensus::serialize;
 
 use secp256k1::{SecretKey, PublicKey, Signature};
