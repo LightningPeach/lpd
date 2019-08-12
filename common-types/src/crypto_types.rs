@@ -21,6 +21,12 @@ impl From<PublicKey> for RawPublicKey {
     }
 }
 
+impl std::fmt::Display for RawPublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "RawPublicKey({})", self.to_hex())
+    }
+}
+
 impl std::fmt::Debug for RawPublicKey {
     // use compact format, same as as to_hex()
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

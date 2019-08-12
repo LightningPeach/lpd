@@ -15,6 +15,7 @@ use state::{DB, DBValue};
 
 use super::channel::{ChannelParties, ChannelLinks, ChannelRef, Side};
 use super::tools::GenericSystem;
+use common_types::RawPublicKey;
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub struct NodeRef(pub Entity);
@@ -25,7 +26,7 @@ pub struct NodeLinks(pub Vec<ChannelRef>);
 #[derive(Component, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
     timestamp: u32,
-    node_id: PublicKey,
+    node_id: RawPublicKey,
     color: Color,
     alias: NodeAlias,
     address: Vec<Address>,
@@ -33,7 +34,7 @@ pub struct Node {
 
 impl Node {
     pub fn id(&self) -> PublicKey {
-        self.node_id.clone()
+        self.node_id.0.clone()
     }
 }
 
@@ -74,7 +75,7 @@ impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
 
             let node = Node {
                 timestamp: announcement_node.timestamp,
-                node_id: announcement_node.node_id.0,
+                node_id: announcement_node.node_id,
                 color: announcement_node.color,
                 alias: announcement_node.alias,
                 address: announcement_node.address.0,
@@ -88,7 +89,7 @@ impl<'a> System<'a> for GenericSystem<AnnouncementNode, ()> {
                 let mut links = NodeLinks(Vec::new());
 
                 for (entity, parties, mut channel_links) in (entities, &channel_parties, &mut channel_links).join() {
-                    match parties.other(&id) {
+                    match parties.other(&id.0) {
                         Some(side) => {
                             let node_ref = NodeRef(node_ref);
                             match side {
