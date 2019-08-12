@@ -11,7 +11,10 @@ name = "channel"
 
 [dependencies]
 rand = "0.6"
-secp256k1 = { path = "../secp256k1" }
 hex = "0.3"
-bitcoin = { path = "../bitcoin" }
+bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
 bitcoin_hashes = "0.3"
+
+[dependencies.secp256k1]
+git = "https://github.com/LightningPeach/secp256k1-wrapper.git"
+package = "secp256k1-pure-rust"
