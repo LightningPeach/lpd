@@ -12,7 +12,7 @@ grpc = "0.6"
 futures = "0.1"
 lazycell = "1.2"
 hex = "0.3"
-bitcoin_rpc_client = { git = "https://github.com/LightningPeach/bitcoinrpc-rust-client" }
-bitcoin = "0.18"
+bitcoin_rpc_client = { gitz = "https://github.com/LightningPeach/bitcoinrpc-rust-client.git", package = "bitcoincore-rpc" }
+bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
 client = { path = "../rpc/client" }
 interface = { path = "../rpc/interface" }
