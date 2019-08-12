@@ -8,4 +8,4 @@ edition = "2018"
 bincode = { path = "../bincode" }
 flate2 = "1.0"
 serde = "1.0"
-secp256k1 = { version = "0.12", optional = true }
+secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust",optional = true }
