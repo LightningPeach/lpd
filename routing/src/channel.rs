@@ -17,6 +17,8 @@ use super::node::{NodeRef, Node, NodeLinks};
 
 use serde_derive::{Serialize, Deserialize};
 
+use common_types::RawPublicKey;
+
 #[derive(Component, Eq, PartialEq)]
 pub struct Peer {
     id: PublicKey,
@@ -43,8 +45,8 @@ pub struct ChannelId {
 
 #[derive(Component, Clone, Debug, Serialize, Deserialize)]
 pub struct ChannelParties {
-    lightning: (PublicKey, PublicKey),
-    origin: (PublicKey, PublicKey),
+    lightning: (RawPublicKey, RawPublicKey),
+    origin: (RawPublicKey, RawPublicKey),
 }
 
 pub enum Side {
@@ -58,9 +60,9 @@ pub enum Side {
 
 impl ChannelParties {
     pub fn other(&self, id: &PublicKey) -> Option<Side> {
-        match (self.lightning.0.eq(id), self.lightning.1.eq(id)) {
-            (true, _) => Some(Side::Left { other: self.lightning.1.clone() }),
-            (_, true) => Some(Side::Right { other: self.lightning.0.clone() }),
+        match ((self.lightning.0).0.eq(id), (self.lightning.1).0.eq(id)) {
+            (true, _) => Some(Side::Left { other: (self.lightning.1).0.clone() }),
+            (_, true) => Some(Side::Right { other: (self.lightning.0).0.clone() }),
             _ => None,
         }
     }
@@ -177,10 +179,10 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
                 short_channel_id: announcement_channel.id().clone(),
             };
 
-            let n_id_left = announcement_channel.node_id.0.as_ref().clone();
-            let n_id_right = announcement_channel.node_id.1.as_ref().clone();
-            let b_id_left = announcement_channel.bitcoin_key.0.as_ref().clone();
-            let b_id_right = announcement_channel.bitcoin_key.1.as_ref().clone();
+            let n_id_left = announcement_channel.node_id.0.clone();
+            let n_id_right = announcement_channel.node_id.1.clone();
+            let b_id_left = announcement_channel.bitcoin_key.0.clone();
+            let b_id_right = announcement_channel.bitcoin_key.1.clone();
 
             let this_parties = ChannelParties {
                 lightning: (n_id_left, n_id_right),
@@ -199,16 +201,16 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
             if let Some(shell_blacklist_channel_parties) = shell_blacklist_channel_parties {
                 let shell_blacklist_id = |id: &PublicKey| -> bool {
                     false
-                        || id.eq(&shell_blacklist_channel_parties.lightning.0)
-                        || id.eq(&shell_blacklist_channel_parties.lightning.1)
-                        || id.eq(&this_parties.lightning.0)
-                        || id.eq(&this_parties.lightning.1)
+                        || id.eq(&(shell_blacklist_channel_parties.lightning.0).0)
+                        || id.eq(&(shell_blacklist_channel_parties.lightning.1).0)
+                        || id.eq(&(this_parties.lightning.0).0)
+                        || id.eq(&(this_parties.lightning.1).0)
                 };
                 let shell_blacklist_peer = |peer: &Peer| shell_blacklist_id(&peer.id);
                 let shell_blacklist_channel = |parties: &ChannelParties| -> bool {
                     false
-                        || shell_blacklist_id(&parties.lightning.0)
-                        || shell_blacklist_id(&parties.lightning.1)
+                        || shell_blacklist_id(&(parties.lightning.0).0)
+                        || shell_blacklist_id(&(parties.lightning.1).0)
                 };
 
                 for (entity, peer) in (entities, &mut peer).join() {
@@ -235,10 +237,10 @@ impl<'a> System<'a> for GenericSystem<AnnouncementChannel, ()> {
             // try link
             let mut links = ChannelLinks::default();
             for (entity, node, node_links) in (entities, &node, &mut node_links).join() {
-                if node.id() == this_parties.lightning.0.clone() {
+                if node.id() == this_parties.lightning.0.as_ref().clone() {
                     links.0 = Some(NodeRef(entity));
                 }
-                if node.id() == this_parties.lightning.1.clone() {
+                if node.id() == this_parties.lightning.1.as_ref().clone() {
                     links.1 = Some(NodeRef(entity));
                 }
                 node_links.0.push(ChannelRef(channel_ref));
@@ -277,12 +279,12 @@ impl<'a> System<'a> for GenericSystem<UpdateChannel, ()> {
                 if update_channel.as_ref_content().id().eq(&id.short_channel_id)
                     && update_channel.as_ref_content().hash().eq(&id.hash) {
                     let (r0, r1) = (
-                        update_channel.check(&context, &parties.lightning.0),
-                        update_channel.check(&context, &parties.lightning.1),
+                        update_channel.check(&context, &parties.lightning.0.as_ref()),
+                        update_channel.check(&context, &parties.lightning.1.as_ref()),
                     );
                     let update_channel = match (r0, r1) {
-                        (Ok(()), _) => update_channel.verify(&context, &parties.lightning.0).unwrap().0,
-                        (_, Ok(())) => update_channel.verify(&context, &parties.lightning.1).unwrap().0,
+                        (Ok(()), _) => update_channel.verify(&context, &parties.lightning.0.as_ref()).unwrap().0,
+                        (_, Ok(())) => update_channel.verify(&context, &parties.lightning.1.as_ref()).unwrap().0,
                         _ => break,
                     };
                     history.records.push(ChannelPolicy {
