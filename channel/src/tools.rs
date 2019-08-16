@@ -18,10 +18,6 @@ use bitcoin::consensus::serialize;
 
 use secp256k1::{SecretKey, PublicKey, Signature};
 
-/// TODO: is it correct?
-const OP_CHECKSEQUENCEVERIFY: bitcoin::blockdata::opcodes::All = OP_NOP;
-const OP_CHECKLOCKTIMEVERIFY: bitcoin::blockdata::opcodes::All = OP_NOP;
-
 pub fn s2dh256(s: &str) -> sha256d::Hash {
     match sha256d::Hash::from_hex(s) {
         Ok(h) => return h,
@@ -167,7 +163,7 @@ pub fn to_local_script(local_delayedpubkey: &PublicKey, to_self_delay: u64, revo
         .push_slice(&revocationpubkey.serialize())
         .push_opcode(OP_ELSE)
         .push_int(to_self_delay as i64)
-        .push_opcode(OP_CHECKSEQUENCEVERIFY)
+        .push_opcode(OP_CSV)
         .push_opcode(OP_DROP)
         .push_slice(&local_delayedpubkey.serialize())
         .push_opcode(OP_ENDIF)
@@ -293,7 +289,7 @@ pub fn accepted_htlc(revocationpubkey: &PublicKey, remote_htlcpubkey: &PublicKey
                 // # To remote node after timeout.
                 .push_opcode(OP_DROP)
                 .push_int(cltv_expiry as i64)
-                .push_opcode(OP_CHECKLOCKTIMEVERIFY)
+                .push_opcode(OP_CLTV)
                 .push_opcode(OP_DROP)
                 .push_opcode(OP_CHECKSIG)
             .push_opcode(OP_ENDIF)
