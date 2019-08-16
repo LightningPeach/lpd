@@ -214,7 +214,7 @@ mod tests {
     use binformat::BinarySD;
     use super::*;
 
-    use hex;
+    use dependencies::hex;
 
     #[test]
     fn deserialize_init() {

@@ -1,5 +1,7 @@
-use bitcoin;
-use hex;
+use dependencies::hex;
+use dependencies::bitcoin;
+use dependencies::bitcoin_hashes;
+use dependencies::secp256k1;
 
 use bitcoin_hashes::{sha256, sha256d, hash160, ripemd160};
 use bitcoin_hashes::Hash;
@@ -354,8 +356,11 @@ pub fn spending_witness_2x2_multisig(pk1: &PublicKey, pk2: &PublicKey, sig1: &Si
 
 #[cfg(test)]
 mod tests {
+    use dependencies::hex;
+    use dependencies::bitcoin;
+    use dependencies::bitcoin_hashes;
+    use dependencies::secp256k1;
 
-    use hex;
     use super::{spending_witness_2x2_multisig, s2sig, sha256, accepted_htlc, offered_htlc, assert_tx_eq, to_local_script, s2script, s2tx, new_2x2_multisig, new_2x2_wsh_lock_script, s2pubkey, v0_p2wpkh, s2dh256, p2pkh, p2pkh_unlock_script, get_obscuring_number, get_locktime, get_sequence};
     use super::super::spec_example::get_example;
     use secp256k1::{Secp256k1, SecretKey, PublicKey, Message};

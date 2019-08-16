@@ -5,18 +5,9 @@ authors = ["LightningPeach <contact@lightningpeach.com>"]
 edition = "2018"
 
 [dependencies]
-hex = "0.3"
-secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust", features = ["rand"] }
-hmac = "0.7"
-chacha = "0.3"
-bytes = "0.4"
-sha2 = "0.8.0"
 serde = { version = "1.0", features = ["derive"] }
-
+dependencies = { path = "../dependencies" }
 wire = { path = "../wire" }
 binformat = { path = "../binformat" }
 common-types = { path = "../common-types" }
 
-[dev-dependencies]
-rand = "0.6"
-wire = { path = "../wire", features = ["testing"] }

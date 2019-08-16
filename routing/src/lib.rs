@@ -6,5 +6,6 @@ mod node;
 mod channel;
 mod tools;
 
+use dependencies::rocksdb;
 pub use self::graph_state::{State, SharedState};
 pub use rocksdb::Error as DBError;

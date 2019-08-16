@@ -1,3 +1,8 @@
+use dependencies::grpc;
+use dependencies::futures;
+use dependencies::hex;
+use dependencies::secp256k1;
+
 use grpc::{rt::ServerServiceDefinition, RequestOptions, SingleResponse};
 use grpc::Error;
 use interface::routing_grpc::{RoutingServiceServer, RoutingService};

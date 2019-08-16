@@ -1,3 +1,6 @@
+use dependencies::secp256k1;
+use dependencies::tokio;
+
 use tokio::io;
 use tokio::codec::{Decoder, Framed};
 use tokio::prelude::Future;

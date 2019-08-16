@@ -1,3 +1,9 @@
+use dependencies::hex;
+use dependencies::hex_literal;
+use dependencies::rand;
+use dependencies::secp256k1;
+use dependencies::sha2;
+
 use hex as hex_mod;
 use std::error::Error;
 use serde::{Serialize, Deserialize};
@@ -71,6 +77,7 @@ impl<'a> From<&'a [&'a [u8]]> for Hash256 {
 
 mod debug {
     use super::Hash256;
+    use super::hex;
 
     use std::fmt;
 
@@ -90,7 +97,7 @@ mod debug {
 
 mod secp256k1_m {
     use super::Hash256;
-    use secp256k1::Message;
+    use super::secp256k1::Message;
 
     impl From<Hash256> for Message {
         fn from(v: Hash256) -> Self {
@@ -102,6 +109,7 @@ mod secp256k1_m {
 #[cfg(any(test, feature = "testing"))]
 mod rand_m {
     use super::Hash256;
+    use super::rand;
 
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;

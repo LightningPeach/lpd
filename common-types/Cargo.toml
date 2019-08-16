@@ -6,12 +6,7 @@ edition = "2018"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-rand = "0.6"
-sha2 = "0.8"
-digest = "0.8"
-hex = "0.3"
-hex-literal = "0.2"
-secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust" }
+dependencies = { path = "../dependencies" }
 binformat = { path = "../binformat" }
 
 [features]

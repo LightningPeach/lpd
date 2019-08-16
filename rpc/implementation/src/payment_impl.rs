@@ -1,3 +1,5 @@
+use dependencies::grpc;
+
 use grpc::{rt::ServerServiceDefinition, RequestOptions, SingleResponse, StreamingRequest, StreamingResponse};
 use interface::payment_grpc::{PaymentServiceServer, PaymentService};
 use interface::payment::{

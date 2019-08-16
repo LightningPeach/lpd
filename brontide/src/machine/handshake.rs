@@ -1,4 +1,12 @@
 use std::{io, fmt, error, sync::{RwLock, Arc}};
+
+use dependencies::rand;
+use dependencies::chacha20_poly1305_aead;
+use dependencies::hex;
+use dependencies::secp256k1;
+use dependencies::tokio;
+use dependencies::bytes;
+
 use tokio::timer::timeout;
 use secp256k1::{Secp256k1, SignOnly, VerifyOnly, SecretKey, PublicKey, Error as EcdsaError};
 use super::cipher_state::CipherState;

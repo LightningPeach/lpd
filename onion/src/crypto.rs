@@ -1,3 +1,7 @@
+use dependencies::chacha;
+use dependencies::sha2;
+use dependencies::hmac;
+
 use common_types::Hash256;
 use chacha::{ChaCha, KeyStream};
 use std::ops::BitXorAssign;

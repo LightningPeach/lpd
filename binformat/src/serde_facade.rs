@@ -1,3 +1,5 @@
+use serde;
+
 use serde::{Serialize, Serializer, Deserialize, Deserializer, de::DeserializeOwned};
 use bincode::{Error, LengthSDOptions, config};
 

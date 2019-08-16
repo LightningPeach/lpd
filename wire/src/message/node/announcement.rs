@@ -218,6 +218,9 @@ mod serde_m {
 
 #[cfg(test)]
 mod tests {
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use super::*;
 
     use binformat::BinarySD;

@@ -1,4 +1,5 @@
 use std::error::Error;
+use dependencies::hex;
 pub const ONION_PACKET_SIZE: usize = 1366;
 
 #[derive(Clone)]
@@ -105,6 +106,8 @@ mod debug {
     use std::fmt::Debug;
     use std::fmt::Formatter;
     use std::fmt::Result;
+
+    use dependencies::hex;
 
     impl Debug for OnionBlob {
         fn fmt(&self, f: &mut Formatter) -> Result {

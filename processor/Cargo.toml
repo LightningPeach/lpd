@@ -5,9 +5,7 @@ authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
 edition = "2018"
 
 [dependencies]
-either = "1.5"
-tokio = "0.1"
-futures = "0.1"
+dependencies = { path = "../dependencies" }
 binformat = { path = "../binformat" }
 wire = { path = "../wire" }
 internal-event = { path = "../internal-event" }

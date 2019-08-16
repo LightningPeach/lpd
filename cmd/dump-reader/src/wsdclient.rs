@@ -3,6 +3,7 @@
 
 use std::borrow::ToOwned;
 
+use dependencies::reqwest;
 use serde::{Serialize, Deserialize};
 
 use std::error::Error;

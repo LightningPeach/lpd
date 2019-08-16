@@ -1,3 +1,5 @@
+use dependencies::hex;
+
 use super::ChannelId;
 use super::Hash256;
 use super::MilliSatoshi;
@@ -131,6 +133,9 @@ pub struct UpdateFee {
 
 #[cfg(test)]
 mod test {
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use binformat::BinarySD;
     use crate::message::channel::ChannelId;
     use crate::message::channel::operation::{UpdateFulfillHtlc, HtlcId, u8_32_from_hex};

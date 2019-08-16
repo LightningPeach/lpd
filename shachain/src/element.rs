@@ -1,5 +1,8 @@
+use dependencies::sha2;
+use dependencies::hex;
+
 use sha2::{Sha256, Digest};
-use hex;
+
 
 use std::error::Error;
 

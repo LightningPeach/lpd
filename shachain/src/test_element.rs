@@ -1,4 +1,4 @@
-use hex;
+use dependencies::hex;
 
 use crate::element::{Element, Index, ROOT_INDEX};
 

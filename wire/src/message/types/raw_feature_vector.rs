@@ -1,6 +1,8 @@
 use std::error::Error;
 use std::collections::HashSet;
 
+use dependencies::hex;
+
 use serde::Serialize;
 use serde::Serializer;
 use serde::Deserialize;
@@ -163,6 +165,8 @@ mod debug {
 
 #[cfg(test)]
 mod test {
+    use dependencies::rand;
+
     use super::RawFeatureVector;
     use super::FeatureBit;
 
@@ -182,7 +186,7 @@ mod test {
         BinarySD::serialize(&mut data, &feature_vector).unwrap();
 
         println!("{:?}", data);
-        data.append(&mut thread_rng().gen_iter().take(10).collect());
+        data.append(&mut vec![0, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
         println!("{:?} added additional bytes", data);
         let new_feature_vector = BinarySD::deserialize(&data[..]).unwrap();
 

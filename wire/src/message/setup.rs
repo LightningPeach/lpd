@@ -32,6 +32,9 @@ pub struct Error {
 mod test {
     use binformat::BinarySD;
 
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use super::Init;
     use super::super::types::RawFeatureVector;
     use super::super::types::FeatureBit;

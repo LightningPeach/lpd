@@ -1,17 +1,16 @@
-extern crate bitcoin;
-extern crate zmq;
-extern crate bitcoin_rpc_client;
-extern crate futures;
-extern crate tokio_core;
-extern crate chainntfs;
-extern crate bitcoin_hashes;
+use dependencies::zmq;
+use dependencies::bitcoin_rpc_client;
+use dependencies::futures;
+use dependencies::tokio_core;
+use dependencies::bitcoin;
+use dependencies::bitcoin_hashes;
 
 use bitcoin::{
     OutPoint
 };
 use bitcoin_hashes::sha256d;
 use bitcoin_rpc_client::{
-    BitcoinCoreClient, BitcoinRpcApi
+    Client, RpcApi, Auth
 };
 
 use futures::Stream;
@@ -26,12 +25,11 @@ use chainntfs::{
 };
 
 fn main() {
-    let client = BitcoinCoreClient::new(
-        DEFAULT_RPC_ADDR,
-        DEFAULT_RPC_USER,
-        DEFAULT_RPC_PASS,
-    );
-    let block_hashes = client.generate(110).unwrap().unwrap();
+    let client = Client::new(
+        DEFAULT_RPC_ADDR.to_owned(),
+        Auth::UserPass(DEFAULT_RPC_USER.to_owned(), DEFAULT_RPC_PASS.to_owned())
+    ).unwrap();
+    let block_hashes = client.generate(110, None).unwrap();
 
     let mut core = Core::new().unwrap();
     let handle = core.handle();
@@ -53,8 +51,17 @@ fn main() {
         });
     let mut consumer = ZMQMessageConsumer::new(receiver);
 
-    let addr = client.get_new_address().unwrap().unwrap();
-    let txid = client.send_to_address(&addr, 1.0).unwrap().unwrap();
+    let addr = client.get_new_address(None, None).unwrap();
+    let txid = client.send_to_address(
+        &addr,
+        1.0,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    ).unwrap();
     let num_confs = 1;
     let conf_rx = consumer.register_confirmations_ntfn(
         txid,
@@ -63,8 +70,8 @@ fn main() {
 
     let mut spend_rx_vec = Vec::new();
     for block_hash in block_hashes {
-        let block = client.get_block(&block_hash).unwrap().unwrap();
-        let coinbase_txid = block.tx[0].clone();
+        let block = client.get_block(&block_hash).unwrap();
+        let coinbase_txid = block.txdata[0].txid();
         spend_rx_vec.push(consumer.register_spend_ntfn(
             OutPoint{
                 txid: coinbase_txid,

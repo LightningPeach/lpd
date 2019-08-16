@@ -1,3 +1,8 @@
+use dependencies::secp256k1;
+use dependencies::bitcoin_hashes;
+use dependencies::bitcoin;
+use dependencies::rand;
+
 
 use wire::{
     Message, AcceptChannel, OpenChannel,

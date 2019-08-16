@@ -1,5 +1,5 @@
-extern crate grpc;
-extern crate protobuf;
+use grpc;
+use protobuf;
 
 pub mod common;
 pub mod channel;

@@ -1,3 +1,7 @@
+use dependencies::bitcoin;
+use dependencies::bitcoin_hashes;
+use dependencies::secp256k1;
+
 use secp256k1::{PublicKey, SecretKey, Signature, Secp256k1, Message};
 use bitcoin::OutPoint;
 use bitcoin_hashes::{sha256d, Hash};
@@ -174,11 +178,14 @@ impl CommitTx {
 
 #[cfg(test)]
 mod tests {
+    use dependencies::secp256k1;
+    use dependencies::hex;
+
+    use secp256k1::Secp256k1;
+
     use super::super::spec_example::get_example;
     use super::super::tools::{s2tx, assert_tx_eq, spending_witness_2x2_multisig};
     use super::super::commit::CommitTx;
-    use secp256k1::Secp256k1;
-    use hex;
 
     #[test]
     fn test_simple_commitment_tx_with_no_htlcs() {

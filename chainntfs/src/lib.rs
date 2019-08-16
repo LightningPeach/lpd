@@ -1,8 +1,8 @@
-extern crate bitcoin;
-extern crate zmq;
-extern crate futures;
-extern crate tokio_core;
-extern crate bitcoin_hashes;
+use dependencies::zmq;
+use dependencies::futures;
+use dependencies::tokio_core;
+use dependencies::bitcoin;
+use dependencies::bitcoin_hashes;
 
 use bitcoin::{
     consensus::deserialize,

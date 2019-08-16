@@ -1,10 +1,13 @@
+use dependencies::bitcoin;
+use dependencies::secp256k1;
+
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, ChildNumber};
 use bitcoin::network::constants::Network;
 use secp256k1::Secp256k1;
 
 use std::error::Error;
 
-use scoped_manager::ScopedManager;
+use crate::scoped_manager::ScopedManager;
 
 pub struct KeyManager {
     master_key: ExtendedPrivKey,

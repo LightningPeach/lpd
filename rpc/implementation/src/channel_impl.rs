@@ -1,3 +1,7 @@
+use dependencies::grpc;
+use dependencies::futures;
+use dependencies::secp256k1;
+
 use grpc::{rt::ServerServiceDefinition, RequestOptions, SingleResponse, StreamingResponse};
 use grpc::Error;
 use interface::channel_grpc::{ChannelServiceServer, ChannelService};

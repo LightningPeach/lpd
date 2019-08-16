@@ -1,3 +1,5 @@
+use dependencies::bitflags;
+
 use super::Hash256;
 use super::ShortChannelId;
 use super::MilliSatoshi;
@@ -49,6 +51,9 @@ impl UpdateChannelData {
 
 #[cfg(test)]
 mod test {
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use super::*;
     use binformat::BinarySD;
     use std::io::Cursor;

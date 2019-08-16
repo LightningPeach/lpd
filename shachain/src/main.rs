@@ -1,5 +1,5 @@
-extern crate sha2;
-extern crate hex;
+use dependencies::sha2;
+use dependencies::hex;
 
 use sha2::{Sha256, Digest};
 

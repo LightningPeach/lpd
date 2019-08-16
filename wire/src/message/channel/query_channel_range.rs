@@ -31,6 +31,9 @@ pub struct ReplyChannelRange {
 
 #[cfg(test)]
 mod tests {
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use binformat::BinarySD;
     use super::*;
 

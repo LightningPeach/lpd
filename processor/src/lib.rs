@@ -1,5 +1,9 @@
 #![forbid(unsafe_code)]
 
+use dependencies::either;
+use dependencies::tokio;
+use dependencies::futures;
+
 use binformat::WireError;
 use wire::{Message, MessageExt};
 use internal_event::Event;

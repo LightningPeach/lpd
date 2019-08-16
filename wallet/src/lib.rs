@@ -1,8 +1,7 @@
-extern crate bitcoin;
-extern crate secp256k1;
-extern crate bitcoin_hashes;
-extern crate hex;
-extern crate wire;
+use dependencies::bitcoin;
+use dependencies::secp256k1;
+use dependencies::bitcoin_hashes;
+use dependencies::hex;
 
 mod key_manager;
 mod scoped_manager;

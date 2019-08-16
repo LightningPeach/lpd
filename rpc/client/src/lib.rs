@@ -28,6 +28,7 @@ impl LightningPeach {
     pub fn local(port: u16) -> Result<Self, Error> {
         use std::net::{SocketAddrV4, Ipv4Addr};
 
+        // TODO(mkl): make it configurable
         let socket_address = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), port));
         Self::new(&socket_address)
     }

@@ -7,6 +7,9 @@ extern crate wire;
 #[cfg(test)]
 mod test{
     use std::io::{Cursor};
+
+    use dependencies::hex;
+
     use wire::*;
     use common_types::secp256k1_m::{Data, Signed};
     use binformat::{BinarySD, SerdeVec};

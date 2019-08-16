@@ -7,28 +7,8 @@ edition = "2018"
 [dependencies.wire]
 path = "../wire"
 
-[dependencies.processor]
-path = "../processor"
-
-[dependencies.binformat]
-path = "../binformat"
-
-[dependencies.tokio]
-version = "0.1"
-
-[dependencies.either]
-version = "1.5"
-
 [dependencies.channel]
 path = "../channel"
 
-[dependencies.secp256k1]
-package = "secp256k1-pure-rust"
-git = "https://github.com/LightningPeach/secp256k1-wrapper.git"
-
-[dependencies.rand]
-version = "0.6"
-
 [dependencies]
-bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
-bitcoin_hashes = "0.7"
+dependencies = { path = "../dependencies" }

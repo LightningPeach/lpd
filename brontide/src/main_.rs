@@ -1,8 +1,9 @@
-extern crate rand;
-extern crate secp256k1;
 extern crate brontide;
-extern crate tokio;
-extern crate hex;
+
+use dependencies::rand;
+use dependencies::hex;
+use dependencies::secp256k1;
+use dependencies::tokio;
 
 use secp256k1::{SecretKey, PublicKey, Secp256k1};
 use secp256k1::constants::SECRET_KEY_SIZE;

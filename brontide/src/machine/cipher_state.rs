@@ -1,3 +1,9 @@
+use dependencies::sha2;
+use dependencies::byteorder;
+use dependencies::chacha20_poly1305_aead;
+use dependencies::hkdf;
+use dependencies::hex;
+
 use chacha20_poly1305_aead::DecryptError;
 use std::{fmt, io};
 

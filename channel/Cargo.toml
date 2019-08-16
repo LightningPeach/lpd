@@ -10,12 +10,4 @@ edition = "2018"
 name = "channel"
 
 [dependencies]
-rand = "0.6"
-hex = "0.3"
-bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
-bitcoin_hashes = "0.7"
-
-[dependencies.secp256k1]
-git = "https://github.com/LightningPeach/secp256k1-wrapper.git"
-package = "secp256k1-pure-rust"
-# features = ["rand"]
+dependencies = { path = "../dependencies" }

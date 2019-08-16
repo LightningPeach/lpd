@@ -1,3 +1,5 @@
+use dependencies::hex;
+
 use super::common::Module;
 
 // I guess it is RGBA
@@ -65,7 +67,7 @@ impl ColorBasis for Color {
 
 mod debug {
     use super::Color;
-    use hex::encode;
+    use super::hex::encode;
     use std::fmt;
 
     impl fmt::Display for Color {

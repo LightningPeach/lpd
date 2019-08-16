@@ -1,10 +1,7 @@
 #![feature(custom_attribute)]
 #![feature(plugin)]
 
-extern crate clap;
-extern crate serde;
-extern crate serde_json;
-extern crate reqwest;
+use dependencies::clap;
 
 mod message;
 use message::MessageInfo;

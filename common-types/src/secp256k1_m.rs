@@ -1,3 +1,7 @@
+use dependencies::secp256k1;
+use dependencies::sha2;
+use dependencies::digest;
+
 use secp256k1::{PublicKey, SecretKey, Message, Signature, Error, Secp256k1, SignOnly, VerifyOnly};
 use super::ac;
 use serde::{Serialize, Deserialize};

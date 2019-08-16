@@ -1,3 +1,6 @@
+use dependencies::bitcoin;
+use dependencies::bitcoin_hashes;
+
 use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
 use bitcoin_hashes::Hash;
 
@@ -107,6 +110,8 @@ pub fn reorder_tx(tx: &mut Transaction) -> TransactionReordering {
 
 #[cfg(test)]
 mod tests {
+    use dependencies::bitcoin;
+
     use super::{is_permutation, TransactionReordering, reorder_tx};
     use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
     use bitcoin::blockdata::script::Script;

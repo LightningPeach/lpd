@@ -1,3 +1,6 @@
+use dependencies::tokio;
+use dependencies::bytes;
+
 use super::handshake::Machine;
 
 use tokio::codec::{Encoder, Decoder};

@@ -1,3 +1,5 @@
+use dependencies::secp256k1;
+
 use secp256k1::{SecretKey, PublicKey};
 use serde_derive::{Serialize, Deserialize};
 use common_types::ac;
@@ -89,21 +91,29 @@ impl ChannelPrivateKeys {
 }
 
 mod rand_m {
+    use dependencies::secp256k1;
+    use dependencies::rand;
+
+    use secp256k1::SecretKey;
     use super::ChannelPrivateKeys;
     use rand::distributions::{Distribution, Standard};
     use rand::Rng;
 
-    impl Distribution<ChannelPrivateKeys> for Standard {
-        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ChannelPrivateKeys {
-            use secp256k1::SecretKey;
+    fn rand_secret_key<R: Rng + ?Sized>(rng: &mut R) -> SecretKey {
+        let random_bytes = rng.gen::<[u8; 32]>();
+        SecretKey::from_slice(&random_bytes).unwrap()
+    }
 
+    impl Distribution<ChannelPrivateKeys> for Standard {
+        // TODO(mkl): fix this to use distribution
+        fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> ChannelPrivateKeys {
             ChannelPrivateKeys {
-                funding: SecretKey::new(rng),
-                revocation: SecretKey::new(rng),
-                payment: SecretKey::new(rng),
-                delayed_payment: SecretKey::new(rng),
-                htlc: SecretKey::new(rng),
-                first_per_commitment: SecretKey::new(rng),
+                funding: rand_secret_key(rng),
+                revocation: rand_secret_key(rng),
+                payment: rand_secret_key(rng),
+                delayed_payment: rand_secret_key(rng),
+                htlc: rand_secret_key(rng),
+                first_per_commitment: rand_secret_key(rng),
             }
         }
     }

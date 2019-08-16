@@ -19,6 +19,9 @@ pub struct AnnounceSignatures {
 
 #[cfg(test)]
 mod test {
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use super::*;
     use binformat::BinarySD;
     use crate::message::channel::ChannelId;

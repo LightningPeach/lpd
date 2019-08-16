@@ -1,5 +1,10 @@
 mod tcp;
 
+use dependencies::secp256k1;
+use dependencies::tokio;
+use dependencies::futures;
+use dependencies::either;
+
 use secp256k1::{SecretKey, PublicKey};
 use tokio::{
     io::{AsyncRead, AsyncWrite},

@@ -1,5 +1,7 @@
 use std::mem;
 
+use dependencies::rand;
+
 use serde_derive::{Serialize, Deserialize};
 
 use super::MessageSize;
@@ -81,6 +83,9 @@ impl Pong {
 
 #[cfg(test)]
 mod test {
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use binformat::BinarySD;
     use std::io::Cursor;
     use crate::Message;

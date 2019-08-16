@@ -1,4 +1,4 @@
-use hex;
+use dependencies::hex;
 
 use crate::store::RevocationStore;
 use crate::element::Index;

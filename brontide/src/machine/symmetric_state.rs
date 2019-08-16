@@ -1,3 +1,7 @@
+use dependencies::sha2;
+use dependencies::hkdf;
+use dependencies::hex;
+
 use super::cipher_state::CipherState;
 use std::{fmt, io};
 

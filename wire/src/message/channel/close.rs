@@ -31,6 +31,9 @@ pub struct ClosingSigned {
 
 #[cfg(test)]
 mod test{
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use crate::ClosingSigned;
 
     use super::*;

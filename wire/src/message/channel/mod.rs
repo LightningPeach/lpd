@@ -1,5 +1,8 @@
 use std::error::Error;
 
+use dependencies::hex;
+use dependencies::byteorder;
+
 use super::types::*;
 
 mod funding;
@@ -202,35 +205,36 @@ mod rand_m {
     use super::ChannelId;
     use super::ShortChannelId;
 
-    use rand::{Rng, Rand};
-
-    impl Rand for ChannelId {
-        fn rand<R: Rng>(rng: &mut R) -> Self {
-            let rnd_bytes: Vec<u8> = rng.gen_iter().take(32).collect();
-            let mut this = ChannelId { data: [0u8; 32], };
-            this.data.copy_from_slice(rnd_bytes.as_slice());
-            this
-        }
-    }
-
-    impl Rand for ShortChannelId {
-        fn rand<R: Rng>(rng: &mut R) -> Self {
-            From::<u64>::from(rng.gen())
-        }
-    }
+//    use rand::{Rng, Rand};
+//    use rand_core::RngCore;t
+//
+//    impl Rand for ChannelId {
+//        fn rand<R: Rng>(rng: &mut R) -> Self {
+//            let rnd_bytes: Vec<u8> = rng.gen_iter().take(32).collect();
+//            let mut this = ChannelId { data: [0u8; 32], };
+//            this.data.copy_from_slice(rnd_bytes.as_slice());
+//            this
+//        }
+//    }
+//
+//    impl Rand for ShortChannelId {
+//        fn rand<R: Rng>(rng: &mut R) -> Self {
+//            From::<u64>::from(rng.gen())
+//        }
+//    }
 }
 
 #[cfg(test)]
 mod tests {
     use binformat::BinarySD;
     use super::ShortChannelId;
-    use rand;
+    use dependencies::rand;
 
     #[test]
     fn short_channel_id_packing() {
         let value: u64 = rand::random();
         let short_channel_id = ShortChannelId::from(value);
-        let restored = short_channel_id.into();
+        let restored: u64 = short_channel_id.into();
         assert_eq!(value, restored);
     }
 

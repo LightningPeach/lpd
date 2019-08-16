@@ -1,3 +1,8 @@
+use dependencies::specs;
+use dependencies::specs_derive;
+use dependencies::rocksdb;
+use dependencies::secp256k1;
+
 use wire::AnnouncementNode;
 use wire::Color;
 use wire::Address;

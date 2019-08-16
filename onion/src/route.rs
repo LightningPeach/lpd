@@ -1,3 +1,7 @@
+use dependencies::secp256k1;
+use dependencies::chacha;
+use dependencies::hex;
+
 use super::hop::{Hop, HopBytes};
 use super::crypto::{HmacData, KeyType};
 use super::packet::{OnionPacket, ValidOnionPacket};

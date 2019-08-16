@@ -1,5 +1,10 @@
 use std::sync::{Arc, RwLock, Mutex};
 
+use dependencies::secp256k1;
+use dependencies::tokio;
+use dependencies::futures;
+use dependencies::either;
+
 use wallet_lib::interface::Wallet;
 
 use secp256k1::{SecretKey, PublicKey};

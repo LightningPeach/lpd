@@ -1,3 +1,6 @@
+use dependencies::secp256k1;
+use dependencies::tokio;
+
 use super::AbstractAddress;
 
 use std::{net::SocketAddr, io};

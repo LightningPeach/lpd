@@ -1,3 +1,5 @@
+use dependencies::secp256k1;
+
 use super::{hop::{HopData, HopBytes}, crypto::{KeyType, HmacData}, route::OnionPacketVersion};
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
 use serde::{Serialize, Deserialize};

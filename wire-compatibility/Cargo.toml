@@ -5,6 +5,8 @@ authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
 edition = "2018"
 
 [dependencies]
+dependencies = { path = "../dependencies" }
+
 wire = { path = "../wire" }
 binformat = { path = "../binformat" }
-clap = "2.33"
+#clap = "2.33"

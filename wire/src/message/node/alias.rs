@@ -1,6 +1,8 @@
 use serde_derive::{Serialize, Deserialize};
 use std::error::Error;
 
+use dependencies::hex;
+
 const SIZE: usize = 32;
 
 // NodeAlias may contain not UTF8 string, so it is better not to use string here

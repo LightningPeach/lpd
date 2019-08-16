@@ -1,3 +1,6 @@
+use dependencies::secp256k1;
+use dependencies::chacha;
+
 use super::crypto::HmacData;
 use wire::{Satoshi, ShortChannelId};
 use secp256k1::PublicKey;

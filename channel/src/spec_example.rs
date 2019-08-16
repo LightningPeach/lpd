@@ -1,3 +1,6 @@
+use dependencies::bitcoin_hashes;
+use dependencies::secp256k1;
+
 use secp256k1::{SecretKey, PublicKey};
 use bitcoin_hashes::{sha256d, sha256};
 use bitcoin_hashes::Hash;

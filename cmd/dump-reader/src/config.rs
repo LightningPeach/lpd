@@ -1,3 +1,5 @@
+use dependencies::clap;
+
 use clap::{App, Arg, AppSettings, SubCommand};
 
 use crate::wsdclient;

@@ -1,3 +1,5 @@
+use dependencies::flate2;
+
 use serde::{Serialize, Serializer, Deserialize, Deserializer, de};
 use std::mem;
 

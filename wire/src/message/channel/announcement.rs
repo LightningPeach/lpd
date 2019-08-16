@@ -35,6 +35,10 @@ impl AnnouncementChannelData {
 #[cfg(test)]
 #[allow(unused_imports)]
 mod test {
+    use dependencies::secp256k1;
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use super::*;
     use common_types::ac::{Signed, Data};
     use binformat::BinarySD;

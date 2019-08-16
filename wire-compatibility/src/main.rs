@@ -1,3 +1,5 @@
+use dependencies::clap;
+
 use wire::MessageExt;
 use binformat::WireError;
 
@@ -10,7 +12,7 @@ fn de(data: Vec<u8>) -> Result<Vec<MessageExt>, WireError> {
 
     let mut cursor = Cursor::new(data);
     loop {
-        if cursor.get_ref().len() == cursor.position() as _ {
+        if cursor.get_ref().len() == cursor.position() as usize {
             break;
         }
         let length = BinarySD::deserialize::<u16, _>(&mut cursor)?;

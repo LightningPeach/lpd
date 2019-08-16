@@ -1,3 +1,9 @@
+use dependencies::dijkstras_search;
+use dependencies::specs;
+use dependencies::specs_derive;
+use dependencies::rocksdb;
+use dependencies::secp256k1;
+
 use wire::{
     Hash256, ShortChannelId, MilliSatoshi, RawFeatureVector,
     AnnouncementChannel, UpdateChannel,

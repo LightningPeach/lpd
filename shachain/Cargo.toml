@@ -5,5 +5,4 @@ authors = ["evgeniy.scherbina <evgeniy.scherbina@bitfury.com>"]
 edition = "2018"
 
 [dependencies]
-sha2 = "0.8"
-hex = "0.3"
+dependencies = { path = "../dependencies" }

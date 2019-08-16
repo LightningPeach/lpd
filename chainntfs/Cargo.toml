@@ -2,12 +2,7 @@
 name = "chainntfs"
 version = "0.1.0"
 authors = ["evgeniy.scherbina <evgeniy.scherbina@bitfury.com>"]
+edition = "2018"
 
 [dependencies]
-zmq = "0.8.2"
-bitcoin_rpc_client = { gitz = "https://github.com/LightningPeach/bitcoinrpc-rust-client.git", package = "bitcoincore-rpc" }
-futures = "0.1.13"
-tokio-core = "0.1.7"
-
-bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
-bitcoin_hashes = "0.7"
+dependencies = { path = "../dependencies" }

@@ -5,25 +5,15 @@ authors = ["LightningPeach <contact@lightningpeach.com>"]
 edition = "2018"
 
 [dependencies]
+serde = "1.0"
+serde_derive = "1.0"
+dependencies = { path = "../dependencies" }
 state = { path = "../state" }
 interface = { path = "../rpc/interface", optional = true }
 wire = { path = "../wire" }
 binformat = { path = "../binformat" }
 common-types = { path = "../common-types" }
 processor = { path = "../processor" }
-dijkstras_search = { git = "https://github.com/LightningPeach/dijkstras_search" }
-specs = "0.14"
-specs-derive = "0.4"
-tokio = "0.1"
-rocksdb = "0.10"
-serde = "1.0"
-serde_derive = "1.0"
-either = "1.5"
-secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust" }
-
-[dev-dependencies]
-hex-literal = "0.2"
-wire = { path = "../wire", features = ["testing"] }
 
 [features]
 rpc = ["interface"]

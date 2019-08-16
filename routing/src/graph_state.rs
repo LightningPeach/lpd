@@ -1,3 +1,9 @@
+use dependencies::dijkstras_search;
+use dependencies::specs;
+use dependencies::tokio;
+use dependencies::either;
+use dependencies::secp256k1;
+
 use specs::prelude::*;
 use state::{DB, DBBuilder, DBError, DBUser};
 use super::channel::{

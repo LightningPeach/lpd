@@ -1,5 +1,8 @@
+use dependencies::hex;
+use dependencies::secp256k1;
+use dependencies::bytes;
+
 use secp256k1::{Secp256k1, SecretKey, PublicKey};
-use hex;
 use std::error::Error;
 use std::collections::HashMap;
 use super::handshake::{HandshakeIn, HandshakeOut};

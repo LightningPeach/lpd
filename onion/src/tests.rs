@@ -1,3 +1,7 @@
+use dependencies::secp256k1;
+use dependencies::hex;
+use dependencies::rand;
+
 use super::{OnionPacketVersion, OnionPacket, ValidOnionPacket, OnionRoute, Hop, HopData, BitcoinHopData, Processed};
 use secp256k1::SecretKey;
 use wire::{Wrapper, Satoshi};

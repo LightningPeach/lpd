@@ -1,5 +1,8 @@
 use std::error::Error;
 
+use dependencies::hex;
+use dependencies::bitcoin_hashes;
+
 use super::ChannelId;
 use super::OutputIndex;
 use super::super::types::{RawSignature, RawPublicKey};
@@ -110,6 +113,7 @@ impl FundingTxid {
 
 #[cfg(test)]
 mod test {
+    use dependencies::pretty_assertions;
 
     use super::*;
     use binformat::BinarySD;

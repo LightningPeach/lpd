@@ -1,4 +1,4 @@
-use hex;
+use dependencies::hex;
 
 use std::ops::{Index, IndexMut};
 

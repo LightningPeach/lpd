@@ -1,3 +1,5 @@
+use dependencies::sha2;
+
 use sha2::{Sha256, Digest};
 
 use super::util::{Sha256Hash, LeafIndex, get_nth_bit};
@@ -31,7 +33,7 @@ impl ProducerTree {
 
 #[cfg(test)]
 mod tests {
-    use hex;
+    use dependencies::hex;
 
     use super::{ProducerTree, Sha256Hash};
     use super::LeafIndex;

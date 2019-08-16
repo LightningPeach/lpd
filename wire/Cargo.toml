@@ -12,22 +12,16 @@ name = "wire"
 [dependencies]
 serde = "1.0"
 serde_derive = "1.0"
-bitflags = "1.0"
-secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust", features = ["rand"] }
-hex = "0.3"
-hex-literal = "0.2"
-rand = "0.6"
-bitcoin_hashes = "0.7"
-byteorder = "1.3"
 
+dependencies = { path = "../dependencies" }
 bincode = { path = "../bincode" }
 common-types = { path = "../common-types" }
 bitcoin-types = { path = "../bitcoin-types" }
-binformat = { path = "../binformat", features = ["secp256k1"] }
+binformat = { path = "../binformat"}
 
 [dev-dependencies]
 common-types = { path = "../common-types", features = ["testing"] }
-pretty_assertions = "0.6.1"
+#pretty_assertions
 
 [features]
 testing = []

@@ -5,7 +5,6 @@ authors = ["Vladislav Melnik <vladislav.melnik@bitfury.com>"]
 edition = "2018"
 
 [dependencies]
-bincode = { path = "../bincode" }
-flate2 = "1.0"
 serde = "1.0"
-secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust",optional = true }
+dependencies = { path = "../dependencies" }
+bincode = { path = "../bincode" }

@@ -113,6 +113,10 @@ pub struct ReestablishChannel {
 
 #[cfg(test)]
 mod test {
+    use dependencies::hex;
+    use dependencies::rand;
+    use dependencies::pretty_assertions;
+
     use super::*;
     use super::ChannelKeys;
     use binformat::BinarySD;
@@ -132,9 +136,10 @@ mod test {
         let mut rng = thread_rng();
         let private: ChannelPrivateKeys = rng.gen();
         let mut vec = vec![];
+        // TODO(mkl): maybe add some pseudo-randomisation
         let msg = OpenChannel {
             chain_hash: Hash256::BITCOIN_CHAIN_HASH,//rng.gen(),
-            temporary_channel_id: rng.gen(),
+            temporary_channel_id: [1u8; 32].into(),
             funding: Satoshi::default(),
             push: MilliSatoshi::default(),
             dust_limit: Satoshi::default(),

@@ -1,3 +1,6 @@
+use dependencies::bitcoin;
+use dependencies::secp256k1;
+
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, ChildNumber};
 use bitcoin::util::key::PublicKey;
 use secp256k1::{Secp256k1};

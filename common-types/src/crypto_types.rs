@@ -1,4 +1,8 @@
 use std::error::Error;
+
+use dependencies::secp256k1;
+use dependencies::hex;
+
 use secp256k1::{Signature, PublicKey};
 use binformat::PackSized;
 

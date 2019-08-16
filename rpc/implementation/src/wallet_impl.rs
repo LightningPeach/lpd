@@ -1,3 +1,9 @@
+use dependencies::grpc;
+use dependencies::protobuf;
+use dependencies::bitcoin_hashes;
+use dependencies::futures;
+use dependencies::bitcoin;
+
 use grpc::{rt::ServerServiceDefinition, RequestOptions, SingleResponse};
 use grpc::Error;
 use interface::wallet_grpc::{WalletServer, Wallet};

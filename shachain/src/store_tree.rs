@@ -1,3 +1,5 @@
+use dependencies::sha2;
+
 use sha2::{Sha256, Digest};
 
 use super::util::{Sha256Hash, LeafIndex, get_nth_bit, count_trailing_zeroes, MAX_HEIGHT};

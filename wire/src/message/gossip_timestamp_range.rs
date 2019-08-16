@@ -31,12 +31,14 @@ impl GossipTimestampRange {
 
 #[cfg(test)]
 mod test {
+    use dependencies::hex;
+    use dependencies::pretty_assertions;
+
     use binformat::BinarySD;
     use std::io::Cursor;
     use crate::{Message, GossipTimestampRange};
     use pretty_assertions::assert_eq;
     use common_types::Hash256;
-
 
     #[test]
     fn gossip_timestamp_range_test() {

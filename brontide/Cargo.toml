@@ -5,18 +5,8 @@ authors = ["BitfuryLightning <lightning@bitfury.com>"]
 edition = "2018"
 
 [dependencies]
-rand = "0.6"
-sha2 = "0.8"
-byteorder = "1.2"
-chacha20-poly1305-aead = "0.1"
-hkdf = "0.7"
-hex = "0.3"
 serde = "1.0"
-secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust", features = ["rand"] }
-
-tokio = "0.1"
-bytes = "0.4"
-
+dependencies = { path = "../dependencies" }
 wire = { path = "../wire" }
 binformat = { path = "../binformat" }
 common-types = { path = "../common-types" }
