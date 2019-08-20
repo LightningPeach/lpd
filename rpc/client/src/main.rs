@@ -13,7 +13,7 @@ fn main() -> Result<(), Error> {
     use std::{sync::Arc, net::{SocketAddr, IpAddr, Ipv4Addr}};
     use grpc::{Client, ClientStub};
     use httpbis::ClientTlsOption;
-    use tls_api_stub::TlsConnector;
+    use tls_api_rustls::TlsConnector;
     use interface::{
         routing_grpc::{RoutingServiceClient, RoutingService},
         routing::{ConnectPeerRequest, LightningAddress, ChannelGraphRequest},

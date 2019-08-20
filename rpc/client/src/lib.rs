@@ -11,7 +11,7 @@ pub struct LightningPeach(Arc<Client>);
 
 impl LightningPeach {
     pub fn new(socket_address: &SocketAddr) -> Result<Self, Error> {
-        use tls_api_stub::TlsConnector;
+        use tls_api_rustls::TlsConnector;
         use httpbis::ClientTlsOption;
 
         let host = socket_address.ip().to_string();

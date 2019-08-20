@@ -424,9 +424,8 @@ dependencies = [
  "httpbis 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "interface 0.0.0",
  "native-tls 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "tls-api 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tls-api-native-tls 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tls-api-stub 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tls-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tls-api-rustls 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2673,29 +2672,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "tls-api"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "tls-api-native-tls"
 version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "native-tls 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tls-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "tls-api-native-tls"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "native-tls 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "tls-api 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2715,15 +2697,6 @@ version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "tls-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
- "void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "tls-api-stub"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "tls-api 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -3595,12 +3568,9 @@ dependencies = [
 "checksum thread_local 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c6b53e329000edc2b34dbe8545fd20e55a333362d0a321909685a19bd28c3f1b"
 "checksum time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "db8dcfca086c1143c9270ac42a2bbd8a7ee477b78ac8e45b19abfb0cbede4b6f"
 "checksum tls-api 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)" = "049c03787a0595182357fbd487577947f4351b78ce20c3668f6d49f17feb13d1"
-"checksum tls-api 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "120fafaffb42f6b3544cde0debba846f641b218ffc74c2f856ba41ef5e6679a8"
 "checksum tls-api-native-tls 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)" = "f5bde85cdaca4f2193562285df950a425b045a0e5eaa6f579661cb8b205ce763"
-"checksum tls-api-native-tls 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "909489ea33869820f5e4f275327dfa6756e7ed0dc3aff52ef1b1cbc769c18fb6"
 "checksum tls-api-rustls 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)" = "170e842eb3737569f46972898d82f69755cf983b61fb706ea3cf0f4a2b67bc09"
 "checksum tls-api-stub 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)" = "c9a0cc8c149724db9de7d73a0e1bc80b1a74f5394f08c6f301e11f9c35fa061e"
-"checksum tls-api-stub 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "faa7d2385cf1275d22ff0d08bb4911568c01086cbe969740b46cbb9d73f9e130"
 "checksum tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)" = "5a09c0b5bb588872ab2f09afa13ee6e9dac11e10a0ec9e8e3ba39a5a5d530af6"
 "checksum tokio-buf 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8fb220f46c53859a4b7ec083e41dec9778ff0b1851c0942b211edb89e0ccdc46"
 "checksum tokio-codec 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5c501eceaf96f0e1793cf26beb63da3d11c738c4a943fdf3746d81d64684c39f"
