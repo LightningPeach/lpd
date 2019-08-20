@@ -120,12 +120,16 @@ fn test_bolt4_packet() {
 
 fn new_test_route(num_hops: usize) -> (Vec<SecretKey>, Vec<Hop>, ValidOnionPacket) {
     use secp256k1::{Secp256k1, PublicKey};
+    use rand::Rng;
 
     let context = Secp256k1::new();
 
     let mut rng = rand::thread_rng();
     let keys = (0..num_hops)
-        .map(|_| SecretKey::new(&mut rng))
+        .map(|_| {
+            let sk_bytes: [u8; 32] = rng.gen();
+            SecretKey::from_slice(&sk_bytes[..]).unwrap()
+        })
         .collect::<Vec<SecretKey>>();
 
     let hops = keys
