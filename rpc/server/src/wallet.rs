@@ -1,4 +1,6 @@
 use std::path::Path;
+
+use dependencies::bitcoin;
 use implementation::wallet_lib::{interface::Wallet, error::WalletError};
 
 pub fn create_wallet<P>(db_path: &P) -> Result<Box<dyn Wallet + Send>, WalletError>

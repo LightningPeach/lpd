@@ -12,10 +12,5 @@ name = "client"
 
 [dependencies]
 grpc = "0.6.*"
-tls-api = "^0.1"
-tls-api-rustls = "^0.1.0"
-httpbis = "0.7.*"
-futures = "0.1.*"
-native-tls = "0.2.3"
-
+dependencies = { path = "../../dependencies" }
 interface = { path = "../interface" }

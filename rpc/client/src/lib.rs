@@ -1,5 +1,8 @@
-use grpc::{Client, ClientStub, Error};
 use std::{sync::Arc, net::SocketAddr};
+
+use dependencies::tls_api_rustls;
+use dependencies::httpbis;
+use grpc::{Client, ClientStub, Error};
 
 use interface::{
     routing_grpc::{RoutingServiceClient, RoutingService},

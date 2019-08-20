@@ -1,3 +1,7 @@
+use dependencies::futures;
+use dependencies::httpbis;
+use dependencies::tls_api_rustls;
+
 use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;
 

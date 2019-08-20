@@ -2,22 +2,13 @@
 name = "server"
 version = "0.0.0"
 authors = ["LightningPeach <contact@lightningpeach.com>"]
+edition = "2018"
 
 [[bin]]
 name = "server"
 
 [dependencies]
 grpc = "0.6.*"
-tls-api = "^0.1"
-tls-api-rustls = "^0.1.0"
-httpbis = "0.7.*"
-ctrlc = "3.1"
-secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust" }
-hex = "0.3"
-
-futures = "0.1"
-
-bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
-
+dependencies = { path = "../../dependencies" }
 implementation = { path = "../implementation" }
 connection = { path = "../../connection" }

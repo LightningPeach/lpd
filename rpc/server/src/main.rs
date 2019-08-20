@@ -1,22 +1,11 @@
-extern crate grpc;
-extern crate tls_api_rustls;
-extern crate tls_api;
-extern crate httpbis;
-extern crate ctrlc;
-extern crate bitcoin;
-extern crate secp256k1;
-extern crate hex;
-
-extern crate futures;
-
-extern crate implementation;
-
-extern crate connection;
-
 mod config;
 use self::config::{Argument, Error as CommandLineReadError};
 
 mod wallet;
+
+use dependencies::httpbis;
+use dependencies::futures;
+use dependencies::ctrlc;
 
 use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;

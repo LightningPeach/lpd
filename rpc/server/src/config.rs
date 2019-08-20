@@ -1,3 +1,6 @@
+use dependencies::tls_api;
+use dependencies::tls_api_rustls;
+
 use tls_api_rustls::TlsAcceptor;
 use tls_api::Error as TlsError;
 use std::{net::{SocketAddr, AddrParseError}, io::Error as IoError};

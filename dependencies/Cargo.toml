@@ -1,0 +1,55 @@
+[package]
+name = "dependencies"
+description = "Contains dependencies in one place. Reexports them. Other lpd-related crates should use this package instead of importing dependencies directly."
+version = "0.1.0"
+authors = ["Mykola Sakhno <mykola.sakhno@bitfury.com>"]
+edition = "2018"
+
+[dependencies]
+secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust" }
+bitcoin_hashes = "0.7"
+bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
+rand = "0.6"
+hex = "0.3"
+flate2 = "1.0"
+sha2 = "0.8"
+byteorder = "1.2"
+chacha20-poly1305-aead = "0.1"
+hkdf = "0.7"
+tokio = "0.1"
+bytes = "0.4"
+zmq = "0.8.2"
+bitcoin_rpc_client = { git = "https://github.com/LightningPeach/bitcoinrpc-rust-client.git", package = "bitcoincore-rpc" }
+futures = "0.1.13"
+tokio-core = "0.1.7"
+hmac = "0.7"
+chacha = "0.3"
+either = "1.5"
+dijkstras_search = { git = "https://github.com/LightningPeach/dijkstras_search" }
+specs = "0.14"
+specs-derive = "0.4"
+rocksdb = "0.10"
+grpc = "0.6"
+protobuf = "2.3"
+chrono = "0.4"
+clap = "2.33.0"
+hex-literal = "0.2"
+digest = "0.8"
+bitflags = "1.0"
+tls-api = "^0.1"
+tls-api-rustls = "^0.1.0"
+httpbis = "0.7.*"
+ctrlc = "3.1"
+
+# TODO(mkl): maybe move to dev-dependencies
+pretty_assertions = "0.6.1"
+
+# for dump reader
+reqwest = "0.9.14"
+
+# I can't reexport serde in full due to this issue: https://github.com/serde-rs/serde/issues/1465
+#serde = "1.0"
+#serde_derive = "1.0"
+
+
+
