@@ -1,5 +1,5 @@
 extern crate grpc;
-extern crate tls_api_native_tls;
+extern crate tls_api_rustls;
 extern crate tls_api;
 extern crate httpbis;
 extern crate ctrlc;

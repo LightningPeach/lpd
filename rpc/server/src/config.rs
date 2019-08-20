@@ -1,4 +1,4 @@
-use tls_api_native_tls::TlsAcceptor;
+use tls_api_rustls::TlsAcceptor;
 use tls_api::Error as TlsError;
 use std::{net::{SocketAddr, AddrParseError}, io::Error as IoError};
 
@@ -12,8 +12,8 @@ pub enum Error {
 enum CommandLineKey {
     RpcAddress,
     P2pAddress,
-    Pkcs12,
-    Pkcs12Password,
+    KeyFileName,
+    CertFileName,
     DbPath,
 }
 
@@ -24,8 +24,8 @@ impl CommandLineKey {
         match self {
             RpcAddress => "--rpclisten=",
             P2pAddress => "--listen=",
-            Pkcs12 => "--pkcs12=",
-            Pkcs12Password => "--pkcs12-password=",
+            KeyFileName => "--key=",
+            CertFileName => "--cert=",
             DbPath => "--db-path=",
         }
     }
@@ -49,7 +49,7 @@ pub struct Argument {
 impl Argument {
     // TODO(mkl): rewite using some lib. All
     pub fn from_env() -> Result<Self, Error> {
-        use tls_api_native_tls::{
+        use tls_api_rustls::{
             TlsAcceptorBuilder as TlsAcceptorBuilderImpl,
         };
         use tls_api::TlsAcceptorBuilder;
@@ -78,21 +78,25 @@ impl Argument {
             .unwrap_or(default_db_path.to_owned());
 
         let acceptor = {
-            let pkcs12 = env::args().find(|arg| Pkcs12.predicate(arg)).map(|arg| {
-                let path = Pkcs12.value(arg);
+            let key_bytes: Option<std::io::Result<Vec<u8>>> = env::args().find(|arg| KeyFileName.predicate(arg)).map(|arg| {
+                let path = KeyFileName.value(arg);
                 let mut file = File::open(path)?;
                 let mut vec = Vec::new();
                 file.read_to_end(&mut vec)?;
                 Ok(vec)
             });
-            let pkcs12_password = env::args()
-                .find(|arg| Pkcs12Password.predicate(arg))
-                .map(|arg| Pkcs12Password.value(arg));
-            match (pkcs12, pkcs12_password) {
-                (Some(data), Some(password)) => {
-                    let data = data.map_err(ReadCertificate)?;
+            let cert_bytes = env::args().find(|arg| CertFileName.predicate(arg)).map(|arg| {
+                let path = CertFileName.value(arg);
+                let mut file = File::open(path)?;
+                let mut vec = Vec::new();
+                file.read_to_end(&mut vec)?;
+                Ok(vec)
+            });
+            match (key_bytes, cert_bytes) {
+                (Some(key_bytes), Some(cert_bytes)) => {
+                    let cert_bytes = cert_bytes.map_err(ReadCertificate)?;
                     let acceptor =
-                        TlsAcceptorBuilderImpl::from_pkcs12(data.as_slice(), password.as_str())
+                        TlsAcceptorBuilderImpl::from_certs_and_key(&[&cert_bytes[..]], &cert_bytes[..])
                             .map_err(Tls)?
                             .build()
                             .map_err(Tls)?;

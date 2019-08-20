@@ -59,8 +59,6 @@ or
 
 for release configuration. Cli parameters are following:
 
-- `--pkcs12=path/to/p12`
-- `--pkcs12-password=qwerty123`
 - `--rpclisten=0.0.0.0:1234` ip and port to listen RPC on. Default is `127.0.0.1:10009`.
 - `--listen=0.0.0.0:1234` ip and port to listen peers on. Default is `127.0.0.1:9735`.
 - `--db-path=path/to/database` path to database directory. Default is `target/db`.

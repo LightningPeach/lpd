@@ -7,10 +7,17 @@ use dependencies::secp256k1;
 use dependencies::tokio;
 use dependencies::bytes;
 
+use rand::Rng;
+
 use tokio::timer::timeout;
 use secp256k1::{Secp256k1, SignOnly, VerifyOnly, SecretKey, PublicKey, Error as EcdsaError};
 use super::cipher_state::CipherState;
 use super::symmetric_state::{SymmetricState, MAC_SIZE};
+
+fn get_rand_priv_key() -> SecretKey {
+    let sk_bytes: [u8; 32] = rand::thread_rng().gen();
+    SecretKey::from_slice(&sk_bytes[..]).unwrap()
+}
 
 #[derive(Debug)]
 pub enum HandshakeError {
@@ -250,7 +257,7 @@ impl HandshakeIn {
             symmetric_state: symmetric_state,
             local_static: local_secret,
             ephemeral_gen: || {
-                SecretKey::new(&mut rand::thread_rng())
+                get_rand_priv_key()
             },
         })
     }
@@ -322,7 +329,7 @@ impl HandshakeOut {
             remote_static: remote_public,
             // TODO(mkl): is it crypto secure to use this source of randomness
             ephemeral_gen: || {
-                SecretKey::new(&mut rand::thread_rng())
+               get_rand_priv_key()
             },
         })
     }

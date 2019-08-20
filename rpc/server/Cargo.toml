@@ -8,10 +8,9 @@ name = "server"
 
 [dependencies]
 grpc = "0.6.*"
-tls-api = "0.1.*"
-tls-api-native-tls = "0.1.2"
+tls-api = "^0.1"
+tls-api-rustls = "^0.1.0"
 httpbis = "0.7.*"
-native-tls = "0.2"
 ctrlc = "3.1"
 secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust" }
 hex = "0.3"
