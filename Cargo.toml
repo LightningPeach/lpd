@@ -39,10 +39,6 @@ authors = ["LightningPeach <contact@lightningpeach.com>"]
 [lib]
 name = "lpd"
 
-#[[example]]
-#name = "wasm-basic"
-#crate-type = ["cdylib"]
-
 [[example]]
 name = "wasm-runner"
 
