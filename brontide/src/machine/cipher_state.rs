@@ -1,11 +1,14 @@
-use dependencies::sha2;
 use dependencies::byteorder;
 use dependencies::chacha20_poly1305_aead;
 use dependencies::hkdf;
 use dependencies::hex;
+use dependencies::bitcoin_hashes;
+
+use bitcoin_hashes::sha256;
 
 use chacha20_poly1305_aead::DecryptError;
 use std::{fmt, io};
+use common_types::Sha256HashEngine;
 
 // keyRotationInterval is the number of messages sent on a single
 // cipher stream before the keys are rotated forwards.
@@ -115,12 +118,11 @@ impl CipherState {
     // using an HKDF invocation with the salt for the `CipherState` as the salt,
     // and the current key as the input
     fn next(&mut self) {
-        use sha2::Sha256;
         use hkdf::Hkdf;
 
         self.nonce += 1;
         if self.nonce == KEY_ROTATION_INTERVAL {
-            let hkdf = Hkdf::<Sha256>::extract(Some(&self.salt), &self.secret_key);
+            let hkdf = Hkdf::<Sha256HashEngine>::extract(Some(&self.salt), &self.secret_key);
             let mut okm = [0; 64];
             hkdf.expand(&[], &mut okm).unwrap();
 

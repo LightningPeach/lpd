@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "../lpd",
     "bincode",
     "wire",
     "brontide",

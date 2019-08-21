@@ -1,17 +1,17 @@
-use super::Hash256;
+use super::Sha256;
 use super::ShortChannelIdEncoding;
 
 use serde_derive::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct QueryChannelRange {
-    pub chain_hash: Hash256,
+    pub chain_hash: Sha256,
     pub first_block_height: u32,
     pub number_of_blocks: u32,
 }
 
 impl QueryChannelRange {
-    pub fn new(chain_hash: Hash256, first_block_height: u32, number_of_blocks: u32) -> Self {
+    pub fn new(chain_hash: Sha256, first_block_height: u32, number_of_blocks: u32) -> Self {
         QueryChannelRange {
             chain_hash: chain_hash,
             first_block_height: first_block_height,
@@ -22,7 +22,7 @@ impl QueryChannelRange {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ReplyChannelRange {
-    pub chain_hash: Hash256,
+    pub chain_hash: Sha256,
     pub first_block_height: u32,
     pub number_of_blocks: u32,
     pub complete: bool,
@@ -63,7 +63,7 @@ mod tests {
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = QueryChannelRange {
-            chain_hash: Hash256::from_hex("00000b0000000000000000000000000000000000000000000000000000000000").unwrap(),
+            chain_hash: Sha256::from_hex("00000b0000000000000000000000000000000000000000000000000000000000").unwrap(),
             first_block_height: 10000,
             number_of_blocks: 12,
         };
@@ -95,7 +95,7 @@ mod tests {
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = ReplyChannelRange {
-            chain_hash: Hash256::from_hex("00000b0000000000000000000000000000000000000000000000000000000000").unwrap(),
+            chain_hash: Sha256::from_hex("00000b0000000000000000000000000000000000000000000000000000000000").unwrap(),
             first_block_height: 10000,
             number_of_blocks: 12,
             complete: 1 != 0,
@@ -138,7 +138,7 @@ mod tests {
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = ReplyChannelRange {
-            chain_hash: Hash256::from_hex("00000b0000000000000000000000000000000000000000000000000000000000").unwrap(),
+            chain_hash: Sha256::from_hex("00000b0000000000000000000000000000000000000000000000000000000000").unwrap(),
             first_block_height: 10000,
             number_of_blocks: 12,
             complete: 1 != 0,

@@ -194,7 +194,6 @@ impl ActThree {
         tag_first: [u8; MAC_SIZE],
         tag_second: [u8; MAC_SIZE],
     ) -> Self {
-        dbg!("ActThree::new()");
         let mut s = ActThree {
             bytes: [0; Self::SIZE],
         };
@@ -412,6 +411,7 @@ impl HandshakeInActOne {
             .map_err(|err| {
                 HandshakeError::Crypto(err, "Cannot compute Diffie-Hellman (ee) during generation ActTwo".to_owned())
             })?;
+        // Maybe self.base.symmetric_state.mix_key(&s[..]);
         self.base.symmetric_state.mix_key(&s.serialize()[..]);
 
         let auth_payload = self
@@ -597,6 +597,7 @@ impl HandshakeOutActTwo {
             .map_err(|err| {
                 HandshakeError::Crypto(err, "cannot calculate Diffie-Hellman during generate ActThree".to_owned())
             })?;
+        // Maybe self.base.symmetric_state.mix_key(&s[..]);
         self.base.symmetric_state.mix_key(&s.serialize()[..]);
 
         let auth_payload = self
@@ -713,7 +714,6 @@ impl Machine {
         // TODO(mkl): make logging messages optional
 //        dbg!(self.read_int(src))
         let r = self.read_int(src);
-        eprintln!("{:#?}", &r);
         r
     }
 

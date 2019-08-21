@@ -1,7 +1,7 @@
 use dependencies::hex;
 
 use super::ChannelId;
-use super::Hash256;
+use super::Sha256;
 use super::MilliSatoshi;
 use super::OnionBlob;
 use super::SatoshiPerKiloWeight;
@@ -61,7 +61,7 @@ pub struct UpdateAddHtlc {
     pub channel_id: ChannelId,
     pub id: HtlcId,
     pub amount: MilliSatoshi,
-    pub payment_hash: Hash256,
+    pub payment_hash: Sha256,
     pub expiry: u32,
     pub onion_blob: OnionBlob,
 }
@@ -72,7 +72,7 @@ pub struct UpdateAddHtlc {
 pub struct UpdateFulfillHtlc {
     pub channel_id: ChannelId,
     pub id: HtlcId,
-    pub payment_preimage: Hash256,
+    pub payment_preimage: Sha256,
 }
 
 /// Remove HTLC if it has timed out or it has failed to route.
@@ -88,7 +88,7 @@ pub struct UpdateFailHtlc {
 pub struct UpdateFailMalformedHtlc {
     pub channel_id: ChannelId,
     pub id: HtlcId,
-    pub sha256_of_onion: Hash256,
+    pub sha256_of_onion: Sha256,
     pub failure_code: u16,
 }
 
@@ -112,7 +112,7 @@ pub struct CommitmentSigned {
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct RevokeAndAck {
     pub channel_id: ChannelId,
-    pub revocation_preimage: Hash256,
+    pub revocation_preimage: Sha256,
     pub next_per_commitment_point: RawPublicKey,
 }
 
@@ -145,7 +145,7 @@ mod test {
         MilliSatoshi, OnionBlob, UpdateFailHtlc, UpdateFailMalformedHtlc, SatoshiPerKiloWeight
     };
     use pretty_assertions::assert_eq;
-    use common_types::Hash256;
+    use common_types::Sha256;
     use super::UpdateFee;
 
     #[test]
@@ -158,7 +158,7 @@ mod test {
         let msg_correct = UpdateFulfillHtlc {
             channel_id: ChannelId::from_hex("0200000000000000000000000000000000000000000000000000000000000000").unwrap(),
             id: HtlcId::from_u64(121),
-            payment_preimage: Hash256::from_hex("0064000000000000000000000000000000000000000000000000000000000000").unwrap()
+            payment_preimage: Sha256::from_hex("0064000000000000000000000000000000000000000000000000000000000000").unwrap()
         };
         let wrapped_msg_correct = Message::UpdateFulfillHtlc(msg_correct);
 
@@ -183,7 +183,7 @@ mod test {
 
         let msg_correct = RevokeAndAck{
             channel_id: ChannelId::from_hex("0100000000000000000000000000000000000000000000000000000000000000").unwrap(),
-            revocation_preimage: Hash256::from_hex("0002000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            revocation_preimage: Sha256::from_hex("0002000000000000000000000000000000000000000000000000000000000000").unwrap(),
             next_per_commitment_point: RawPublicKey::from_hex("02122fac0daa5028e984f52bf5fa72cb0ec7bf3758fcb8392a6a2ef71a9d00d994").unwrap(),
         };
         let wrapped_msg_correct = Message::RevokeAndAck(msg_correct);
@@ -276,7 +276,7 @@ mod test {
             channel_id: ChannelId::from_hex("0200000000000000000000000000000000000000000000000000000000000000").unwrap(),
             id: HtlcId::from_u64(1001),
             amount: MilliSatoshi::from(101000),
-            payment_hash: Hash256::from_hex("0079000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            payment_hash: Sha256::from_hex("0079000000000000000000000000000000000000000000000000000000000000").unwrap(),
             expiry: 100,
             onion_blob: OnionBlob::from_hex("\
                 00050000000000000000000000000000000000000000000000000000000000000000000000000000\
@@ -362,7 +362,7 @@ mod test {
         let msg_correct = UpdateFailMalformedHtlc {
             channel_id: ChannelId::from_hex("0200000000000000000000000000000000000000000000000000000000000000").unwrap(),
             id: HtlcId::from_u64(100),
-            sha256_of_onion: Hash256::from_hex("0000000500000000000000000000000000000000000000000000000000000000").unwrap(),
+            sha256_of_onion: Sha256::from_hex("0000000500000000000000000000000000000000000000000000000000000000").unwrap(),
             failure_code: 49157,
         };
         let wrapped_msg_correct = Message::UpdateFailMalformedHtlc(msg_correct);

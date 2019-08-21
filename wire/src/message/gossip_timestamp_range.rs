@@ -1,4 +1,4 @@
-use super::types::Hash256;
+use super::types::Sha256;
 
 use std::ops::Range;
 
@@ -6,7 +6,7 @@ use serde_derive::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct GossipTimestampRange {
-    pub chain_hash: Hash256,
+    pub chain_hash: Sha256,
     pub first_timestamp: u32,
     pub timestamp_range: u32
 }
@@ -38,7 +38,7 @@ mod test {
     use std::io::Cursor;
     use crate::{Message, GossipTimestampRange};
     use pretty_assertions::assert_eq;
-    use common_types::Hash256;
+    use common_types::Sha256;
 
     #[test]
     fn gossip_timestamp_range_test() {
@@ -46,7 +46,7 @@ mod test {
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = GossipTimestampRange {
-            chain_hash: Hash256::from_hex("000b000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            chain_hash: Sha256::from_hex("000b000000000000000000000000000000000000000000000000000000000000").unwrap(),
             first_timestamp: 100000000,
             timestamp_range: 1234,
         };

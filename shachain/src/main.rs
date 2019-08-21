@@ -1,9 +1,5 @@
-use dependencies::sha2;
 use dependencies::hex;
 
-use sha2::{Sha256, Digest};
-
-use producer::RevocationProducer;
 use element::{Element, Index, ROOT_INDEX};
 
 mod test_producer;

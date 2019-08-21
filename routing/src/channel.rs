@@ -5,7 +5,7 @@ use dependencies::rocksdb;
 use dependencies::secp256k1;
 
 use wire::{
-    Hash256, ShortChannelId, MilliSatoshi, RawFeatureVector,
+    Sha256, ShortChannelId, MilliSatoshi, RawFeatureVector,
     AnnouncementChannel, UpdateChannel,
 };
 
@@ -45,7 +45,7 @@ pub struct ChannelLinks(pub Option<NodeRef>, pub Option<NodeRef>);
 
 #[derive(Component, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ChannelId {
-    hash: Hash256,
+    hash: Sha256,
     short_channel_id: ShortChannelId,
 }
 

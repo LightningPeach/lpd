@@ -6,15 +6,11 @@ use dependencies::secp256k1;
 use bitcoin_hashes::{sha256, sha256d, hash160, ripemd160};
 use bitcoin_hashes::Hash;
 use bitcoin_hashes::hex::FromHex;
-use bitcoin_hashes::hex::ToHex;
 use bitcoin::blockdata::transaction::{Transaction};
 use bitcoin::blockdata::script::{Script, Builder};
 use bitcoin::blockdata::opcodes::all::*;
 
 use bitcoin::consensus::encode::Decodable;
-
-use bitcoin::consensus::Encodable;
-use bitcoin::consensus::serialize;
 
 use secp256k1::{SecretKey, PublicKey, Signature};
 

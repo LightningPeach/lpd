@@ -1,11 +1,10 @@
 use dependencies::clap;
 
-use wire::MessageExt;
+use wire::{Message, MessageExt};
 use binformat::WireError;
 
 fn de(data: Vec<u8>) -> Result<Vec<MessageExt>, WireError> {
     use binformat::BinarySD;
-    use wire::{Message, MessageExt};
     use std::io::{Cursor, Seek, SeekFrom};
 
     let mut messages = Vec::new();

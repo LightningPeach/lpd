@@ -1,6 +1,6 @@
 use dependencies::bitflags;
 
-use super::Hash256;
+use super::Sha256;
 use super::ShortChannelId;
 use super::MilliSatoshi;
 use super::super::types::RawSignature;
@@ -27,7 +27,7 @@ bitflags! {
 /// (origin or final). A node can do this multiple times, in order to change fees.
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UpdateChannelData {
-    pub hash: Hash256,
+    pub hash: Sha256,
     pub short_channel_id: ShortChannelId,
     pub timestamp: u32,
     pub message_flags: u8,
@@ -40,7 +40,7 @@ pub struct UpdateChannelData {
 }
 
 impl UpdateChannelData {
-    pub fn hash(&self) -> &Hash256 {
+    pub fn hash(&self) -> &Sha256 {
         &self.hash
     }
 
@@ -73,7 +73,7 @@ mod test {
             signature: RawSignature::from_hex("3023021e030000000000000000000000000000000000000000000000000000000000020100").unwrap(),
             data: Data(
                 UpdateChannelData{
-                    hash: Hash256::from_hex("0004000000000000000000000000000000000000000000000000000000000000").unwrap(),
+                    hash: Sha256::from_hex("0004000000000000000000000000000000000000000000000000000000000000").unwrap(),
                     short_channel_id: ShortChannelId::from_u64(109951163039759),
                     timestamp: 1000000,
                     message_flags: 1,

@@ -1,6 +1,3 @@
-use grpc;
-use protobuf;
-
 pub mod common;
 pub mod channel;
 pub mod channel_grpc;

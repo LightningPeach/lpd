@@ -1,10 +1,10 @@
-use common_types::Hash256;
+use common_types::Sha256;
 use std::sync::{Arc, Mutex};
 use wallet_lib::interface::Wallet;
 
 pub struct Blockchain {
     wallet: Arc<Mutex<Box<dyn Wallet + Send>>>,
-    block_hash: Hash256,
+    block_hash: Sha256,
     block_height: u32,
 }
 
@@ -13,7 +13,7 @@ impl Blockchain {
         Blockchain {
             wallet: wallet,
             block_height: 0,
-            block_hash: Hash256::TEST_HASH,
+            block_hash: Sha256::TEST_HASH,
         }
     }
 
@@ -21,7 +21,7 @@ impl Blockchain {
         self.block_height
     }
 
-    pub fn hash(&self) -> Hash256 {
+    pub fn hash(&self) -> Sha256 {
         self.block_hash.clone()
     }
 

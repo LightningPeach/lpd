@@ -1,4 +1,4 @@
-use super::Hash256;
+use super::Sha256;
 use super::ChannelId;
 use super::MilliSatoshi;
 use super::Satoshi;
@@ -23,7 +23,7 @@ pub struct OpenChannel {
     /// of the `chain_hash` allows nodes to open channels across many distinct blockchains
     /// as well as have channels within multiple blockchains opened to the same peer
     /// (if it supports the target chains).
-    pub chain_hash: Hash256,
+    pub chain_hash: Sha256,
     /// The `temporary_channel_id` is used to identify this channel on a per-peer basis
     /// until the funding transaction is established, at which point it is replaced
     /// by the channel_id, which is derived from the funding transaction.
@@ -138,7 +138,7 @@ mod test {
         let mut vec = vec![];
         // TODO(mkl): maybe add some pseudo-randomisation
         let msg = OpenChannel {
-            chain_hash: Hash256::BITCOIN_CHAIN_HASH,//rng.gen(),
+            chain_hash: Sha256::BITCOIN_CHAIN_HASH,//rng.gen(),
             temporary_channel_id: [1u8; 32].into(),
             funding: Satoshi::default(),
             push: MilliSatoshi::default(),
@@ -154,7 +154,7 @@ mod test {
         };
 
         // try to estimate size without aligning
-        let estimated_size = size_of::<Hash256>() + size_of::<ChannelId>()
+        let estimated_size = size_of::<Sha256>() + size_of::<ChannelId>()
             + size_of::<Satoshi>() * 3 + size_of::<MilliSatoshi>() * 3
             + size_of::<SatoshiPerKiloWeight>() + size_of::<CsvDelay>()
             + size_of::<u16>() + 33 * 6 + size_of::<u8>();
@@ -182,7 +182,7 @@ mod test {
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = OpenChannel {
-            chain_hash: Hash256::from_hex("00000c0000000000000000000000000000000000000000000000000000000000").unwrap(),
+            chain_hash: Sha256::from_hex("00000c0000000000000000000000000000000000000000000000000000000000").unwrap(),
             temporary_channel_id: ChannelId::from_hex("0200000000000000000000000000000000000000000000000000000000000000").unwrap(),
             funding: Satoshi::from(100000),
             push: MilliSatoshi::from(12341),

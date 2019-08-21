@@ -1,9 +1,10 @@
 use dependencies::secp256k1;
+use dependencies::bitcoin_hashes;
 
 use super::{hop::{HopData, HopBytes}, crypto::{KeyType, HmacData}, route::OnionPacketVersion};
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
 use serde::{Serialize, Deserialize};
-use common_types::{Hash256, RawPublicKey};
+use common_types::{Sha256, RawPublicKey};
 
 #[derive(Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct OnionPacket {
@@ -70,9 +71,12 @@ impl ValidOnionPacket {
             let mut temp = x.clone();
             temp.mul_assign(&context, &sk[..]).map(|()| temp)
         };
-        let hash = |x: &[u8]| -> Hash256 { Hash256::from(x) };
-        let hash_s = |xs: &[&[u8]]| -> Hash256 { Hash256::from(xs) };
-        let hash_to_sk = |hash: &Hash256| SecretKey::from_slice(hash.as_ref());
+        let hash = |x: &[u8]| -> Sha256 {
+            use bitcoin_hashes::Hash;
+            Sha256::hash(x)
+        };
+        let hash_s = |xs: &[&[u8]]| -> Sha256 { Sha256::hash_mult(xs) };
+        let hash_to_sk = |hash: &Sha256| SecretKey::from_slice(hash.as_ref());
 
         let temp = mul_pk(&ephemeral_key, onion_key).map_err(EcdsaError)?;
         let shared_secret = hash(&temp.serialize()[..]);

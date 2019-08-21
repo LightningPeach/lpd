@@ -1,6 +1,8 @@
 use dependencies::secp256k1;
-use dependencies::sha2;
-use dependencies::digest;
+use dependencies::bitcoin_hashes;
+
+use bitcoin_hashes::sha256;
+use bitcoin_hashes::Hash;
 
 use secp256k1::{PublicKey, SecretKey, Message, Signature, Error, Secp256k1, SignOnly, VerifyOnly};
 use super::ac;
@@ -54,13 +56,7 @@ where
         where
             T: AsRef<[u8]>,
         {
-            use sha2::Sha256;
-            use digest::FixedOutput;
-            use digest::Input;
-
-            let mut hasher = Sha256::default();
-            hasher.input(v.as_ref());
-            hasher.fixed_result()
+            sha256::Hash::hash(v.as_ref())
         }
 
         let mut v = Vec::new();

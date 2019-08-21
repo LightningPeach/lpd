@@ -1,5 +1,5 @@
 use super::RawFeatureVector;
-use super::Hash256;
+use super::Sha256;
 use super::ShortChannelId;
 use super::super::types::{RawSignature, RawPublicKey};
 use common_types::secp256k1_m::{Signed, Data};
@@ -16,14 +16,14 @@ pub type AnnouncementChannel = SignedRaw<SignedRaw<SignedRaw<SignedRaw<Data<Anno
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct AnnouncementChannelData {
     pub features: RawFeatureVector,
-    pub chain_hash: Hash256,
+    pub chain_hash: Sha256,
     pub short_channel_id: ShortChannelId,
     pub node_id: (RawPublicKey, RawPublicKey),
     pub bitcoin_key: (RawPublicKey, RawPublicKey),
 }
 
 impl AnnouncementChannelData {
-    pub fn hash(&self) -> &Hash256 {
+    pub fn hash(&self) -> &Sha256 {
         &self.chain_hash
     }
 
@@ -127,7 +127,7 @@ mod test {
                         data: Data(
                             AnnouncementChannelData {
                                 features: RawFeatureVector::from_hex("000182").unwrap(),
-                                chain_hash: Hash256::from_hex("000b000000000000000000000000000000000000000000000000000000000000").unwrap(),
+                                chain_hash: Sha256::from_hex("000b000000000000000000000000000000000000000000000000000000000000").unwrap(),
                                 short_channel_id: ShortChannelId::from_u64(1356797348806756),
                                 node_id: (
                                     RawPublicKey::from_hex("0235071ecd1b59d1810ef84bf770b8f1ebc96b21c3d69a2af6772727f49765547d").unwrap(),

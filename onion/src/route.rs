@@ -1,13 +1,14 @@
 use dependencies::secp256k1;
 use dependencies::chacha;
 use dependencies::hex;
+use dependencies::bitcoin_hashes;
 
 use super::hop::{Hop, HopBytes};
 use super::crypto::{HmacData, KeyType};
 use super::packet::{OnionPacket, ValidOnionPacket};
 
 use secp256k1::{SecretKey, PublicKey, Error as EcdsaError};
-use common_types::{Hash256, RawPublicKey};
+use common_types::{Sha256, RawPublicKey};
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -62,7 +63,7 @@ impl OnionRoute {
             context: &Secp256k1<All>,
             payment_path: I,
             session_key: &SecretKey,
-        ) -> Result<Vec<Hash256>, EcdsaError>
+        ) -> Result<Vec<Sha256>, EcdsaError>
         where
             I: Iterator<Item = &'a PublicKey>,
         {
@@ -78,9 +79,12 @@ impl OnionRoute {
                 let mut temp: SecretKey = x.clone();
                 temp.mul_assign(&sk[..]).map(|()| temp)
             };
-            let hash = |x: &[u8]| -> Hash256 { Hash256::from(x) };
-            let hash_s = |xs: &[&[u8]]| -> Hash256 { Hash256::from(xs) };
-            let hash_to_sk = |hash: &Hash256| SecretKey::from_slice(hash.as_ref());
+            let hash = |x: &[u8]| -> Sha256 {
+                use bitcoin_hashes::Hash;
+                Sha256::hash(x)
+            };
+            let hash_s = |xs: &[&[u8]]| -> Sha256 { Sha256::hash_mult(xs) };
+            let hash_to_sk = |hash: &Sha256| SecretKey::from_slice(hash.as_ref());
 
             // secp256k1 base point G
             let base_point = {
@@ -111,7 +115,7 @@ impl OnionRoute {
 
         fn generate_header_padding(
             key_type: &KeyType,
-            shared_secrets: &[Hash256],
+            shared_secrets: &[Sha256],
         ) -> Vec<HopBytes> {
             let num = shared_secrets.len();
             let mut filler = vec![HopBytes::zero(); num - 1];

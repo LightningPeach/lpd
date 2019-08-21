@@ -12,7 +12,7 @@ fn test_bolt0008() {
     test_bolt0008_internal().unwrap();
 }
 
-fn test_bolt0008_internal() -> Result<(), Box<Error>> {
+fn test_bolt0008_internal() -> Result<(), Box<dyn Error>> {
     let rs_priv = SecretKey::from_slice(
         hex::decode("2121212121212121212121212121212121212121212121212121212121212121")?.as_slice(),
     )?;
@@ -73,8 +73,6 @@ fn test_bolt0008_internal() -> Result<(), Box<Error>> {
     assert_eq!(hex::encode(act_three.as_ref()), "00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba");
 
     let mut responder_machine = responder_machine.receive_act_three(act_three)?;
-
-    println!("{:?}", responder_machine);
 
     let send_key = "969ab31b4d288cedf6218839b27a3e2140827047f2c0f01bf5c04435d43511a9";
     let recv_key = "bb9020b8965f4df047e07f955f3c4b88418984aadc5cdb35096b9ea8fa5c3442";

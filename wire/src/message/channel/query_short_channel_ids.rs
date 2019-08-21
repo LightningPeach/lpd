@@ -1,6 +1,6 @@
 use std::error::Error;
 use super::ShortChannelId;
-use super::Hash256;
+use super::Sha256;
 use binformat::UncompressedData;
 use binformat::SerdeVec;
 
@@ -32,13 +32,13 @@ impl ShortChannelIdEncoding {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct QueryShortChannelIds {
-    pub chain_hash: Hash256,
+    pub chain_hash: Sha256,
     pub ids: ShortChannelIdEncoding,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct ReplyShortChannelIdsEnd {
-    pub chain_hash: Hash256,
+    pub chain_hash: Sha256,
     pub complete: bool,
 }
 
@@ -147,7 +147,7 @@ mod test {
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = QueryShortChannelIds {
-            chain_hash: Hash256::from_hex("0006000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            chain_hash: Sha256::from_hex("0006000000000000000000000000000000000000000000000000000000000000").unwrap(),
             ids: ShortChannelIdEncoding::from_u64_vec(0, &vec![
                 13437131603116042,
                 16492674417426533,
@@ -181,7 +181,7 @@ mod test {
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = QueryShortChannelIds {
-            chain_hash: Hash256::from_hex("0006000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            chain_hash: Sha256::from_hex("0006000000000000000000000000000000000000000000000000000000000000").unwrap(),
             ids: ShortChannelIdEncoding::from_u64_vec(1, &vec![13437131603116042, 16492674417426533, 219902325555527691,]).unwrap(),
         };
         let wrapped_msg_correct = Message::QueryShortChannelIds(msg_correct);
@@ -204,7 +204,7 @@ mod test {
         let msg_bytes = hex::decode(msg_hex).unwrap();
 
         let msg_correct = ReplyShortChannelIdsEnd {
-            chain_hash: Hash256::from_hex("0007000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            chain_hash: Sha256::from_hex("0007000000000000000000000000000000000000000000000000000000000000").unwrap(),
             complete: 1 != 0,
         };
         let wrapped_msg_correct = Message::ReplyShortChannelIdsEnd(msg_correct);

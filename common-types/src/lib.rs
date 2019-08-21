@@ -1,7 +1,9 @@
 #![forbid(unsafe_code)]
 
+pub extern crate dependencies;
+
 mod hash;
-pub use self::hash::Hash256;
+pub use self::hash::{Sha256, Sha256HashEngine};
 
 mod crypto_types;
 pub use self::crypto_types::{RawPublicKey, RawSignature};

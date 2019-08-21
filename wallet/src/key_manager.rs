@@ -1,7 +1,7 @@
 use dependencies::bitcoin;
 use dependencies::secp256k1;
 
-use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, ChildNumber};
+use bitcoin::util::bip32::{ExtendedPrivKey, ChildNumber};
 use bitcoin::network::constants::Network;
 use secp256k1::Secp256k1;
 
@@ -14,7 +14,7 @@ pub struct KeyManager {
 }
 
 impl KeyManager {
-    pub fn from_seed(seed: &[u8]) -> Result<Self, Box<Error>> {
+    pub fn from_seed(seed: &[u8]) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
             master_key: ExtendedPrivKey::new_master(Network::Bitcoin, seed)?,
         })

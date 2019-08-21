@@ -1,9 +1,12 @@
-use dependencies::sha2;
 use dependencies::hkdf;
 use dependencies::hex;
+use dependencies::bitcoin_hashes;
+
+use bitcoin_hashes::Hash;
 
 use super::cipher_state::CipherState;
 use std::{fmt, io};
+use common_types::{Sha256, Sha256HashEngine};
 
 // TODO: needed MAC type encapsulating the array [u8; MAC_SIZE]
 pub const MAC_SIZE: usize = 16;
@@ -40,15 +43,7 @@ impl fmt::Debug for SymmetricState {
 
 impl SymmetricState {
     pub fn new(protocol_name: &str) -> Self {
-        use sha2::{Digest, Sha256};
-
-        let digest = {
-            let mut hasher = Sha256::default();
-            hasher.input(protocol_name.as_bytes());
-            let mut digest: [u8; 32] = [0; 32];
-            digest.copy_from_slice(&hasher.result()[..]);
-            digest
-        };
+        let digest = Sha256::hash(protocol_name.as_bytes()).into_inner();
 
         SymmetricState {
             cipher_state: CipherState::new([0; 32], [0; 32]),
@@ -63,14 +58,11 @@ impl SymmetricState {
     // then latter 32 bytes become the temp secret key using within any future AEAD
     // operations until another DH operation is performed.
     pub fn mix_key(&mut self, input: &[u8]) {
-        use sha2::{Sha256, Digest};
         use hkdf::Hkdf;
 
-        let mut hasher = Sha256::default();
-        hasher.input(input);
-        let hash = hasher.result();
 
-        let hkdf = Hkdf::<Sha256>::extract(Some(&self.chaining_key), hash.as_ref());
+        let hash = Sha256::hash(input);
+        let hkdf = Hkdf::<Sha256HashEngine>::extract(Some(&self.chaining_key), hash.as_ref());
         let mut okm = [0; 64];
         hkdf.expand(&[], &mut okm).unwrap();
 
@@ -86,13 +78,8 @@ impl SymmetricState {
     // The running result of this value (h) is used as the associated data in all
     // decryption/encryption operations.
     pub fn mix_hash(&mut self, data: &[u8]) {
-        use sha2::{Digest, Sha256};
-
-        let mut hasher = Sha256::default();
-        hasher.input(&self.handshake_digest);
-        hasher.input(data);
-
-        self.handshake_digest.copy_from_slice(&hasher.result()[..]);
+        let hash = Sha256::hash_mult(&[&self.handshake_digest, data]);
+        self.handshake_digest.copy_from_slice(&hash[..]);
     }
 
     // encrypt_and_hash returns the authenticated encryption of the passed plaintext.
@@ -138,9 +125,7 @@ impl SymmetricState {
     }
 
     pub fn into_pair(self) -> (CipherState, CipherState) {
-        use sha2::Sha256;
-
-        let hkdf = hkdf::Hkdf::<Sha256>::extract(Some(&self.chaining_key), &[]);
+        let hkdf = hkdf::Hkdf::<Sha256HashEngine>::extract(Some(&self.chaining_key), &[]);
         let mut okm = [0; 64];
         hkdf.expand(&[], &mut okm).unwrap();
 

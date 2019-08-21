@@ -9,6 +9,6 @@ pub use self::output_index::OutputIndex;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct ChannelPoint {
-    hash: Hash256,
+    hash: Sha256,
     index: u32,
 }

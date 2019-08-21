@@ -1,20 +1,21 @@
-use dependencies::sha2;
+use dependencies::bitcoin_hashes;
 
-use sha2::{Sha256, Digest};
+use common_types::Sha256;
+use bitcoin_hashes::Hash;
 
-use super::util::{Sha256Hash, LeafIndex, get_nth_bit};
+use super::util::{LeafIndex, get_nth_bit};
 
 pub struct ProducerTree {
-    seed: Sha256Hash,
+    seed: Sha256,
 }
 
 impl ProducerTree {
-    pub fn new(seed: Sha256Hash) -> Self {
+    pub fn new(seed: Sha256) -> Self {
         Self { seed }
     }
 
-    pub fn leaf(&self, index: LeafIndex) -> Sha256Hash {
-        let mut value: [u8; 32] = self.seed.clone().into();
+    pub fn leaf(&self, index: LeafIndex) -> Sha256 {
+        let mut value: [u8; 32] = self.seed.clone().into_inner();
         for n in (0..63).rev() {
             if get_nth_bit(index.into(), n) {
                 // flip bit
@@ -22,20 +23,24 @@ impl ProducerTree {
                 let bit_number = n % 8;
                 value[byte_number] ^= 1 << bit_number;
 
-                let mut hasher = Sha256::default();
-                hasher.input(&value);
-                value.copy_from_slice(&hasher.result());
+//                let mut hasher = Sha256::default();
+//                hasher.input(&value);
+                value = Sha256::hash(&value[..]).into_inner();
             }
         }
-        Sha256Hash::from(value)
+        Sha256::from(value)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use dependencies::hex;
+    use dependencies::bitcoin_hashes;
 
-    use super::{ProducerTree, Sha256Hash};
+    use bitcoin_hashes::Hash;
+    use common_types::Sha256;
+
+    use super::{ProducerTree};
     use super::LeafIndex;
 
     struct TestData<'a> {
@@ -84,7 +89,7 @@ mod tests {
             let mut seed = [0; 32];
             seed.copy_from_slice(&hex::decode(test.seed).unwrap());
 
-            let producer = ProducerTree::new(Sha256Hash::from(seed));
+            let producer = ProducerTree::new(Sha256::from(seed));
             let leaf: [u8; 32] = producer.leaf(test.index).into();
 
             assert_eq!(hex::encode(leaf), test.output);

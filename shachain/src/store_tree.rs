@@ -1,8 +1,9 @@
-use dependencies::sha2;
+use dependencies::bitcoin_hashes;
 
-use sha2::{Sha256, Digest};
+use common_types::Sha256;
 
-use super::util::{Sha256Hash, LeafIndex, get_nth_bit, count_trailing_zeroes, MAX_HEIGHT};
+use bitcoin_hashes::Hash;
+use super::util::{LeafIndex, get_nth_bit, count_trailing_zeroes, MAX_HEIGHT};
 use super::error::{CanNotDeriveTreeElement, InvalidLeaf, CanNotFindElementByIndex, AddLeafError, LookupError};
 
 fn can_derive(from_index: LeafIndex, to_index: LeafIndex) -> bool {
@@ -14,7 +15,7 @@ fn can_derive(from_index: LeafIndex, to_index: LeafIndex) -> bool {
     true
 }
 
-fn derive(from_index: LeafIndex, to_index: LeafIndex, from_value: Sha256Hash) -> Result<Sha256Hash, CanNotDeriveTreeElement> {
+fn derive(from_index: LeafIndex, to_index: LeafIndex, from_value: Sha256) -> Result<Sha256, CanNotDeriveTreeElement> {
     if !can_derive(from_index, to_index) {
         return Err(CanNotDeriveTreeElement::new(from_index, to_index))
     }
@@ -26,9 +27,9 @@ fn derive(from_index: LeafIndex, to_index: LeafIndex, from_value: Sha256Hash) ->
             let bit_number = bit % 8;
             value[byte_number] ^= 1 << bit_number;
 
-            let mut hasher = Sha256::default();
-            hasher.input(value.as_bytes());
-            value.copy_from_slice(&hasher.result());
+//            let mut hasher = Sha256::default();
+//            hasher.input(value.as_bytes());
+            value = Sha256::hash(value.as_ref());
         }
     }
     return Ok(value)
@@ -37,11 +38,11 @@ fn derive(from_index: LeafIndex, to_index: LeafIndex, from_value: Sha256Hash) ->
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Leaf {
     index: LeafIndex,
-    value: Sha256Hash,
+    value: Sha256,
 }
 
 impl Leaf {
-    fn new(index: LeafIndex, value: Sha256Hash) -> Self {
+    fn new(index: LeafIndex, value: Sha256) -> Self {
         Self {
             index,
             value,
@@ -52,7 +53,7 @@ impl Leaf {
         self.index
     }
 
-    pub fn get_value(&self) -> Sha256Hash {
+    pub fn get_value(&self) -> Sha256 {
         self.value
     }
 }
@@ -70,7 +71,7 @@ impl StoreTree {
         }
     }
 
-    pub fn add_leaf(&mut self, hash: Sha256Hash) -> Result<(), AddLeafError> {
+    pub fn add_leaf(&mut self, hash: Sha256) -> Result<(), AddLeafError> {
         {
             let next_index = self.next_index;
             self.receive_value(next_index, hash)?;
@@ -79,7 +80,7 @@ impl StoreTree {
         Ok(())
     }
 
-    pub fn lookup(&self, index: LeafIndex) -> Result<Sha256Hash, LookupError> {
+    pub fn lookup(&self, index: LeafIndex) -> Result<Sha256, LookupError> {
         for leaf in &self.known[..] {
             if can_derive(leaf.index, index) {
                 let elem = derive(leaf.index, index, leaf.value)?;
@@ -89,7 +90,7 @@ impl StoreTree {
         Err(CanNotFindElementByIndex::new(index).into())
     }
 
-    fn receive_value(&mut self, index: LeafIndex, value: Sha256Hash) -> Result<(), AddLeafError> {
+    fn receive_value(&mut self, index: LeafIndex, value: Sha256) -> Result<(), AddLeafError> {
         let pos = count_trailing_zeroes(index.into());
         // We should be able to generate every lesser value, otherwise invalid
         for i in 0..pos {
@@ -106,7 +107,7 @@ impl StoreTree {
 #[cfg(test)]
 mod tests {
     use super::StoreTree;
-    use super::{LeafIndex, Sha256Hash};
+    use super::{LeafIndex, Sha256};
 
     struct TestInsert<'a> {
         index:      LeafIndex,
@@ -452,7 +453,7 @@ mod tests {
         for test in &TESTS {
             let mut receiver = StoreTree::new();
             for insert in test.inserts {
-                let secret = Sha256Hash::from_hex(insert.secret).unwrap();
+                let secret = Sha256::from_hex(insert.secret).unwrap();
                 let resp = receiver.add_leaf(secret);
                 if resp.is_err() && insert.successful {
                     panic!("Failed ({}): error was received but it shouldn't: {}", test.name, resp.unwrap_err())

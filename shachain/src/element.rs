@@ -1,10 +1,9 @@
-use dependencies::sha2;
 use dependencies::hex;
-
-use sha2::{Sha256, Digest};
-
+use dependencies::bitcoin_hashes;
 
 use std::error::Error;
+use common_types::Sha256;
+use bitcoin_hashes::Hash;
 
 use crate::utils;
 
@@ -45,9 +44,7 @@ impl Element {
 
             hash[byte_number as usize] ^= (1 << bit_number);
 
-            let mut hasher = Sha256::default();
-            hasher.input(&hash);
-            hash.copy_from_slice(&hasher.result());
+            hash = Sha256::hash(hash.as_ref()).into_inner();
         }
 
         Ok(Element {

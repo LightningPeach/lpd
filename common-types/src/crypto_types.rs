@@ -48,7 +48,7 @@ impl AsRef<PublicKey> for RawPublicKey {
 
 impl RawPublicKey {
     // assume serialized compressed or not?
-    pub fn from_hex(s: &str) -> Result<RawPublicKey, Box<Error>> {
+    pub fn from_hex(s: &str) -> Result<RawPublicKey, Box<dyn Error>> {
         use std::str::FromStr;
         let pk = PublicKey::from_str(s)
             .map_err(|err| format!("error decoding pubkey: {:?}", err))?;
@@ -108,7 +108,7 @@ impl RawSignature {
     }
 
     // use der encoding
-    pub fn from_bytes(v: &[u8]) -> Result<RawSignature, Box<Error>> {
+    pub fn from_bytes(v: &[u8]) -> Result<RawSignature, Box<dyn Error>> {
         let s = Signature::from_der(v)?;
         Ok(RawSignature(s))
     }
@@ -120,7 +120,7 @@ impl RawSignature {
     }
 
     // use der encoding
-    pub fn from_hex(s: &str) -> Result<RawSignature, Box<Error>> {
+    pub fn from_hex(s: &str) -> Result<RawSignature, Box<dyn Error>> {
         let b = hex::decode(s)
             .map_err(|err| format!("cannot decode RawSignature from hex: {:?}", err))?;
         let sig = Signature::from_der(&b[..])

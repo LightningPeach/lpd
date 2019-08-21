@@ -1,8 +1,10 @@
 use dependencies::chacha;
-use dependencies::sha2;
 use dependencies::hmac;
+use dependencies::bitcoin_hashes;
 
-use common_types::Hash256;
+use bitcoin_hashes::sha256;
+
+use common_types::{Sha256, Sha256HashEngine};
 use chacha::{ChaCha, KeyStream};
 use std::ops::BitXorAssign;
 use serde::{Serialize, Deserialize};
@@ -18,8 +20,7 @@ impl KeyType {
     // maximum length currently is 32 bytes.
     const KEY_LEN: usize = 32;
 
-    fn key(&self, shared_key: Hash256) -> [u8; Self::KEY_LEN] {
-        use sha2::Sha256;
+    fn key(&self, shared_key: Sha256) -> [u8; Self::KEY_LEN] {
         use hmac::{Hmac, Mac};
         use self::KeyType::*;
 
@@ -28,7 +29,7 @@ impl KeyType {
             &Mu => "mu",
         };
 
-        let mut mac = Hmac::<Sha256>::new_varkey(key_type.as_bytes()).unwrap();
+        let mut mac = Hmac::<Sha256HashEngine>::new_varkey(key_type.as_bytes()).unwrap();
         mac.input(shared_key.as_ref());
         let result = mac.result().code();
         let mut array = [0; Self::KEY_LEN];
@@ -36,16 +37,15 @@ impl KeyType {
         array
     }
 
-    pub fn chacha(&self, shared_key: Hash256) -> ChaCha {
+    pub fn chacha(&self, shared_key: Sha256) -> ChaCha {
         ChaCha::new_chacha20(&self.key(shared_key), &[0u8; 8])
     }
 
-    pub fn hmac(&self, shared_key: Hash256, msg: &[&[u8]]) -> HmacData {
-        use sha2::Sha256;
+    pub fn hmac(&self, shared_key: Sha256, msg: &[&[u8]]) -> HmacData {
         use hmac::{Hmac, Mac};
 
         let key = self.key(shared_key);
-        let mac = Hmac::<Sha256>::new_varkey(&key).unwrap();
+        let mac = Hmac::<Sha256HashEngine>::new_varkey(&key).unwrap();
         let mac = msg.iter().fold(mac, |mut mac, &x| {
             mac.input(x);
             mac
