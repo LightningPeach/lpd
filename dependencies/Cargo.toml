@@ -6,7 +6,7 @@ authors = ["Mykola Sakhno <mykola.sakhno@bitfury.com>"]
 edition = "2018"
 
 [dependencies]
-secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust" }
+secp256k1 = { git = "https://github.com/LightningPeach/secp256k1-wrapper.git", package = "secp256k1-pure-rust"}
 bitcoin_hashes = "0.7"
 bitcoin = { git = "https://github.com/LightningPeach/rust-bitcoin.git" }
 rand = "0.6"
