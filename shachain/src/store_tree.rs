@@ -6,6 +6,8 @@ use bitcoin_hashes::Hash;
 use super::util::{LeafIndex, get_nth_bit, count_trailing_zeroes, MAX_HEIGHT};
 use super::error::{CanNotDeriveTreeElement, InvalidLeaf, CanNotFindElementByIndex, AddLeafError, LookupError};
 
+use serde::{Serialize, Deserialize};
+
 fn can_derive(from_index: LeafIndex, to_index: LeafIndex) -> bool {
     for bit in (count_trailing_zeroes(from_index.into())..63).rev() {
         if get_nth_bit(from_index.into(), bit) != get_nth_bit(to_index.into(), bit) {
@@ -35,7 +37,7 @@ fn derive(from_index: LeafIndex, to_index: LeafIndex, from_value: Sha256) -> Res
     return Ok(value)
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Leaf {
     index: LeafIndex,
     value: Sha256,
@@ -101,6 +103,78 @@ impl StoreTree {
         self.known[pos].index = index;
         self.known[pos].value = value;
         Ok(())
+    }
+}
+
+mod state_m {
+    use super::StoreTree;
+
+    use serde::{Serialize, Deserialize, Serializer, Deserializer};
+    use state::DBValue;
+
+    impl Serialize for StoreTree {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            use super::MAX_HEIGHT;
+            use serde::ser::SerializeTuple;
+
+            let mut tuple = serializer.serialize_tuple(MAX_HEIGHT + 1)?;
+            self.known.iter().try_for_each(|leaf| tuple.serialize_element(leaf))?;
+            tuple.serialize_element(&self.next_index)?;
+            tuple.end()
+        }
+    }
+
+    impl<'de> Deserialize<'de> for StoreTree {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            use super::MAX_HEIGHT;
+            use std::fmt;
+            use serde::de::{Visitor, SeqAccess, Error};
+
+            struct V;
+
+            impl<'r> Visitor<'r> for V {
+                type Value = StoreTree;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    write!(formatter, "sequence")
+                }
+
+                fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+                where
+                    A: SeqAccess<'r>,
+                {
+                    let mut seq = seq;
+                    let mut value = StoreTree::new();
+                    value.known.iter_mut().try_for_each(|leaf| {
+                        *leaf = seq.next_element()?.ok_or(Error::custom("expect known leaf"))?;
+                        Ok(())
+                    })?;
+                    value.next_index = seq.next_element()?.ok_or(Error::custom("expect next_index"))?;
+                    Ok(value)
+                }
+            }
+
+            deserializer.deserialize_tuple(MAX_HEIGHT + 1, V)
+        }
+    }
+
+    impl DBValue for StoreTree {
+        type Extension = ();
+
+        fn extend(self, e: Self::Extension) -> Self {
+            let () = e;
+            self
+        }
+
+        fn cf_name() -> &'static str {
+            "store_tree"
+        }
     }
 }
 

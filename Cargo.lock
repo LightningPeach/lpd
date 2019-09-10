@@ -2438,6 +2438,8 @@ version = "0.1.0"
 dependencies = [
  "common-types 0.0.0",
  "dependencies 0.1.0",
+ "serde 1.0.100 (registry+https://github.com/rust-lang/crates.io-index)",
+ "state 0.1.0",
 ]
 
 [[package]]

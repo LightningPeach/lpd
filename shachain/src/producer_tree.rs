@@ -3,8 +3,12 @@ use dependencies::bitcoin_hashes;
 use common_types::Sha256;
 use bitcoin_hashes::Hash;
 
+use serde::{Serialize, Deserialize};
+use state::DBValue;
+
 use super::util::{LeafIndex, get_nth_bit};
 
+#[derive(Serialize, Deserialize)]
 pub struct ProducerTree {
     seed: Sha256,
 }
@@ -29,6 +33,19 @@ impl ProducerTree {
             }
         }
         Sha256::from(value)
+    }
+}
+
+impl DBValue for ProducerTree {
+    type Extension = ();
+
+    fn extend(self, e: Self::Extension) -> Self {
+        let () = e;
+        self
+    }
+
+    fn cf_name() -> &'static str {
+        "producer_tree"
     }
 }
 
