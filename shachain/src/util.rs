@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 const START_INDEX: LeafIndex = LeafIndex(((1u64 << (MAX_HEIGHT as u64)) - 1) as u64);
 pub const MAX_HEIGHT: usize = 48;
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub struct LeafIndex(pub u64);
 
 impl Into<u64> for LeafIndex {

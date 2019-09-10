@@ -37,7 +37,7 @@ fn derive(from_index: LeafIndex, to_index: LeafIndex, from_value: Sha256) -> Res
     return Ok(value)
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Leaf {
     index: LeafIndex,
     value: Sha256,
@@ -103,6 +103,22 @@ impl StoreTree {
         self.known[pos].index = index;
         self.known[pos].value = value;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+impl Eq for StoreTree {}
+
+#[cfg(test)]
+impl PartialEq for StoreTree {
+    fn eq(&self, other: &Self) -> bool {
+        // TODO: compare them properly
+        for i in 0..MAX_HEIGHT {
+            if self.known[i] != other.known[i] {
+                return false;
+            }
+        }
+        self.next_index == other.next_index
     }
 }
 
@@ -534,6 +550,45 @@ mod tests {
                 } else if resp.is_ok() && !insert.successful {
                     panic!("Failed ({}): error wasn't received", test.name)
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn test_db() {
+        use state::DBBuilder;
+        use std::{fs, io};
+
+        fn test_trees() -> Vec<StoreTree> {
+            TESTS.iter().map(|test| {
+                let mut receiver = StoreTree::new();
+                for insert in test.inserts {
+                    if insert.successful {
+                        let secret = Sha256::from_hex(insert.secret).unwrap();
+                        receiver.add_leaf(secret).unwrap();
+                    } else {
+                        break
+                    }
+                }
+                receiver
+            }).collect()
+        }
+
+        {
+            let () = fs::remove_dir_all("target/db")
+                .or_else(|e| if e.kind() == io::ErrorKind::NotFound { Ok(()) } else { Err(e) })
+                .unwrap();
+            let db = DBBuilder::default().register::<StoreTree>().build("target/db").unwrap();
+            for (index, tree) in test_trees().into_iter().enumerate() {
+                db.put(&index, tree).ok().unwrap();
+            }
+        }
+
+        let db = DBBuilder::default().register::<StoreTree>().build("target/db").unwrap();
+        for (index, tree) in test_trees().into_iter().enumerate() {
+            let from_db: StoreTree = db.get(&index).unwrap().unwrap();
+            if from_db != tree {
+                panic!();
             }
         }
     }
