@@ -37,7 +37,7 @@ impl RevocationStore {
     // in store we will not able to derive it and function will fail.
     //
     // NOTE: This function is part of the Store interface.
-    fn look_up(&self, v: u64) -> Result<[u8; 32], Box<Error>> {
+    fn look_up(&self, v: u64) -> Result<[u8; 32], Box<dyn Error>> {
     	let ind = Index::new(v);
 
     	// Trying to derive the index from one of the existing buckets elements.
@@ -56,7 +56,7 @@ impl RevocationStore {
     // they're produced by a shachain.Producer.
     //
     // NOTE: This function is part of the Store interface.
-    pub fn add_next_entry(&mut self, hash: [u8; 32]) -> Result<(), Box<Error>> {
+    pub fn add_next_entry(&mut self, hash: [u8; 32]) -> Result<(), Box<dyn Error>> {
     	let new_element = Element{
     		index: self.index,
     		hash,

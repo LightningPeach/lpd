@@ -20,7 +20,7 @@ impl ProducerTree {
             if get_nth_bit(index.into(), n) {
                 // flip bit
                 let byte_number = n / 8;
-                let bit_number = n % 8;
+                let bit_number = (n % 8) as u8;
                 value[byte_number] ^= 1 << bit_number;
 
 //                let mut hasher = Sha256::default();
@@ -35,9 +35,7 @@ impl ProducerTree {
 #[cfg(test)]
 mod tests {
     use dependencies::hex;
-    use dependencies::bitcoin_hashes;
 
-    use bitcoin_hashes::Hash;
     use common_types::Sha256;
 
     use super::{ProducerTree};

@@ -24,7 +24,7 @@ fn derive(from_index: LeafIndex, to_index: LeafIndex, from_value: Sha256) -> Res
         if get_nth_bit(to_index.into(),bit) && !get_nth_bit(from_index.into(), bit) {
             // flip bit
             let byte_number = bit / 8;
-            let bit_number = bit % 8;
+            let bit_number = (bit % 8) as u8;
             value[byte_number] ^= 1 << bit_number;
 
 //            let mut hasher = Sha256::default();

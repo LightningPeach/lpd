@@ -3,7 +3,7 @@ use std;
 
 // get_bit return bit on index at position.
 pub fn get_bit(index: Index, position: u8) -> u8 {
-	((index.0 >> position) & 1) as u8
+	((index.0 >> (position as u64)) & 1) as u8
 }
 
 pub fn get_prefix(index: Index, position: u8) -> u64 {
@@ -21,7 +21,7 @@ pub fn get_prefix(index: Index, position: u8) -> u64 {
 	//	|  0 |   1   |  1   |	 1   |
 	//	+ -- + ----- + ---- + ------ +
 
-    let mask = std::u64::MAX - ((1u64 << position) - 1);
+    let mask = std::u64::MAX - ((1u64 << (position as u64)) - 1);
     index.0 & mask
 }
 

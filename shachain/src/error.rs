@@ -83,7 +83,7 @@ impl fmt::Display for AddLeafError {
 }
 
 impl Error for AddLeafError {
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             AddLeafError::Derive(ref err) => Some(err),
             AddLeafError::InvalidLeaf(ref err) => Some(err),

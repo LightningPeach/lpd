@@ -31,7 +31,7 @@ impl RevocationProducer {
     // particular index.
     //
     // NOTE: Part of the Producer interface.
-    pub fn at_index(&self, v: u64) -> Result<[u8; 32], Box<Error>> {
+    pub fn at_index(&self, v: u64) -> Result<[u8; 32], Box<dyn Error>> {
     	let ind = Index::new(v);
         let element = self.root.derive(ind)?;
         Ok(element.hash)

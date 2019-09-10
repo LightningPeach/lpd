@@ -1,4 +1,3 @@
-use dependencies::hex;
 use dependencies::bitcoin_hashes;
 
 use std::error::Error;
@@ -33,7 +32,7 @@ pub struct Element {
 impl Element {
     // derive computes one shachain element from another by applying a series of
     // bit flips and hashing operations based on the starting and ending index.
-    pub fn derive(&self, to_index: Index) -> Result<Element, Box<Error>> {
+    pub fn derive(&self, to_index: Index) -> Result<Element, Box<dyn Error>> {
         let positions= self.index.derive_bit_transformations(to_index)?;
 
         let mut hash = self.hash;
@@ -42,7 +41,7 @@ impl Element {
             let byte_number = position / 8;
             let bit_number = position % 8;
 
-            hash[byte_number as usize] ^= (1 << bit_number);
+            hash[byte_number as usize] ^= 1 << bit_number;
 
             hash = Sha256::hash(hash.as_ref()).into_inner();
         }
@@ -68,7 +67,7 @@ pub const MAX_HEIGHT: u8 = 48;
 pub const ROOT_INDEX: Index = Index(0);
 
 // START_INDEX is the index of first element in the shachain PRF.
-pub const START_INDEX: Index = Index((1 << MAX_HEIGHT) - 1);
+pub const START_INDEX: Index = Index((1 << (MAX_HEIGHT as u64)) - 1);
 
 // Index is a number which identifies the hash number and serves as a way to
 // determine the hashing operation required  to derive one hash from another.
@@ -115,7 +114,7 @@ impl Index {
     //    +---|---|---|---|---|---|---|---|---> index
     //        0   1   2   3   4   5   6   7
     //
-    fn derive_bit_transformations(&self, to: Index) -> Result<Vec<u8>, Box<Error>> {
+    fn derive_bit_transformations(&self, to: Index) -> Result<Vec<u8>, Box<dyn Error>> {
         let mut positions = Vec::new();
 
         if self.0 == to.0 {

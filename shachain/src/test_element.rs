@@ -1,6 +1,9 @@
+#[cfg(test)]
 use dependencies::hex;
 
-use crate::element::{Element, Index, ROOT_INDEX};
+#[cfg(test)]
+use crate::element::{Element, ROOT_INDEX};
+use crate::element::Index;
 
 struct TestData<'a> {
     name:   &'a str,

@@ -1,5 +1,7 @@
+#[cfg(test)]
 use dependencies::hex;
 
+#[cfg(test)]
 use crate::store::RevocationStore;
 use crate::element::Index;
 

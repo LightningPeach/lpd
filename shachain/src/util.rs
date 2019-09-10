@@ -1,9 +1,4 @@
-use dependencies::hex;
-
-use std::ops::{Index, IndexMut};
-
-const SHA256_HASH_SIZE: usize = 32;
-const START_INDEX: LeafIndex = LeafIndex(((1u64 << MAX_HEIGHT) - 1) as u64);
+const START_INDEX: LeafIndex = LeafIndex(((1u64 << (MAX_HEIGHT as u64)) - 1) as u64);
 pub const MAX_HEIGHT: usize = 48;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -26,7 +21,7 @@ impl LeafIndex {
 }
 
 pub fn get_nth_bit(value: u64, n: usize) -> bool {
-    ((value >> n) & 1) == 1
+    ((value >> (n as u64)) & 1) == 1
 }
 
 pub fn count_trailing_zeroes(value: u64) -> usize {
