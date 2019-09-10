@@ -574,17 +574,19 @@ mod tests {
             }).collect()
         }
 
+        const DB_PATH: &'static str = "../target/db/shachain-test";
+
         {
-            let () = fs::remove_dir_all("target/db")
+            let () = fs::remove_dir_all(DB_PATH)
                 .or_else(|e| if e.kind() == io::ErrorKind::NotFound { Ok(()) } else { Err(e) })
                 .unwrap();
-            let db = DBBuilder::default().register::<StoreTree>().build("target/db").unwrap();
+            let db = DBBuilder::default().register::<StoreTree>().build(DB_PATH).unwrap();
             for (index, tree) in test_trees().into_iter().enumerate() {
                 db.put(&index, tree).ok().unwrap();
             }
         }
 
-        let db = DBBuilder::default().register::<StoreTree>().build("target/db").unwrap();
+        let db = DBBuilder::default().register::<StoreTree>().build(DB_PATH).unwrap();
         for (index, tree) in test_trees().into_iter().enumerate() {
             let from_db: StoreTree = db.get(&index).unwrap().unwrap();
             if from_db != tree {
