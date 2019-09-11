@@ -13,3 +13,7 @@ structopt = "0.3"
 dependencies = { path = "../../dependencies" }
 implementation = { path = "../implementation" }
 connection = { path = "../../connection" }
+
+[build-dependencies]
+chrono = "0.4"
+rustc_version = "0.2"

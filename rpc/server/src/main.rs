@@ -54,6 +54,15 @@ fn main() -> Result<(), Error> {
         return Ok(());
     }
 
+    let _version = format!(
+        "lpd version: {}\ncommit hash: {}\nbuild time: {}\nrustc version: {}\nhas diff: {}",
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH"),
+        env!("BUILD_TIME"),
+        env!("RUSTC_VERSION"),
+        env!("GIT_HAS_DIFF"),
+    );
+
     let wallet = {
         let mut wallet_db_path = PathBuf::from(config.db_path.clone());
         wallet_db_path.push("wallet");
