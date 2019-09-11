@@ -15,7 +15,7 @@ pub use self::lp::{LpServer, LpRunning};
 
 // abstract lightning node
 mod al;
-use self::al::AbstractLightningNode;
+// use self::al::AbstractLightningNode;
 
 use std::error::Error;
 
@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     use std::thread;
     use std::time::Duration;
     use futures::{Future, Stream};
-    use bitcoin_rpc_client::BitcoinRpcApi;
+    use bitcoin_rpc_client::RpcApi as _;
     use bitcoin::Address;
     use std::str::FromStr;
 
@@ -51,13 +51,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("End waiting for bitcoind");
 
     // Generate some blocks to activate segwit
-    btc_running.rpc_client().generate(500)
+    btc_running.rpc_client()?.generate(500, None)
         .unwrap_or_else(|err| {
-            println!("rpc error, cannot mine initial blocks: {:?}", err);
-            panic!(err);
-        })
-        .unwrap_or_else(|err| {
-            println!("client error, cannot mine initial blocks: {:?}", err);
+            println!("error, cannot mine initial blocks: {:?}", err);
             panic!(err);
         });
 
@@ -90,14 +86,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             err
         })?;
 
-    btc_running.rpc_client()
+    btc_running.rpc_client()?
         .generate_to_address(400, &mining_address)
         .unwrap_or_else(|err|{
-            println!("rpc error mining initial money for the first node: {:?}", err);
-            panic!(err);
-        })
-        .unwrap_or_else(|err|{
-            println!("client error mining money for the first node: {:?}", err);
+            println!("error mining initial money for the first node: {:?}", err);
             panic!(err);
         });
     println!("Before waiting for mining blocks for money for first node");
@@ -130,7 +122,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let pk_our = peach_node.address().pubkey;
     let update_stream = nodes[0].open_channel(pk_our.as_str());
     thread::sleep(Duration::from_secs(5));
-    btc_running.rpc_client().generate_to_address(10, &mining_address).unwrap().unwrap();
+    btc_running.rpc_client()?.generate_to_address(10, &mining_address).unwrap().unwrap();
 
     // TODO: run it
     let _ = update_stream.map(|i| {
