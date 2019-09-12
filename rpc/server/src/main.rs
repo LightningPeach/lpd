@@ -1,16 +1,20 @@
 mod config;
-use self::config::{Argument, Error as CommandLineReadError};
+use self::config::{Config, Error as CommandLineReadError, create_tls_acceptor};
 
 mod wallet;
 
 use dependencies::httpbis;
 use dependencies::futures;
 use dependencies::ctrlc;
+use dependencies::secp256k1;
+
+use structopt::StructOpt;
 
 use grpc::Error as GrpcError;
 use httpbis::Error as HttpbisError;
 use std::io::Error as IoError;
 use implementation::wallet_lib::error::WalletError;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 enum Error {
@@ -18,9 +22,16 @@ enum Error {
     Httpbis(HttpbisError),
     CommandLineRead(CommandLineReadError),
     Io(IoError),
-    WalletError(WalletError),
+    WalletError(WalletError, String),
     SendError(ctrlc::Error),
-    TransportError(connection::TransportError)
+    TransportError(connection::TransportError),
+    FileNotSpecified {
+        description: String,
+    }
+}
+
+fn print_version() {
+    println!("{}", env!("CARGO_PKG_VERSION"));
 }
 
 fn main() -> Result<(), Error> {
@@ -31,19 +42,28 @@ fn main() -> Result<(), Error> {
     use self::Error::*;
     use self::wallet::create_wallet;
 
-    let argument = Argument::from_env().map_err(CommandLineRead)?;
+    let config: Config = Config::from_args();
+
+    if config.print_config {
+        println!("{:#?}", config);
+        return Ok(());
+    }
+
+    if config.print_version {
+        print_version();
+        return Ok(());
+    }
 
     let wallet = {
-        let mut wallet_db_path = PathBuf::from(argument.db_path.clone());
+        let mut wallet_db_path = PathBuf::from(config.db_path.clone());
         wallet_db_path.push("wallet");
-        let wallet = create_wallet(&wallet_db_path.as_path()).map_err(WalletError)?;
+        let wallet = create_wallet(&wallet_db_path.as_path()).map_err(|err| {
+            WalletError(err, "cannot create bitcoin onchain wallet".to_owned())
+        })?;
         Arc::new(Mutex::new(wallet))
     };
 
     let (node, tx, rx) = {
-        println!("the lightning peach node is listening rpc at: {}, listening peers at: {}, has database at: {}",
-                 argument.address, argument.p2p_address, argument.db_path);
-
         let (tx, rx) = mpsc::channel(1);
 
         let tx_wait = tx.clone();
@@ -61,7 +81,17 @@ fn main() -> Result<(), Error> {
             0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12,
         ];
 
-        let mut node_db_path = PathBuf::from(argument.db_path.clone());
+        let ctx = secp256k1::Secp256k1::new();
+        let priv_key = secp256k1::SecretKey::from_slice(&secret).unwrap();
+        let pub_key = secp256k1::PublicKey::from_secret_key(&ctx, &priv_key);
+
+        println!("RPC listen at: {}", config.rpc_address);
+        println!("peer listen at: {}", config.p2p_address);
+        println!("db_path: {:?}", config.db_path);
+        println!("Identity pub_key: {}", &pub_key);
+        println!("URI: {}@{}", &pub_key, config.p2p_address);
+
+        let mut node_db_path = PathBuf::from(config.db_path.clone());
         node_db_path.push("node");
 
         (Arc::new(RwLock::new(Node::new(wallet.clone(), secret, node_db_path))), tx, rx)
@@ -69,10 +99,22 @@ fn main() -> Result<(), Error> {
 
     let server = {
         let mut server = ServerBuilder::new();
-        if let Some(acceptor) = argument.tls_acceptor {
+        if !config.rpc_no_tls {
+            let cert_path = config.rpc_tls_cert_path.ok_or ({
+                Error::FileNotSpecified {
+                    description: "RPC TLS certificate file".to_owned(),
+                }
+            })?;
+            let key_path = config.rpc_tls_key_path.ok_or ({
+                Error::FileNotSpecified {
+                    description: "RPC TLS key file".to_owned(),
+                }
+            })?;
+            let acceptor = create_tls_acceptor(&cert_path, &key_path)
+                .map_err(Error::CommandLineRead)?;
             server.http.set_tls(acceptor);
         }
-        server.http.set_addr(argument.address).map_err(Httpbis)?;
+        server.http.set_addr(config.rpc_address).map_err(Httpbis)?;
         // TODO(mkl): make it configurable
         server.http.set_cpu_pool_threads(4);
         server.add_service(wallet_service(wallet.clone(), tx.clone()));
@@ -82,7 +124,7 @@ fn main() -> Result<(), Error> {
         server.build().map_err(Grpc)?
     };
 
-    Node::listen(node, &argument.p2p_address, rx)
+    Node::listen(node, &config.p2p_address, rx)
         .map_err(|err| {
             Error::TransportError(err)
         })?;

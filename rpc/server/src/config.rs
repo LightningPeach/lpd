@@ -3,117 +3,113 @@ use dependencies::tls_api_rustls;
 
 use tls_api_rustls::TlsAcceptor;
 use tls_api::Error as TlsError;
+use tls_api::TlsAcceptorBuilder;
 use std::{net::{SocketAddr, AddrParseError}, io::Error as IoError};
+use std::path::PathBuf;
+use std::fs::File;
+
+use structopt::StructOpt;
+use std::io::Read;
+
+use tls_api_rustls::{
+    TlsAcceptorBuilder as TlsAcceptorBuilderImpl,
+};
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "lpd")]
+/// Lightning Peach Daemon. Server implementation of Lighting protocol
+pub struct Config {
+    /// Address to listen for RPC client connections
+    #[structopt(long="rpc-listen", default_value="127.0.0.1:10009")]
+    pub rpc_address: SocketAddr,
+
+    /// Address to listen for peer-to-peer(p2p) connections
+    #[structopt(long="p2p-listen", default_value="127.0.0.1:9735")]
+    pub p2p_address: SocketAddr,
+
+    /// Path to database
+    #[structopt(long="db-path", parse(from_os_str), default_value="target/db")]
+    pub db_path: PathBuf,
+
+    /// Do not use TLS for rpc connections
+    #[structopt(long="rpc-no-tls")]
+    pub rpc_no_tls: bool,
+
+    /// Path to key file for TLS for RPC connections
+    #[structopt(long="rpc-tls-key-path", parse(from_os_str))]
+    pub rpc_tls_key_path: Option<PathBuf>,
+
+    /// Path to cert file for TLS for RPC connections
+    #[structopt(long="rpc-tls-cert-path", parse(from_os_str))]
+    pub rpc_tls_cert_path: Option<PathBuf>,
+
+    /// Print configuration information and exit. Useful for debugging
+    #[structopt(long="print-config")]
+    pub print_config: bool,
+
+    /// Print detailed version
+    #[structopt(long="version")]
+    pub print_version: bool,
+}
+
 
 #[derive(Debug)]
 pub enum Error {
-    Tls(TlsError),
-    ReadCertificate(IoError),
-    AddressParse(AddrParseError),
+    Tls {
+        inner: TlsError,
+        description: String,
+    },
+    ReadCertificate{
+        inner: IoError,
+        description: String,
+    }
 }
-
-enum CommandLineKey {
-    RpcAddress,
-    P2pAddress,
-    KeyFileName,
-    CertFileName,
-    DbPath,
-}
-
-impl CommandLineKey {
-    fn pattern<'a>(&self) -> &'a str {
-        use self::CommandLineKey::*;
-
-        match self {
-            RpcAddress => "--rpclisten=",
-            P2pAddress => "--listen=",
-            KeyFileName => "--key=",
-            CertFileName => "--cert=",
-            DbPath => "--db-path=",
+impl Error {
+    fn new_tls_error(inner: TlsError, description: &str) -> Error {
+        Error::Tls {
+            inner,
+            description: description.to_owned(),
         }
     }
 
-    fn predicate(&self, arg: &String) -> bool {
-        arg.starts_with(self.pattern())
-    }
-
-    fn value(&self, arg: String) -> String {
-        arg.trim_start_matches(self.pattern()).to_owned()
+    fn new_read_certificate_error(inner: IoError, description: &str) -> Error {
+        Error::ReadCertificate {
+            inner,
+            description: description.to_owned(),
+        }
     }
 }
-
-pub struct Argument {
-    pub address: SocketAddr,
-    pub p2p_address: SocketAddr,
-    pub db_path: String,
-    pub tls_acceptor: Option<TlsAcceptor>,
-}
-
-impl Argument {
-    // TODO(mkl): rewite using some lib. All
-    pub fn from_env() -> Result<Self, Error> {
-        use tls_api_rustls::{
-            TlsAcceptorBuilder as TlsAcceptorBuilderImpl,
-        };
-        use tls_api::TlsAcceptorBuilder;
-        use std::{env, fs::File, io::Read, net::{Ipv4Addr, IpAddr}};
-        use self::Error::*;
-        use self::CommandLineKey::*;
-
-        let default_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 10009);
-        let address = env::args()
-            .find(|arg| RpcAddress.predicate(arg))
-            .map(|arg| RpcAddress.value(arg).parse::<SocketAddr>())
-            .unwrap_or(Ok(default_address))
-            .map_err(AddressParse)?;
-
-        let default_p2p_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 9735);
-        let p2p_address = env::args()
-            .find(|arg| P2pAddress.predicate(arg))
-            .map(|arg| P2pAddress.value(arg).parse::<SocketAddr>())
-            .unwrap_or(Ok(default_p2p_address))
-            .map_err(AddressParse)?;
-
-        let default_db_path = "target/db";
-        let db_path = env::args()
-            .find(|arg| DbPath.predicate(arg))
-            .map(|arg| DbPath.value(arg))
-            .unwrap_or(default_db_path.to_owned());
-
-        let acceptor = {
-            let key_bytes: Option<std::io::Result<Vec<u8>>> = env::args().find(|arg| KeyFileName.predicate(arg)).map(|arg| {
-                let path = KeyFileName.value(arg);
-                let mut file = File::open(path)?;
-                let mut vec = Vec::new();
-                file.read_to_end(&mut vec)?;
-                Ok(vec)
-            });
-            let cert_bytes = env::args().find(|arg| CertFileName.predicate(arg)).map(|arg| {
-                let path = CertFileName.value(arg);
-                let mut file = File::open(path)?;
-                let mut vec = Vec::new();
-                file.read_to_end(&mut vec)?;
-                Ok(vec)
-            });
-            match (key_bytes, cert_bytes) {
-                (Some(key_bytes), Some(cert_bytes)) => {
-                    let cert_bytes = cert_bytes.map_err(ReadCertificate)?;
-                    let acceptor =
-                        TlsAcceptorBuilderImpl::from_certs_and_key(&[&cert_bytes[..]], &cert_bytes[..])
-                            .map_err(Tls)?
-                            .build()
-                            .map_err(Tls)?;
-                    Some(acceptor)
-                }
-                _ => None,
-            }
-        };
-
-        Ok(Argument {
-            address: address,
-            p2p_address: p2p_address,
-            db_path: db_path,
-            tls_acceptor: acceptor,
-        })
-    }
+pub fn create_tls_acceptor(cert_path: &PathBuf, key_path: &PathBuf) -> Result<TlsAcceptor, Error> {
+    let cert_bytes = {
+        let mut file = File::open(cert_path)
+            .map_err(|err|
+                Error::new_read_certificate_error(err, &format!("cannot open certificate file: {:?}", &cert_path))
+            )?;
+        let mut vec = Vec::new();
+        file.read_to_end(&mut vec).map_err(|err|
+            Error::new_read_certificate_error(err, &format!("cannot read certificate file: {:?}", &cert_path))
+        )?;
+        vec
+    };
+    let key_bytes = {
+        let mut file = File::open(key_path)
+            .map_err(|err|
+                Error::new_read_certificate_error(err, &format!("cannot open key file: {:?}", &key_path))
+            )?;
+        let mut vec = Vec::new();
+        file.read_to_end(&mut vec).map_err(|err|
+            Error::new_read_certificate_error(err, &format!("cannot read key file: {:?}", &key_path))
+        )?;
+        vec
+    };
+    let acceptor =
+        TlsAcceptorBuilderImpl::from_certs_and_key(&[&cert_bytes[..]], &cert_bytes[..])
+            .map_err(|err|{
+                Error::new_tls_error(err, "cannot create TlsAcceptorBuilder")
+            })?
+            .build()
+            .map_err(|err| {
+                Error::new_tls_error(err, "cannot create TlsAcceptor")
+            })?;
+    Ok(acceptor)
 }

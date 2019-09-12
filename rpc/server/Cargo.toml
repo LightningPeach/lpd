@@ -9,6 +9,7 @@ name = "server"
 
 [dependencies]
 grpc = "0.6.*"
+structopt = "0.3"
 dependencies = { path = "../../dependencies" }
 implementation = { path = "../implementation" }
 connection = { path = "../../connection" }
