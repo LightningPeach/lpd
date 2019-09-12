@@ -14,8 +14,7 @@ dependencies = { path = "../../dependencies" }
 implementation = { path = "../implementation" }
 connection = { path = "../../connection" }
 base32 = "0.4"
+build_info = { path = "../../build_info" }
 
 [build-dependencies]
-chrono = "0.4"
-rustc_version = "0.2"
-base32 = "0.4"
+build_info = { path = "../../build_info" }

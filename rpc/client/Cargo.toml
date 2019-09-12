@@ -15,4 +15,8 @@ grpc = "0.6.*"
 structopt = "0.3"
 dependencies = { path = "../../dependencies" }
 interface = { path = "../interface" }
+build_info = { path = "../../build_info" }
+
+[build-dependencies]
+build_info = { path = "../../build_info" }
 

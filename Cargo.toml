@@ -24,7 +24,8 @@ members = [
     "internal-event",
     "wire-compatibility",
     "cmd/dump-reader",
-    "dependencies"
+    "dependencies",
+    "build_info"
 ]
 exclude = ["electrs"]
 

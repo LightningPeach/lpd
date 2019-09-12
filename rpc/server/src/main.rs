@@ -16,6 +16,8 @@ use std::io::Error as IoError;
 use implementation::wallet_lib::error::WalletError;
 use std::path::PathBuf;
 
+use build_info::get_build_info;
+
 #[derive(Debug)]
 enum Error {
     Grpc(GrpcError),
@@ -31,7 +33,7 @@ enum Error {
 }
 
 fn print_version() {
-    println!("{}", env!("CARGO_PKG_VERSION"));
+    println!("{:#?}", get_build_info!());
 }
 
 fn main() -> Result<(), Error> {
@@ -53,13 +55,6 @@ fn main() -> Result<(), Error> {
         print_version();
         return Ok(());
     }
-
-    let git_diff = base32::decode(base32::Alphabet::Crockford, env!("GIT_DIFF"))
-        .map(String::from_utf8)
-        .unwrap_or(Ok("cannot decode base32".to_owned()))
-        .unwrap_or("cannot decode diff".to_owned());
-    println!("{}", env!("BUILD_INFO"));
-    println!("{}", git_diff);
 
     let wallet = {
         let mut wallet_db_path = PathBuf::from(config.db_path.clone());
