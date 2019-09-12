@@ -12,5 +12,7 @@ name = "client"
 
 [dependencies]
 grpc = "0.6.*"
+structopt = "0.3"
 dependencies = { path = "../../dependencies" }
 interface = { path = "../interface" }
+
