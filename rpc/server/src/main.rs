@@ -58,26 +58,7 @@ fn main() -> Result<(), Error> {
         .map(String::from_utf8)
         .unwrap_or(Ok("cannot decode base32".to_owned()))
         .unwrap_or("cannot decode diff".to_owned());
-
-    let version = format!(
-        "\
-        lpd version: {}\n\
-        commit hash: {}\n\
-        branch: {}\n\
-        build time: {}\n\
-        rustc version: {}\n\
-        rustc channel: {}\n\
-        has diff: {}\
-        ",
-        env!("CARGO_PKG_VERSION"),
-        env!("GIT_HASH"),
-        env!("GIT_BRANCH"),
-        env!("BUILD_TIME"),
-        env!("RUSTC_VERSION"),
-        env!("RUSTC_CHANNEL"),
-        !git_diff.is_empty(),
-    );
-    println!("{}", version);
+    println!("{}", env!("BUILD_INFO"));
     println!("{}", git_diff);
 
     let wallet = {
