@@ -16,14 +16,14 @@ use httpbis::Error as HttpbisError;
 use httpbis::ClientTlsOption;
 use structopt::StructOpt;
 use tls_api_rustls::TlsConnector;
+use futures::future::Future;
 
 use interface::{
     routing_grpc::{RoutingServiceClient, RoutingService},
     routing::{ConnectPeerRequest, LightningAddress as LightningAddressRPC, ChannelGraphRequest},
     common::Void,
 };
-
-use futures::future::Future;
+use build_info::get_build_info;
 
 #[derive(Debug)]
 enum Error {
@@ -163,7 +163,7 @@ impl Command {
 }
 
 fn print_version(){
-    println!("{}", env!("CARGO_PKG_VERSION"));
+    println!("{:#?}", get_build_info!());
 }
 
 fn main() -> Result<(), Error> {

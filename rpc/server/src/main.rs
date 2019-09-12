@@ -16,6 +16,8 @@ use std::io::Error as IoError;
 use implementation::wallet_lib::error::WalletError;
 use std::path::PathBuf;
 
+use build_info::get_build_info;
+
 #[derive(Debug)]
 enum Error {
     Grpc(GrpcError),
@@ -31,7 +33,7 @@ enum Error {
 }
 
 fn print_version() {
-    println!("{}", env!("CARGO_PKG_VERSION"));
+    println!("{:#?}", get_build_info!());
 }
 
 fn main() -> Result<(), Error> {

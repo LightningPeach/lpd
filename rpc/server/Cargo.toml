@@ -13,3 +13,8 @@ structopt = "0.3"
 dependencies = { path = "../../dependencies" }
 implementation = { path = "../implementation" }
 connection = { path = "../../connection" }
+base32 = "0.4"
+build_info = { path = "../../build_info" }
+
+[build-dependencies]
+build_info = { path = "../../build_info" }
