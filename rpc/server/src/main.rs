@@ -54,14 +54,22 @@ fn main() -> Result<(), Error> {
         return Ok(());
     }
 
-    let _version = format!(
-        "lpd version: {}\ncommit hash: {}\nbuild time: {}\nrustc version: {}\nhas diff: {}",
+    let git_diff = base32::decode(base32::Alphabet::Crockford, env!("GIT_DIFF"))
+        .map(String::from_utf8)
+        .unwrap_or(Ok("cannot decode base32".to_owned()))
+        .unwrap_or("cannot decode diff".to_owned());
+
+    let version = format!(
+        "lpd version: {}\ncommit hash: {}\nbuild time: {}\nrustc version: {}\nrustc channel: {}\nhas diff: {}",
         env!("CARGO_PKG_VERSION"),
         env!("GIT_HASH"),
         env!("BUILD_TIME"),
         env!("RUSTC_VERSION"),
-        env!("GIT_HAS_DIFF"),
+        env!("RUSTC_CHANNEL"),
+        !git_diff.is_empty(),
     );
+    println!("{}", version);
+    println!("{}", git_diff);
 
     let wallet = {
         let mut wallet_db_path = PathBuf::from(config.db_path.clone());
