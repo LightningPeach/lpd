@@ -14,6 +14,10 @@ fn main() {
     let git_diff = base32::encode(base32::Alphabet::Crockford, output.stdout.as_slice());
     println!("cargo:rustc-env=GIT_DIFF={}", git_diff);
 
+    let output = Command::new("git").args(&["rev-parse", "--abbrev-ref", "HEAD"]).output().unwrap();
+    let git_branch = String::from_utf8(output.stdout).unwrap();
+    println!("cargo:rustc-env=GIT_BRANCH={}", git_branch);
+
     let now = Utc::now();
     println!("cargo:rustc-env=BUILD_TIME={}", now);
 

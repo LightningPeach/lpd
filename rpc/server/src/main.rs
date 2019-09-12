@@ -60,9 +60,18 @@ fn main() -> Result<(), Error> {
         .unwrap_or("cannot decode diff".to_owned());
 
     let version = format!(
-        "lpd version: {}\ncommit hash: {}\nbuild time: {}\nrustc version: {}\nrustc channel: {}\nhas diff: {}",
+        "\
+        lpd version: {}\n\
+        commit hash: {}\n\
+        branch: {}\n\
+        build time: {}\n\
+        rustc version: {}\n\
+        rustc channel: {}\n\
+        has diff: {}\
+        ",
         env!("CARGO_PKG_VERSION"),
         env!("GIT_HASH"),
+        env!("GIT_BRANCH"),
         env!("BUILD_TIME"),
         env!("RUSTC_VERSION"),
         env!("RUSTC_CHANNEL"),
