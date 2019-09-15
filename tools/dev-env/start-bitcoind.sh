@@ -15,4 +15,5 @@ bitcoind \
     -rpcpassword=password \
     -zmqpubrawblock=tcp://127.0.0.1:18501 \
     -zmqpubrawtx=tcp://127.0.0.1:18502 \
-    $@
+    -deprecatedrpc=generate \
+    "$@"
