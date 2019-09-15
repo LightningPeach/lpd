@@ -103,7 +103,7 @@ pub fn create_tls_acceptor(cert_path: &PathBuf, key_path: &PathBuf) -> Result<Tl
         vec
     };
     let acceptor =
-        TlsAcceptorBuilderImpl::from_certs_and_key(&[&cert_bytes[..]], &cert_bytes[..])
+        TlsAcceptorBuilderImpl::from_certs_and_key(&[&cert_bytes[..]], &key_bytes[..])
             .map_err(|err|{
                 Error::new_tls_error(err, "cannot create TlsAcceptorBuilder")
             })?
