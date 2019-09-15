@@ -277,15 +277,20 @@ where
                 },
             },
             NotReady => {
-                match self.incoming.poll()? {
-                    Ready(None) => Ok(Ready(None)),
-                    Ready(Some(brontide_stream)) => {
+                match self.incoming.poll() {
+                    Err(e) => {
+                        // TODO: we should decide how to log errors
+                        println!("{:?}", e);
+                        Ok(NotReady)
+                    },
+                    Ok(Ready(None)) => Ok(Ready(None)),
+                    Ok(Ready(Some(brontide_stream))) => {
                         let (ttx, trx) = oneshot::channel();
                         let (ctx, crx) = mpsc::unbounded();
                         self.pipes.insert(brontide_stream.remote_key(), (ttx, ctx));
                         Ok(Ready(Some(Connection::new(brontide_stream, trx, crx))))
                     },
-                    NotReady => {
+                    Ok(NotReady) => {
                         let mut to_remove = Vec::new();
                         let mut result = Ok(NotReady);
                         for (index, r) in self.outgoing.iter_mut().enumerate() {
