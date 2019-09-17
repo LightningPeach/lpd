@@ -122,6 +122,10 @@ pub enum Command{
     /// Report graph info
     #[structopt(name="describe-graph")]
     DescribeGraph,
+
+    /// Report graph info in dot format
+    #[structopt(name="describe-graph-dot")]
+    DescribeGraphDot,
 }
 
 impl Command {
@@ -157,7 +161,16 @@ impl Command {
                     .drop_metadata().wait().map_err(Error::Grpc)?;
                 println!("{:?}", response);
                 Ok(())
-            }
+            },
+            Self::DescribeGraphDot => {
+                let mut request = ChannelGraphRequest::new();
+                request.set_include_unannounced(false);
+                let response = routing_service
+                    .describe_graph_dot_format(Default::default(), request)
+                    .drop_metadata().wait().map_err(Error::Grpc)?;
+                println!("{:?}", response.raw);
+                Ok(())
+            },
         }
     }
 }
