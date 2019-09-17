@@ -155,14 +155,32 @@ impl RoutingService for RoutingImpl<SocketAddr> {
         };
 
         let edge_dot = |edge: &ChannelEdge| -> String {
+            use interface::{common::MilliSatoshi, routing::RoutingPolicy};
+
+            let policy = |policy: Option<&RoutingPolicy>| -> String {
+                if let Some(policy) = policy {
+                    format!(
+                        "{{time_lock_delta: {}, min_htlc: {}, fee_base: {}, fee_rate: {}, disabled: {}}}",
+                        policy.time_lock_delta,
+                        policy.min_htlc,
+                        policy.fee_base_msat,
+                        policy.fee_rate_milli.as_ref().map(MilliSatoshi::get_value).unwrap_or(0),
+                        policy.disabled,
+                    )
+                } else {
+                    "None".to_owned()
+                }
+            };
             format!(
-                "{} -- {} [last_update={},capacity={},channel_id={:x},chan_point={}]\n",
+                "{} -- {} [last_update={},capacity={},channel_id={:x},chan_point=\"{}\",node1_policy=\"{}\",node2_policy=\"{}\"]\n",
                 edge.node1_pub,
                 edge.node2_pub,
                 edge.last_update,
                 edge.capacity,
                 edge.channel_id,
                 edge.chan_point,
+                policy(edge.node1_policy.as_ref()),
+                policy(edge.node2_policy.as_ref()),
             )
         };
 
