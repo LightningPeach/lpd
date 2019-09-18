@@ -5,7 +5,7 @@ mod btcd;
 pub use self::btcd::*;
 
 use std::io;
-use bitcoin_rpc_client::BitcoinCoreClient;
+use bitcoin_rpc_client::{Client, Error};
 
 pub trait BitcoinConfig
 where
@@ -22,5 +22,5 @@ pub trait BitcoinInstance
 where
     Self: Sized,
 {
-    fn rpc_client(&self) -> BitcoinCoreClient;
+    fn rpc_client(&self) -> Result<Client, Error>;
 }

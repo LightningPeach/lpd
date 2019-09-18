@@ -4,7 +4,7 @@ use crate::home::create_file_for_redirect;
 
 use std::process::{Command, Child};
 use std::{io, fs};
-use bitcoin_rpc_client::BitcoinCoreClient;
+use bitcoin_rpc_client::{Client, Error};
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -124,6 +124,7 @@ impl Bitcoind {
         Command::new("bitcoind")
             .args(&[
                 "-regtest", "-server", "-txindex", "-rpcuser=devuser", "-rpcpassword=devpass",
+                "-deprecatedrpc=generate",
                 "-rpcport=18443",
                 "-zmqpubrawblock=tcp://127.0.0.1:18501", "-zmqpubrawtx=tcp://127.0.0.1:18502",
             ])
@@ -141,7 +142,9 @@ impl Bitcoind {
 }
 
 impl BitcoinInstance for BitcoindRunning {
-    fn rpc_client(&self) -> BitcoinCoreClient {
-        BitcoinCoreClient::new("tcp://localhost:18443", "devuser", "devpass")
+    fn rpc_client(&self) -> Result<Client, Error> {
+        use bitcoin_rpc_client::Auth::UserPass;
+
+        Client::new("http://localhost:18443".to_owned(), UserPass("devuser".to_owned(), "devpass".to_owned()))
     }
 }

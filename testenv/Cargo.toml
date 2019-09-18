@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 wire = { path = "../wire" }
 brontide = { path = "../brontide" }
-lnd-rust = "0.4"
+lnd-rust = { git = "https://github.com/LightningPeach/lnd-rust-2" }
 grpc = "0.6"
 futures = "0.1"
 lazycell = "1.2"
