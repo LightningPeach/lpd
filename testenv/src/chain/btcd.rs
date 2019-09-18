@@ -3,7 +3,7 @@ use super::{BitcoinConfig, BitcoinInstance};
 
 use std::process::{Command, Child};
 use std::{io, fs};
-use bitcoin_rpc_client::{Client, Error};
+use bitcoin_rpc_client::BitcoinCoreClient;
 
 pub struct Btcd {
     home: Home,
@@ -97,8 +97,7 @@ impl Btcd {
 
         Command::new("btcd")
             .args(&[
-                "--simnet", "--txindex", "--rpcuser=devuser", "--rpcpass=devpass",
-                "-deprecatedrpc=generate",
+                "--simnet", "--txindex", "--rpcuser=devuser", "--rpcpass=devpass"
             ])
             .args(args)
             .spawn()
@@ -110,9 +109,7 @@ impl Btcd {
 }
 
 impl BitcoinInstance for BtcdRunning {
-    fn rpc_client(&self) -> Result<Client, Error> {
-        use bitcoin_rpc_client::Auth::UserPass;
-
-        Client::new("http://localhost:18556".to_owned(), UserPass("devuser".to_owned(), "devpass".to_owned()))
+    fn rpc_client(&self) -> BitcoinCoreClient {
+        BitcoinCoreClient::new("tcp://localhost:18556", "devuser", "devpass")
     }
 }
