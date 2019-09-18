@@ -17,7 +17,6 @@ service RoutingService {
     rpc GetInfo (Void) returns (Info) {}
 
     rpc DescribeGraph (ChannelGraphRequest) returns (ChannelGraph) {}
-    rpc DescribeGraphDotFormat (ChannelGraphRequest) returns (ChannelGraphDotFormat) {}
     rpc QueryRoutes(QueryRoutesRequest) returns (RouteList) {}
 }
 
@@ -135,10 +134,6 @@ message ChannelGraph {
 
     /// The list of `ChannelEdge`s in this channel graph
     repeated ChannelEdge edges = 2 [json_name = "edges"];
-}
-/// Returns a new instance of the directed channel graph.
-message ChannelGraphDotFormat {
-    string raw = 1;
 }
 message LightningNode {
     uint32 last_update = 1 [ json_name = "last_update" ];

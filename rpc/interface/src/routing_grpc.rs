@@ -32,8 +32,6 @@ pub trait RoutingService {
 
     fn describe_graph(&self, o: ::grpc::RequestOptions, p: super::routing::ChannelGraphRequest) -> ::grpc::SingleResponse<super::routing::ChannelGraph>;
 
-    fn describe_graph_dot_format(&self, o: ::grpc::RequestOptions, p: super::routing::ChannelGraphRequest) -> ::grpc::SingleResponse<super::routing::ChannelGraphDotFormat>;
-
     fn query_routes(&self, o: ::grpc::RequestOptions, p: super::routing::QueryRoutesRequest) -> ::grpc::SingleResponse<super::routing::RouteList>;
 }
 
@@ -46,7 +44,6 @@ pub struct RoutingServiceClient {
     method_ListPeers: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::common::Void, super::routing::PeerList>>,
     method_GetInfo: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::common::Void, super::routing::Info>>,
     method_DescribeGraph: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::routing::ChannelGraphRequest, super::routing::ChannelGraph>>,
-    method_DescribeGraphDotFormat: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::routing::ChannelGraphRequest, super::routing::ChannelGraphDotFormat>>,
     method_QueryRoutes: ::std::sync::Arc<::grpc::rt::MethodDescriptor<super::routing::QueryRoutesRequest, super::routing::RouteList>>,
 }
 
@@ -84,12 +81,6 @@ impl ::grpc::ClientStub for RoutingServiceClient {
                 req_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
                 resp_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
             }),
-            method_DescribeGraphDotFormat: ::std::sync::Arc::new(::grpc::rt::MethodDescriptor {
-                name: "/RoutingService/DescribeGraphDotFormat".to_string(),
-                streaming: ::grpc::rt::GrpcStreaming::Unary,
-                req_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
-                resp_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
-            }),
             method_QueryRoutes: ::std::sync::Arc::new(::grpc::rt::MethodDescriptor {
                 name: "/RoutingService/QueryRoutes".to_string(),
                 streaming: ::grpc::rt::GrpcStreaming::Unary,
@@ -119,10 +110,6 @@ impl RoutingService for RoutingServiceClient {
 
     fn describe_graph(&self, o: ::grpc::RequestOptions, p: super::routing::ChannelGraphRequest) -> ::grpc::SingleResponse<super::routing::ChannelGraph> {
         self.grpc_client.call_unary(o, p, self.method_DescribeGraph.clone())
-    }
-
-    fn describe_graph_dot_format(&self, o: ::grpc::RequestOptions, p: super::routing::ChannelGraphRequest) -> ::grpc::SingleResponse<super::routing::ChannelGraphDotFormat> {
-        self.grpc_client.call_unary(o, p, self.method_DescribeGraphDotFormat.clone())
     }
 
     fn query_routes(&self, o: ::grpc::RequestOptions, p: super::routing::QueryRoutesRequest) -> ::grpc::SingleResponse<super::routing::RouteList> {
@@ -198,18 +185,6 @@ impl RoutingServiceServer {
                     {
                         let handler_copy = handler_arc.clone();
                         ::grpc::rt::MethodHandlerUnary::new(move |o, p| handler_copy.describe_graph(o, p))
-                    },
-                ),
-                ::grpc::rt::ServerMethod::new(
-                    ::std::sync::Arc::new(::grpc::rt::MethodDescriptor {
-                        name: "/RoutingService/DescribeGraphDotFormat".to_string(),
-                        streaming: ::grpc::rt::GrpcStreaming::Unary,
-                        req_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
-                        resp_marshaller: Box::new(::grpc::protobuf::MarshallerProtobuf),
-                    }),
-                    {
-                        let handler_copy = handler_arc.clone();
-                        ::grpc::rt::MethodHandlerUnary::new(move |o, p| handler_copy.describe_graph_dot_format(o, p))
                     },
                 ),
                 ::grpc::rt::ServerMethod::new(

@@ -1,3 +1,5 @@
+mod network_graph;
+
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::fs::File;
@@ -166,9 +168,10 @@ impl Command {
                 let mut request = ChannelGraphRequest::new();
                 request.set_include_unannounced(false);
                 let response = routing_service
-                    .describe_graph_dot_format(Default::default(), request)
+                    .describe_graph(Default::default(), request)
                     .drop_metadata().wait().map_err(Error::Grpc)?;
-                println!("{:?}", response.raw);
+                let dot = network_graph::dot_format(response);
+                println!("{:?}", dot);
                 Ok(())
             },
         }

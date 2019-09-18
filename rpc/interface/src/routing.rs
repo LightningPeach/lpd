@@ -2480,175 +2480,6 @@ impl ::protobuf::reflect::ProtobufValue for ChannelGraph {
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct ChannelGraphDotFormat {
-    // message fields
-    pub raw: ::std::string::String,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a ChannelGraphDotFormat {
-    fn default() -> &'a ChannelGraphDotFormat {
-        <ChannelGraphDotFormat as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl ChannelGraphDotFormat {
-    pub fn new() -> ChannelGraphDotFormat {
-        ::std::default::Default::default()
-    }
-
-    // string raw = 1;
-
-
-    pub fn get_raw(&self) -> &str {
-        &self.raw
-    }
-    pub fn clear_raw(&mut self) {
-        self.raw.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_raw(&mut self, v: ::std::string::String) {
-        self.raw = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_raw(&mut self) -> &mut ::std::string::String {
-        &mut self.raw
-    }
-
-    // Take field
-    pub fn take_raw(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.raw, ::std::string::String::new())
-    }
-}
-
-impl ::protobuf::Message for ChannelGraphDotFormat {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.raw)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.raw.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.raw);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.raw.is_empty() {
-            os.write_string(1, &self.raw)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> ChannelGraphDotFormat {
-        ChannelGraphDotFormat::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
-        };
-        unsafe {
-            descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                    "raw",
-                    |m: &ChannelGraphDotFormat| { &m.raw },
-                    |m: &mut ChannelGraphDotFormat| { &mut m.raw },
-                ));
-                ::protobuf::reflect::MessageDescriptor::new::<ChannelGraphDotFormat>(
-                    "ChannelGraphDotFormat",
-                    fields,
-                    file_descriptor_proto()
-                )
-            })
-        }
-    }
-
-    fn default_instance() -> &'static ChannelGraphDotFormat {
-        static mut instance: ::protobuf::lazy::Lazy<ChannelGraphDotFormat> = ::protobuf::lazy::Lazy {
-            lock: ::protobuf::lazy::ONCE_INIT,
-            ptr: 0 as *const ChannelGraphDotFormat,
-        };
-        unsafe {
-            instance.get(ChannelGraphDotFormat::new)
-        }
-    }
-}
-
-impl ::protobuf::Clear for ChannelGraphDotFormat {
-    fn clear(&mut self) {
-        self.raw.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for ChannelGraphDotFormat {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for ChannelGraphDotFormat {
-    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
-        ::protobuf::reflect::ProtobufValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
 pub struct LightningNode {
     // message fields
     pub last_update: u32,
@@ -4530,39 +4361,36 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     include_unannounced\x18\x01\x20\x01(\x08R\x13include_unannounced\"X\n\
     \x0cChannelGraph\x12$\n\x05nodes\x18\x01\x20\x03(\x0b2\x0e.LightningNode\
     R\x05nodes\x12\"\n\x05edges\x18\x02\x20\x03(\x0b2\x0c.ChannelEdgeR\x05ed\
-    ges\")\n\x15ChannelGraphDotFormat\x12\x10\n\x03raw\x18\x01\x20\x01(\tR\
-    \x03raw\"\xa3\x01\n\rLightningNode\x12\x20\n\x0blast_update\x18\x01\x20\
-    \x01(\rR\x0blast_update\x12\x18\n\x07pub_key\x18\x02\x20\x01(\tR\x07pub_\
-    key\x12\x14\n\x05alias\x18\x03\x20\x01(\tR\x05alias\x12*\n\taddresses\
-    \x18\x04\x20\x03(\x0b2\x0c.NodeAddressR\taddresses\x12\x14\n\x05color\
-    \x18\x05\x20\x01(\tR\x05color\";\n\x0bNodeAddress\x12\x18\n\x07network\
-    \x18\x01\x20\x01(\tR\x07network\x12\x12\n\x04addr\x18\x02\x20\x01(\tR\
-    \x04addr\"\xaf\x02\n\x0bChannelEdge\x12\x1e\n\nchannel_id\x18\x01\x20\
-    \x01(\x04R\nchannel_id\x12\x1e\n\nchan_point\x18\x02\x20\x01(\tR\nchan_p\
-    oint\x12\x20\n\x0blast_update\x18\x03\x20\x01(\rR\x0blast_update\x12\x1c\
-    \n\tnode1_pub\x18\x04\x20\x01(\tR\tnode1_pub\x12\x1c\n\tnode2_pub\x18\
-    \x05\x20\x01(\tR\tnode2_pub\x12\x1a\n\x08capacity\x18\x06\x20\x01(\x03R\
-    \x08capacity\x122\n\x0cnode1_policy\x18\x07\x20\x01(\x0b2\x0e.RoutingPol\
-    icyR\x0cnode1_policy\x122\n\x0cnode2_policy\x18\x08\x20\x01(\x0b2\x0e.Ro\
-    utingPolicyR\x0cnode2_policy\"\xd3\x01\n\rRoutingPolicy\x12(\n\x0ftime_l\
-    ock_delta\x18\x01\x20\x01(\rR\x0ftime_lock_delta\x12\x1a\n\x08min_htlc\
-    \x18\x02\x20\x01(\x03R\x08min_htlc\x12$\n\rfee_base_msat\x18\x03\x20\x01\
-    (\x03R\rfee_base_msat\x12:\n\x0efee_rate_milli\x18\x04\x20\x01(\x0b2\r.M\
-    illiSatoshiR\x13fee_rate_milli_msat\x12\x1a\n\x08disabled\x18\x05\x20\
-    \x01(\x08R\x08disabled\"\xb0\x01\n\x12QueryRoutesRequest\x12\x17\n\x07pu\
-    b_key\x18\x01\x20\x01(\tR\x06pubKey\x12\x10\n\x03amt\x18\x02\x20\x01(\
-    \x03R\x03amt\x12\x1d\n\nnum_routes\x18\x03\x20\x01(\x05R\tnumRoutes\x12(\
-    \n\x10final_cltv_delta\x18\x04\x20\x01(\x05R\x0efinalCltvDelta\x12&\n\tf\
-    ee_limit\x18\x05\x20\x01(\x0b2\t.FeeLimitR\x08feeLimit\"+\n\tRouteList\
-    \x12\x1e\n\x06routes\x18\x01\x20\x03(\x0b2\x06.RouteR\x06routes2\xe9\x02\
-    \n\x0eRoutingService\x12:\n\x0bSignMessage\x12\x13.SignMessageRequest\
-    \x1a\x14.SignMessageResponse\"\0\x12+\n\x0bConnectPeer\x12\x13.ConnectPe\
-    erRequest\x1a\x05.Void\"\0\x12\x1f\n\tListPeers\x12\x05.Void\x1a\t.PeerL\
-    ist\"\0\x12\x19\n\x07GetInfo\x12\x05.Void\x1a\x05.Info\"\0\x126\n\rDescr\
-    ibeGraph\x12\x14.ChannelGraphRequest\x1a\r.ChannelGraph\"\0\x12H\n\x16De\
-    scribeGraphDotFormat\x12\x14.ChannelGraphRequest\x1a\x16.ChannelGraphDot\
-    Format\"\0\x120\n\x0bQueryRoutes\x12\x13.QueryRoutesRequest\x1a\n.RouteL\
-    ist\"\0b\x06proto3\
+    ges\"\xa3\x01\n\rLightningNode\x12\x20\n\x0blast_update\x18\x01\x20\x01(\
+    \rR\x0blast_update\x12\x18\n\x07pub_key\x18\x02\x20\x01(\tR\x07pub_key\
+    \x12\x14\n\x05alias\x18\x03\x20\x01(\tR\x05alias\x12*\n\taddresses\x18\
+    \x04\x20\x03(\x0b2\x0c.NodeAddressR\taddresses\x12\x14\n\x05color\x18\
+    \x05\x20\x01(\tR\x05color\";\n\x0bNodeAddress\x12\x18\n\x07network\x18\
+    \x01\x20\x01(\tR\x07network\x12\x12\n\x04addr\x18\x02\x20\x01(\tR\x04add\
+    r\"\xaf\x02\n\x0bChannelEdge\x12\x1e\n\nchannel_id\x18\x01\x20\x01(\x04R\
+    \nchannel_id\x12\x1e\n\nchan_point\x18\x02\x20\x01(\tR\nchan_point\x12\
+    \x20\n\x0blast_update\x18\x03\x20\x01(\rR\x0blast_update\x12\x1c\n\tnode\
+    1_pub\x18\x04\x20\x01(\tR\tnode1_pub\x12\x1c\n\tnode2_pub\x18\x05\x20\
+    \x01(\tR\tnode2_pub\x12\x1a\n\x08capacity\x18\x06\x20\x01(\x03R\x08capac\
+    ity\x122\n\x0cnode1_policy\x18\x07\x20\x01(\x0b2\x0e.RoutingPolicyR\x0cn\
+    ode1_policy\x122\n\x0cnode2_policy\x18\x08\x20\x01(\x0b2\x0e.RoutingPoli\
+    cyR\x0cnode2_policy\"\xd3\x01\n\rRoutingPolicy\x12(\n\x0ftime_lock_delta\
+    \x18\x01\x20\x01(\rR\x0ftime_lock_delta\x12\x1a\n\x08min_htlc\x18\x02\
+    \x20\x01(\x03R\x08min_htlc\x12$\n\rfee_base_msat\x18\x03\x20\x01(\x03R\r\
+    fee_base_msat\x12:\n\x0efee_rate_milli\x18\x04\x20\x01(\x0b2\r.MilliSato\
+    shiR\x13fee_rate_milli_msat\x12\x1a\n\x08disabled\x18\x05\x20\x01(\x08R\
+    \x08disabled\"\xb0\x01\n\x12QueryRoutesRequest\x12\x17\n\x07pub_key\x18\
+    \x01\x20\x01(\tR\x06pubKey\x12\x10\n\x03amt\x18\x02\x20\x01(\x03R\x03amt\
+    \x12\x1d\n\nnum_routes\x18\x03\x20\x01(\x05R\tnumRoutes\x12(\n\x10final_\
+    cltv_delta\x18\x04\x20\x01(\x05R\x0efinalCltvDelta\x12&\n\tfee_limit\x18\
+    \x05\x20\x01(\x0b2\t.FeeLimitR\x08feeLimit\"+\n\tRouteList\x12\x1e\n\x06\
+    routes\x18\x01\x20\x03(\x0b2\x06.RouteR\x06routes2\x9f\x02\n\x0eRoutingS\
+    ervice\x12:\n\x0bSignMessage\x12\x13.SignMessageRequest\x1a\x14.SignMess\
+    ageResponse\"\0\x12+\n\x0bConnectPeer\x12\x13.ConnectPeerRequest\x1a\x05\
+    .Void\"\0\x12\x1f\n\tListPeers\x12\x05.Void\x1a\t.PeerList\"\0\x12\x19\n\
+    \x07GetInfo\x12\x05.Void\x1a\x05.Info\"\0\x126\n\rDescribeGraph\x12\x14.\
+    ChannelGraphRequest\x1a\r.ChannelGraph\"\0\x120\n\x0bQueryRoutes\x12\x13\
+    .QueryRoutesRequest\x1a\n.RouteList\"\0b\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
