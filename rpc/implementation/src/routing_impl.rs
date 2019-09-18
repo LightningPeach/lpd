@@ -6,12 +6,7 @@ use dependencies::secp256k1;
 use grpc::{rt::ServerServiceDefinition, RequestOptions, SingleResponse};
 use grpc::Error;
 use interface::routing_grpc::{RoutingServiceServer, RoutingService};
-use interface::routing::{
-    SignMessageRequest, SignMessageResponse,
-    ConnectPeerRequest, PeerList, Info,
-    ChannelGraphRequest, ChannelGraph,
-    QueryRoutesRequest, RouteList,
-};
+use interface::routing::{SignMessageRequest, SignMessageResponse, ConnectPeerRequest, PeerList, Info, ChannelGraphRequest, ChannelGraph, QueryRoutesRequest, RouteList};
 use interface::common::Void;
 use connection::{Node, Command, AbstractAddress};
 use std::sync::{RwLock, Arc};
