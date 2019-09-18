@@ -122,6 +122,9 @@ impl Bitcoind {
         })?;
 
         Command::new("bitcoind")
+            // TODO(mkl): move all this configuration into variables
+            // TODO(mkl): check ports if they are not used
+            // TODO(mkl): handle errors
             .args(&[
                 "-regtest", "-server", "-txindex", "-rpcuser=devuser", "-rpcpassword=devpass",
                 "-deprecatedrpc=generate",
