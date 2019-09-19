@@ -14,8 +14,6 @@ use httpbis::ClientTlsOption;
 use structopt::StructOpt;
 use tls_api_rustls::TlsConnector;
 
-use build_info::get_build_info;
-
 use self::command::{Command, Error};
 
 #[derive(StructOpt, Debug)]
@@ -38,24 +36,12 @@ pub struct Config {
     #[structopt(long="print-config")]
     pub print_config: bool,
 
-    /// Print detailed version
-    #[structopt(long="version")]
-    pub print_version: bool,
-
     #[structopt(subcommand)]
     pub command: Option<Command>,
 }
 
-fn print_version() {
-    println!("{:#?}", get_build_info!());
-}
-
 fn main() -> Result<(), Error> {
     let config: Config = Config::from_args();
-    if config.print_version {
-        print_version();
-        return Ok(());
-    }
     if config.print_config {
         println!("{:#?}", &config);
         return Ok(());

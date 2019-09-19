@@ -15,6 +15,7 @@ use interface::{
     routing::{ConnectPeerRequest, LightningAddress as LightningAddressRPC, ChannelGraphRequest},
     common::Void,
 };
+use build_info::get_build_info;
 
 #[derive(Debug)]
 pub enum Error {
@@ -56,20 +57,30 @@ pub enum Command{
     /// Report graph info in dot format
     #[structopt(name="describe-graph-dot")]
     DescribeGraphDot,
+
+    /// Print version
+    #[structopt(name="get-version")]
+    GetVersion,
+
+    /// List peers
+    #[structopt(name="list-peers")]
+    ListPeers,
 }
 
 impl Command {
     pub fn execute(&self, client: Arc<Client>) -> Result<(), Error> {
+        use self::Command::*;
+
         let routing_service = RoutingServiceClient::with_client(client);
         match self {
-            Self::GetInfo => {
+            GetInfo => {
                 let response = routing_service
                     .get_info(Default::default(), Void::new())
                     .drop_metadata().wait().map_err(Error::Grpc)?;
                 println!("{:?}", response);
                 Ok(())
             },
-            Self::ConnectPeer{address} => {
+            ConnectPeer{address} => {
                 let mut request = ConnectPeerRequest::new();
 
                 let mut lightning_address_rpc = LightningAddressRPC::new();
@@ -83,7 +94,7 @@ impl Command {
                 println!("{:?}", response);
                 Ok(())
             },
-            Self::DescribeGraph => {
+            DescribeGraph => {
                 let mut request = ChannelGraphRequest::new();
                 request.set_include_unannounced(false);
                 let response = routing_service
@@ -92,7 +103,7 @@ impl Command {
                 println!("{:?}", response);
                 Ok(())
             },
-            Self::DescribeGraphDot => {
+            DescribeGraphDot => {
                 let mut request = ChannelGraphRequest::new();
                 request.set_include_unannounced(false);
                 let response = routing_service
@@ -100,6 +111,18 @@ impl Command {
                     .drop_metadata().wait().map_err(Error::Grpc)?;
                 let dot = network_graph::dot_format(response);
                 println!("{:?}", dot);
+                Ok(())
+            },
+            GetVersion => {
+                println!("{:#?}", get_build_info!());
+                Ok(())
+            },
+            ListPeers => {
+                let request = Void::new();
+                let response = routing_service
+                    .list_peers(Default::default(), request)
+                    .drop_metadata().wait().map_err(Error::Grpc)?;
+                println!("{:?}", response);
                 Ok(())
             },
         }
