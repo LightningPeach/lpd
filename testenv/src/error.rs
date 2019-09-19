@@ -1,4 +1,5 @@
 use std::io;
+use std::boxed::Box;
 use bitcoin_rpc_client::{Client, Error as BitcoinRpcError};
 use grpc::Error as GrpcError;
 use bitcoin::consensus::encode::Error as BitcoinEncodeError;
@@ -105,6 +106,20 @@ macro_rules! new_bitcoin_encode_error {
     };
 }
 
+#[macro_export]
+macro_rules! new_error {
+    ($err:expr, $description:expr) => {
+        {
+            use $crate::get_location;
+            $crate::error::Error {
+                location: get_location!(),
+                description: $description.to_owned(),
+                error: $crate::error::ErrorWrapper::new_error($err),
+            }
+        }
+    };
+}
+
 #[derive(Debug)]
 pub enum ErrorWrapper {
     IO {
@@ -119,6 +134,9 @@ pub enum ErrorWrapper {
     },
     BitcoinEncode {
         inner: BitcoinEncodeError,
+    },
+    Error {
+        inner: Box<Error>,
     }
 }
 
@@ -153,6 +171,12 @@ impl ErrorWrapper {
             inner: err,
         }
     }
+
+    pub fn new_error(err: Error) -> ErrorWrapper {
+        ErrorWrapper::Error {
+            inner: Box::new(err)
+        }
+    }
 }
 
 impl std::error::Error for ErrorWrapper {
@@ -169,7 +193,22 @@ impl std::error::Error for ErrorWrapper {
             },
             ErrorWrapper::BitcoinEncode {inner} => {
                 Some(inner)
+            },
+            ErrorWrapper::Error {inner} => {
+                Some(inner)
             }
         }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.error.source()
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:#?}", self)
     }
 }

@@ -1,9 +1,9 @@
 use super::{Home, cleanup};
 use super::chain::BitcoinConfig;
 use super::al::AbstractLightningNode;
-use crate::home::create_file_for_redirect;
+use crate::home::{create_file_for_redirect, write_to_file};
 use crate::error::Error;
-use crate::new_io_error;
+use crate::{new_io_error, new_error};
 
 use std::process::{Command, Child};
 
@@ -62,7 +62,7 @@ pub struct LndProcess {
 
 impl fmt::Debug for LndProcess {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("LnRunning")
+        f.debug_struct("LndProcess")
             .field("config", &self.config)
             .field("instance", &self.process)
             .finish()
@@ -90,6 +90,10 @@ impl LndConfig {
 
     pub fn stderr_path(&self) -> PathBuf {
         self.home.ext_path("lnd.stderr")
+    }
+
+    pub fn pid_path(&self) -> PathBuf {
+        self.home.ext_path("lnd.pid")
     }
 
     pub fn new(
@@ -158,7 +162,7 @@ impl LndConfig {
         })?;
 
         println!("self.home.ext_path(\"data\"): {:?}", self.data_dir_path());
-        Command::new("lnd")
+        let lnd_process = Command::new("lnd")
             .args(self.get_pure_lnd_args())
             .args(b.lnd_params())
             .stdout(stdout)
@@ -176,7 +180,15 @@ impl LndConfig {
                     stdout: stdout_file,
                     stderr: stderr_file
                 }
-            })
+            })?;
+
+        let pid_str = format!("{}", lnd_process.process.id());
+        write_to_file(&lnd_process.config.pid_path(), &pid_str)
+            .map_err(|err| {
+                new_error!(err, "cannot write to lnd pid file")
+            })?;
+
+        Ok(lnd_process)
     }
 }
 
@@ -215,10 +227,12 @@ impl LndProcess {
         let certificate = TLSCertificate::from_path(daemon.home.public_key_path())
             .map_err(grpc::Error::Io)?;
         let localhost = "127.0.0.1";
+        // TODO(mkl): add better error processing
         let localhost_ip = IpAddr::V4(Ipv4Addr::from_str(localhost).unwrap());
         let tls = certificate.into_tls(localhost)
             .map_err(|e| grpc::Error::Io(e.into()))?;
         let socket_address = SocketAddr::new(localhost_ip, daemon.rpc_port);
+
         let conf = Default::default();
         let inner = grpc::Client::new_expl(&socket_address, localhost, tls, conf)?;
         Ok(LightningClient::with_client(Arc::new(inner)))

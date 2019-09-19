@@ -1,58 +1,68 @@
 use super::super::{Home, cleanup};
 use super::{BitcoinConfig, BitcoinInstance};
-use crate::home::create_file_for_redirect;
+use crate::home::{create_file_for_redirect, write_to_file};
 use crate::error::Error;
-use crate::{new_io_error, new_bitcoin_rpc_error};
+use crate::{new_io_error, new_bitcoin_rpc_error, new_error};
 
 use std::process::{Command, Child};
 use std::{io, fs};
 use bitcoin_rpc_client::{Client, Error as BitcoinRpcError};
 use std::fs::File;
 use std::path::PathBuf;
+use std::io::Write;
 
-pub struct Bitcoind {
-    home: Home,
+#[derive(Debug, Clone)]
+pub struct BitcoindConfig {
+    pub home: Home,
+
+    // Should the process be killed in the end
+    // It might be useful if you want to play with the bitcoind process after tests finish
+    pub kill_in_the_end: bool,
+
     // Listen for connections on <port> (default: 8333 or testnet: 18333)
-    port: u16,
+    pub port: u16,
 }
 
-pub struct BitcoindRunning {
-    config: Bitcoind,
-    instance: Child,
+pub struct BitcoindProcess {
+    pub config: BitcoindConfig,
+    pub instance: Child,
+
     stdout: File,
     stderr: File
 }
 
-impl AsMut<Bitcoind> for BitcoindRunning {
-    fn as_mut(&mut self) -> &mut Bitcoind {
+impl AsMut<BitcoindConfig> for BitcoindProcess {
+    fn as_mut(&mut self) -> &mut BitcoindConfig {
         &mut self.config
     }
 }
 
-impl AsRef<Bitcoind> for BitcoindRunning {
-    fn as_ref(&self) -> &Bitcoind {
+impl AsRef<BitcoindConfig> for BitcoindProcess {
+    fn as_ref(&self) -> &BitcoindConfig {
         &self.config
     }
 }
 
-impl Drop for BitcoindRunning {
+impl Drop for BitcoindProcess {
     fn drop(&mut self) {
-        self.instance.kill()
-            .or_else(|e| match e.kind() {
-                io::ErrorKind::InvalidInput => Ok(()),
-                _ => Err(e),
-            })
-            .unwrap()
+        if self.config.kill_in_the_end {
+            self.instance.kill()
+                .or_else(|e| match e.kind() {
+                    io::ErrorKind::InvalidInput => Ok(()),
+                    _ => Err(e),
+                })
+                .unwrap()
+        }
     }
 }
 
-impl BitcoinConfig for Bitcoind {
-    type Instance = BitcoindRunning;
+impl BitcoinConfig for BitcoindConfig {
+    type Instance = BitcoindProcess;
 
     fn new(name: &str) -> Result<Self, Error> {
-        Ok(Bitcoind {
+        Ok(BitcoindConfig {
             // TODO(mkl): rewrite this part. What is the problem with force delete?
-            home: Home::new(name, false, true)?,
+            home: Home::new(name, false, false)?,
 //                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
 //                    // TODO(mkl): this should be fixed to not delete all bitcoind processes
 //                    cleanup("bitcoind");
@@ -61,6 +71,7 @@ impl BitcoinConfig for Bitcoind {
 //                    Err(e)
 //                })?,
             port: 18333,
+            kill_in_the_end: false,
         })
     }
 
@@ -83,7 +94,7 @@ impl BitcoinConfig for Bitcoind {
     }
 }
 
-impl Bitcoind {
+impl BitcoindConfig {
     pub fn set_peer_port(&mut self, port: u16) {
         self.port = port;
     }
@@ -96,7 +107,11 @@ impl Bitcoind {
         self.home.ext_path("bitcoind.stderr")
     }
 
-    fn run_internal(self) -> Result<BitcoindRunning, Error> {
+    pub fn pid_path(&self) -> PathBuf {
+        self.home.ext_path("bitcoind.pid")
+    }
+
+    fn run_internal(self) -> Result<BitcoindProcess, Error> {
         let data_dir_path= self.home.ext_path("data");
         fs::create_dir(&data_dir_path).or_else(|e|
             if e.kind() == io::ErrorKind::AlreadyExists {
@@ -133,8 +148,9 @@ impl Bitcoind {
             )
         })?;
 
+        let pid_path = self.pid_path();
         // TODO(mkl): refactor arguments in new method
-        Command::new("bitcoind")
+        let bitcoind_process = Command::new("bitcoind")
             // TODO(mkl): move all this configuration into variables
             // TODO(mkl): check ports if they are not used
             // TODO(mkl): handle errors
@@ -148,7 +164,7 @@ impl Bitcoind {
             .stdout(stdout)
             .stderr(stderr)
             .spawn()
-            .map(|instance| BitcoindRunning {
+            .map(|instance| BitcoindProcess {
                 config: self,
                 instance: instance,
                 stdout: stdout_file,
@@ -156,11 +172,18 @@ impl Bitcoind {
             })
             .map_err(|err| {
                 new_io_error!(err, "cannot launch bitcoind")
-            })
+            })?;
+
+        let pid_str = format!("{}", bitcoind_process.instance.id());
+        write_to_file(&pid_path, &pid_str)
+            .map_err(|err| {
+                new_error!(err, "cannot write bitcoind pid file")
+            })?;
+        Ok(bitcoind_process)
     }
 }
 
-impl BitcoinInstance for BitcoindRunning {
+impl BitcoinInstance for BitcoindProcess {
     fn rpc_client(&self) -> Result<Client, Error> {
         use bitcoin_rpc_client::Auth::UserPass;
 
@@ -172,3 +195,4 @@ impl BitcoinInstance for BitcoindRunning {
             })
     }
 }
+

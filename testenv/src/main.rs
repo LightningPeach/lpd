@@ -1,6 +1,13 @@
 //#![forbid(unsafe_code)]
 #![allow(non_shorthand_field_patterns)]
 
+use std::thread;
+use std::time::Duration;
+use futures::{Future, Stream};
+use bitcoin_rpc_client::RpcApi as _;
+use bitcoin::Address;
+use std::str::FromStr;
+
 mod home;
 use self::home::Home;
 
@@ -33,19 +40,24 @@ pub fn cleanup(name: &str) {
     panic!("cannot stop other instance of `{}`, stop it manually", name)
 }
 
-fn main() -> Result<(), Error> {
+fn _main() -> Result<(), Error> {
     // TODO(mkl): add possibility to connect to already existing testenv
     // TODO(mkl): add posibility to leave nodes working after tests ends
     println!("Starting testnev");
-    use std::thread;
-    use std::time::Duration;
-    use futures::{Future, Stream};
-    use bitcoin_rpc_client::RpcApi as _;
-    use bitcoin::Address;
-    use std::str::FromStr;
 
-    let btc_running = Bitcoind::new("b")?.run()?;
-    println!("After starting bitcoind");
+    let bitcoind_process = BitcoindConfig::new("b")
+        .map(|x| {
+            println!("{:#?}", x.home.path());
+            x
+        })
+        .map_err(|err| {
+            new_error!(err, "cannot create instance bitcoind")
+        })?
+        .run()
+        .map_err(|err|{
+            new_error!(err, "cannot run bitcoind")
+        })?;
+    println!("After starting bitcoind:");
 
     // TODO(mkl): add checking state instead of flat wait
     println!("Start waiting for bitcoind");
@@ -53,7 +65,7 @@ fn main() -> Result<(), Error> {
     println!("End waiting for bitcoind");
 
     // Generate some blocks to activate segwit
-    btc_running
+    bitcoind_process
         .rpc_client()?
         .generate(500, None)
         .map_err(|err| {
@@ -61,10 +73,18 @@ fn main() -> Result<(), Error> {
         })?;
 
     // creating two nodes with base port 9800
-    let nodes = LndProcess::batch(2, 9800, btc_running.as_ref());
+    let nodes = LndProcess::batch(2, 9800, bitcoind_process.as_ref());
     // TODO(mkl): add checking state instead of flat wait
     thread::sleep(Duration::from_secs(15));
     println!("nodes.len={}", nodes.len());
+
+    // Mine some blocks
+    bitcoind_process
+        .rpc_client()?
+        .generate(10, None)
+        .map_err(|err| {
+            new_bitcoin_rpc_error!(err, "error, cannot mine initial blocks")
+        })?;
 
     nodes[0].obtain_info().wait()
         .map(|rez|{
@@ -84,7 +104,7 @@ fn main() -> Result<(), Error> {
             new_bitcoin_encode_error!(err, "error converting address")
         })?;
 
-    btc_running.rpc_client()?
+    bitcoind_process.rpc_client()?
         .generate_to_address(400, &mining_address)
         .map_err(|err| {
             new_bitcoin_rpc_error!(err, "error mining initial money for the first node")
@@ -138,6 +158,18 @@ fn main() -> Result<(), Error> {
 
     // keep it running until this line
     let _ = nodes;
-    let _ = btc_running;
+    let _ = bitcoind_process;
     Ok(())
+}
+
+fn main() {
+    match _main() {
+        Ok(()) => {
+            println!("Success")
+        },
+        Err(err) => {
+            println!("ERROR: {:?}", err);
+            thread::sleep(Duration::from_secs(10000));
+        }
+    }
 }

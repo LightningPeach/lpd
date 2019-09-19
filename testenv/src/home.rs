@@ -2,6 +2,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::io;
 use std::fs;
+use std::fs::File;
+use std::io::Write;
 
 use crate::error::{Error};
 use crate::new_io_error;
@@ -139,4 +141,16 @@ pub fn create_file_for_redirect(p: PathBuf) -> io::Result<(std::process::Stdio, 
     // from_raw_fd is only considered unsafe if the file is used for mmap
     let stdio = unsafe {Stdio::from_raw_fd(fd)};
     Ok((stdio, f))
+}
+
+pub fn write_to_file(path: &PathBuf, s: &str) -> Result<(), Error> {
+    let mut f = File::create(&path)
+        .map_err(|err| {
+            new_io_error!(err, "cannot open file for writing", path.to_string_lossy().into_owned())
+        })?;
+    write!(f, "{}", s)
+        .map_err(|err| {
+            new_io_error!(err, "cannot write to file", path.to_string_lossy().into_owned())
+        })?;
+    Ok(())
 }
