@@ -2,7 +2,6 @@ mod network_graph;
 
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::fs::File;
 use std::io::Error as IoError;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -217,8 +216,8 @@ fn main() -> Result<(), Error> {
             Default::default()
         ).map_err(Error::Grpc)?
     };
-    if config.command.is_some() {
-        config.command.unwrap().execute(Arc::new(client))
+    if let Some(command) = config.command {
+        command.execute(Arc::new(client))
     } else {
         Ok(())
     }
