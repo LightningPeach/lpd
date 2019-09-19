@@ -1,6 +1,7 @@
 use super::{Home, cleanup};
 use super::chain::BitcoinConfig;
 use super::al::AbstractLightningNode;
+use crate::error::Error;
 
 use client::LightningPeach;
 use std::{process::Child, io};
@@ -29,17 +30,18 @@ impl LpServer {
 
     pub fn new(
         peer_port: u16, rpc_port: u16, name: &str
-    ) -> Result<Self, io::Error> {
+    ) -> Result<Self, Error> {
         Ok(LpServer {
             peer_port: peer_port,
             rpc_port: rpc_port,
-            home: Home::new(name, false, true)
-                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
-                    cleanup("lpd");
-                    Home::new(name, true, true)
-                } else {
-                    Err(e)
-                })?,
+            home: Home::new(name, false, true)?
+            // TODO(mkl): why is this checks everywhere?
+//                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
+//                    cleanup("lpd");
+//                    Home::new(name, true, true)
+//                } else {
+//                    Err(e)
+//                })?,
         })
     }
 

@@ -1,9 +1,11 @@
 use super::super::{Home, cleanup};
 use super::{BitcoinConfig, BitcoinInstance};
+use crate::error::Error;
+use crate::{new_io_error, new_bitcoin_rpc_error};
 
 use std::process::{Command, Child};
 use std::{io, fs};
-use bitcoin_rpc_client::{Client, Error};
+use bitcoin_rpc_client::{Client};
 
 pub struct Btcd {
     home: Home,
@@ -40,19 +42,20 @@ impl Drop for BtcdRunning {
 impl BitcoinConfig for Btcd {
     type Instance = BtcdRunning;
 
-    fn new(name: &str) -> Result<Self, io::Error> {
+    fn new(name: &str) -> Result<Self, Error> {
         Ok(Btcd {
-            home: Home::new(name, false, true)
-                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
-                    cleanup("btcd");
-                    Home::new(name, true, true)
-                } else {
-                    Err(e)
-                })?,
+            // TODO(mkl): fix this
+            home: Home::new(name, false, true)?
+//                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
+//                    cleanup("btcd");
+//                    Home::new(name, true, true)
+//                } else {
+//                    Err(e)
+//                })?,
         })
     }
 
-    fn run(self) -> Result<Self::Instance, io::Error> {
+    fn run(self) -> Result<Self::Instance, Error> {
         self.run_internal(None)
     }
 
@@ -68,21 +71,39 @@ impl BitcoinConfig for Btcd {
 }
 
 impl Btcd {
-    fn run_internal(self, mining_address: Option<String>) -> Result<BtcdRunning, io::Error> {
-        fs::create_dir(self.home.ext_path("data")).or_else(|e|
-            if e.kind() == io::ErrorKind::AlreadyExists {
-                Ok(())
-            } else {
-                Err(e)
-            }
-        )?;
-        fs::create_dir(self.home.ext_path("logs")).or_else(|e|
-            if e.kind() == io::ErrorKind::AlreadyExists {
-                Ok(())
-            } else {
-                Err(e)
-            }
-        )?;
+    fn run_internal(self, mining_address: Option<String>) -> Result<BtcdRunning, Error> {
+        fs::create_dir(self.home.ext_path("data"))
+            .or_else(|e|
+                if e.kind() == io::ErrorKind::AlreadyExists {
+                    Ok(())
+                } else {
+                    Err(e)
+                }
+            )
+            .map_err(|err| {
+                new_io_error!(
+                    err,
+                    "cannot create data dir for btcd",
+                    self.home.ext_path("data").to_string_lossy().into_owned()
+                )
+            })?;
+        fs::create_dir(self.home.ext_path("logs"))
+            .or_else(|e|
+                if e.kind() == io::ErrorKind::AlreadyExists {
+                    Ok(())
+                } else {
+                    Err(e)
+                }
+            )
+            .map_err(|err| {
+                new_io_error!(
+                    err,
+                    "cannot create logs dir for btcd",
+                    self.home.ext_path("logs").to_string_lossy().into_owned()
+                )
+            })?;
+
+        // TODO(mkl): refactor this seperate function
         let mut args = vec![
             format!("--datadir={}", self.home.ext_path("data").to_str().unwrap()),
             format!("--logdir={}", self.home.ext_path("logs").to_str().unwrap()),
@@ -95,6 +116,7 @@ impl Btcd {
             args.push(format!("--miningaddr={}", mining_address));
         }
 
+        // TODO(mkl): why simnet?
         Command::new("btcd")
             .args(&[
                 "--simnet", "--txindex", "--rpcuser=devuser", "--rpcpass=devpass",
@@ -106,6 +128,9 @@ impl Btcd {
                 config: self,
                 instance: instance,
             })
+            .map_err(|err| {
+                new_io_error!(err, "cannot launch btcd")
+            })
     }
 }
 
@@ -114,5 +139,8 @@ impl BitcoinInstance for BtcdRunning {
         use bitcoin_rpc_client::Auth::UserPass;
 
         Client::new("http://localhost:18556".to_owned(), UserPass("devuser".to_owned(), "devpass".to_owned()))
+            .map_err(|err| {
+                new_bitcoin_rpc_error!(err, "cannot connect to btcd")
+            })
     }
 }

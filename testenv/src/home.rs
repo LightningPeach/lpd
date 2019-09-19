@@ -3,8 +3,12 @@ use std::path::PathBuf;
 use std::io;
 use std::fs;
 
+use crate::error::{Error};
+use crate::new_io_error;
+
 /// Abstracts directory containing keys
-#[derive(Debug)]
+// TODO(mkl): Maybe it should be more specific like LndHome or BitcoindHome
+#[derive(Debug, Clone)]
 pub struct Home {
     name: String,
 
@@ -14,6 +18,7 @@ pub struct Home {
 }
 
 impl Home {
+    // TODO(mkl): maybe it should be configurable
     fn sandbox() -> &'static Path {
         Path::new("/tmp/testenv")
     }
@@ -49,7 +54,7 @@ impl Home {
         self.ext_path("lnd.conf")
     }
 
-    pub fn new(name: &str, force: bool, cleanup_files: bool) -> Result<Self, io::Error> {
+    pub fn new(name: &str, force: bool, cleanup_files: bool) -> Result<Self, Error> {
         let s = Home {
             name: name.to_owned(),
             cleanup_files: cleanup_files,
@@ -65,27 +70,25 @@ impl Home {
                 }
             )
             .map_err(|err| {
-                println!("error creating home dir: {:?} {:?}", s.path(), err);
-                err
+                new_io_error!(err, "error creating home dir", s.path().to_string_lossy().into_owned())
             })?;
 
         let lock_path = s.ext_path(".lock");
         if force {
             fs::remove_file(&lock_path)
                 .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
+                    // TODO(mkl): shouldn't it be an error of lock file already exists
                     println!("ignoring, cannot create lock file because it already exists: {:?}", &lock_path);
                     Ok(())
                 } else {
                     Err(e)
                 })
                 .map_err(|err|{
-                    println!("cannot create lock file: {:?} {:?}", &lock_path, err);
-                    err
+                    new_io_error!(err, "cannot delete already existing lock file in force mode", lock_path.to_string_lossy().into_owned())
                 })?;
         }
         fs::File::create(&lock_path).map_err( |err| {
-            println!("cannot create lock file: {:?} {:?}", lock_path, err);
-            err
+            new_io_error!(err, "cannot create lock file", lock_path.to_string_lossy().into_owned())
         })?;
 
         // lnd tries to open default config file if it is unspecified in its options
@@ -94,13 +97,11 @@ impl Home {
         let lnd_config_path = s.lnd_conf_path();
         let mut lnd_conf_file = fs::File::create(&lnd_config_path)
             .map_err(|err| {
-                println!("cannot create lnd config file: {:?} {:?}", &lnd_config_path, err);
-                err
+                new_io_error!(err, "cannot create lnd config file", lnd_config_path.to_string_lossy().into_owned())
             })?;
         lnd_conf_file.write_all(b"[Application Options]\n")
             .map_err(|err| {
-                println!("cannot write to lnd config file: {:?} {:?}", &lnd_config_path, err);
-                err
+                new_io_error!(err, "cannot write to lnd config file", lnd_config_path.to_string_lossy().into_owned())
             })?;
 
         // We do not need to generate tls certificates because lnd generates them automatically

@@ -2,6 +2,8 @@ use super::{Home, cleanup};
 use super::chain::BitcoinConfig;
 use super::al::AbstractLightningNode;
 use crate::home::create_file_for_redirect;
+use crate::error::Error;
+use crate::new_io_error;
 
 use std::process::{Command, Child};
 
@@ -23,36 +25,53 @@ use futures::Stream;
 
 use lazycell::LazyCell;
 
-#[derive(Debug)]
-pub struct LnDaemon {
-    peer_port: u16,
-    rpc_port: u16,
-    rest_port: u16,
-    home: Home,
+
+/// LndConfig represents configuration for `lnd` (Lightning Network Daemon)
+/// Some options are specified, some are derived
+#[derive(Debug, Clone)]
+pub struct LndConfig {
+    /// Peer port. At this port `lnd` is listening for incoming peer connections
+    pub peer_port: u16,
+
+    /// RPC port. At this port `lnd` is listening for GRPC API connections
+    pub rpc_port: u16,
+
+    /// REST API port. At this port `lnd` is listening for HTTP REST API requests
+    pub rest_port: u16,
+
+    /// Working dir
+    pub home: Home,
 }
 
-pub struct LnRunning {
-    config: LnDaemon,
-    instance: Child,
-    client: LazyCell<LightningClient>,
+/// `LndProcess` represents running instance of `lnd`
+pub struct LndProcess {
+    /// Configuration info
+    config: LndConfig,
+
+    process: Child,
+
+    rpc_client: LazyCell<LightningClient>,
+
     info: LazyCell<GetInfoResponse>,
+
     // we should keep file here, because its descriptor is used for redirects
     // if file is closed then descriptor becomes invalid (I guess)
     stdout: File,
     stderr: File
 }
 
-impl fmt::Debug for LnRunning {
+impl fmt::Debug for LndProcess {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("LnRunning")
             .field("config", &self.config)
-            .field("instance", &self.instance)
+            .field("instance", &self.process)
             .finish()
     }
 }
 
 
-impl LnDaemon {
+impl LndConfig {
+    // TODO(mkl): maybe change it to root path
     pub fn name(&self) -> &str {
         self.home.name()
     }
@@ -75,69 +94,84 @@ impl LnDaemon {
 
     pub fn new(
         peer_port: u16, rpc_port: u16, rest_port: u16, name: &str
-    ) -> Result<Self, io::Error> {
-        Ok(LnDaemon {
+    ) -> Result<Self, Error> {
+        // TODO(mkl): new should not do any changes
+        let home = Home::new(name, false, false)?;
+
+        Ok(LndConfig {
             peer_port: peer_port,
             rpc_port: rpc_port,
             rest_port: rest_port,
-            home: Home::new(name, false, true)
-                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
-                    cleanup("lnd");
-                    Home::new(name, true, true)
-                } else {
-                    Err(e)
-                })?,
+            home: home,
         })
     }
 
-    pub fn run<B>(self, b: &B) -> Result<LnRunning, io::Error>
+    /// Returns lnd arguments only connected with `lnd`
+    /// They do not contains e.g. configuration for bitcoind connection
+    pub fn get_pure_lnd_args(&self) -> Vec<String> {
+        let mut args: Vec<String> = vec![];
+        // TODO(mkl): make it configurable
+        args.push("--noseedbackup".to_owned());
+
+        // TODO(mkl): make it configurable
+        args.push("--no-macaroons".to_owned());
+
+        // TODO(mkl): make it configurable. Add enum for trace Leveles
+        args.push("--debuglevel=trace".to_owned());
+
+        // File path related stuff
+        args.push( format!("--lnddir={}", self.home.path().to_str().unwrap()) );
+        args.push( format!("--configfile={}", self.home.lnd_conf_path().to_str().unwrap()) );
+        args.push( format!("--datadir={}", self.data_dir_path().to_str().unwrap()) );
+        args.push( format!("--logdir={}", self.log_dir_path().to_str().unwrap()) );
+        args.push( format!("--tlscertpath={}", self.home.public_key_path().to_str().unwrap()) );
+        args.push( format!("--tlskeypath={}", self.home.private_key_path().to_str().unwrap()) );
+
+        // Ports to listen
+        args.push( format!("--listen=localhost:{}", self.peer_port) );
+        args.push( format!("--rpclisten=localhost:{}", self.rpc_port) );
+        args.push( format!("--restlisten=localhost:{}", self.rest_port) );
+
+        args
+    }
+
+    pub fn run<B>(self, b: &B) -> Result<LndProcess, Error>
     where
         B: BitcoinConfig,
     {
         println!("lnd stdout: {:?}", self.stdout_path());
         println!("lnd stderr: {:?}", self.stderr_path());
         let (stdout, stdout_file) = create_file_for_redirect(self.stdout_path()).map_err(|err| {
-            println!("cannot create file for redirecting lnd stdout: {:?}", err);
-            err
+            new_io_error!(
+                err,
+                "cannot create file for redirecting lnd stdout",
+                self.stdout_path().to_string_lossy().into_owned()
+            )
         })?;
 
         let (stderr, stderr_file) = create_file_for_redirect(self.stderr_path()).map_err(|err|{
-            println!("cannot create file for redirecting lnd stderr: {:?}", err);
-            err
+            new_io_error!(
+                err,
+                "cannot create file for redirecting lnd stderr",
+                self.stderr_path().to_string_lossy().into_owned()
+            )
         })?;
-
 
         println!("self.home.ext_path(\"data\"): {:?}", self.data_dir_path());
         Command::new("lnd")
-            .args(&[
-                "--noseedbackup", "--no-macaroons", "--debuglevel=trace"
-            ])
-            .args(&[
-                format!("--lnddir={}", self.home.path().to_str().unwrap()),
-                format!("--configfile={}", self.home.lnd_conf_path().to_str().unwrap()),
-                format!("--datadir={}", self.data_dir_path().to_str().unwrap()),
-                format!("--logdir={}", self.log_dir_path().to_str().unwrap()),
-                format!("--tlscertpath={}", self.home.public_key_path().to_str().unwrap()),
-                format!("--tlskeypath={}", self.home.private_key_path().to_str().unwrap()),
-            ])
-            .args(&[
-                format!("--listen=localhost:{}", self.peer_port),
-                format!("--rpclisten=localhost:{}", self.rpc_port),
-                format!("--restlisten=localhost:{}", self.rest_port),
-            ])
+            .args(self.get_pure_lnd_args())
             .args(b.lnd_params())
             .stdout(stdout)
             .stderr(stderr)
             .spawn()
             .map_err(|err|{
-                println!("cannot spawn lnd: {:?}", err);
-                err
+                new_io_error!(err, "cannot spawn lnd")
             })
-            .map(|instance| {
-                LnRunning {
+            .map(|child_process| {
+                LndProcess {
                     config: self,
-                    instance: instance,
-                    client: LazyCell::new(),
+                    process: child_process,
+                    rpc_client: LazyCell::new(),
                     info: LazyCell::new(),
                     stdout: stdout_file,
                     stderr: stderr_file
@@ -146,19 +180,20 @@ impl LnDaemon {
     }
 }
 
-impl LnRunning {
+impl LndProcess {
     // errors ignored
     pub fn batch<B>(limit: u16, base_port: u16, b: &B) -> Vec<Self>
     where
         B: BitcoinConfig,
     {
         (0..limit).into_iter()
-            .map(|index| -> Result<LnRunning, io::Error> {
+            .map(|index| -> Result<LndProcess, Error> {
+                // TODO(mkl): move port determination logic into some file
                 let p_peer = base_port + index * 10;
                 let p_rpc = base_port + index * 10 + 1;
                 let p_rest = base_port + index * 10 + 2;
                 let name = format!("lnd-node-{}", index);
-                LnDaemon::new(
+                LndConfig::new(
                     p_peer, p_rpc, p_rest, name.as_str()
                 )?.run(b)
             })
@@ -201,8 +236,8 @@ impl LnRunning {
 
     /// might panic
     pub fn client(&self) -> &LightningClient {
-        self.client.borrow().unwrap_or_else(|| {
-            self.client.fill(self.new_client().unwrap()).ok().unwrap();
+        self.rpc_client.borrow().unwrap_or_else(|| {
+            self.rpc_client.fill(self.new_client().unwrap()).ok().unwrap();
             self.client()
         })
     }
@@ -266,9 +301,9 @@ impl LnRunning {
     }
 }
 
-impl Drop for LnRunning {
+impl Drop for LndProcess {
     fn drop(&mut self) {
-        self.instance.kill()
+        self.process.kill()
             .or_else(|e| match e.kind() {
                 io::ErrorKind::InvalidInput => Ok(()),
                 _ => Err(e),
@@ -277,7 +312,7 @@ impl Drop for LnRunning {
     }
 }
 
-impl AbstractLightningNode for LnRunning {
+impl AbstractLightningNode for LndProcess {
     fn address(&self) -> LightningAddress {
         let mut address = LightningAddress::new();
         address.set_host(format!("127.0.0.1:{}", self.config.peer_port));

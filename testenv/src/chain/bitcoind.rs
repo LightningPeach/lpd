@@ -1,10 +1,12 @@
 use super::super::{Home, cleanup};
 use super::{BitcoinConfig, BitcoinInstance};
 use crate::home::create_file_for_redirect;
+use crate::error::Error;
+use crate::{new_io_error, new_bitcoin_rpc_error};
 
 use std::process::{Command, Child};
 use std::{io, fs};
-use bitcoin_rpc_client::{Client, Error};
+use bitcoin_rpc_client::{Client, Error as BitcoinRpcError};
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -47,21 +49,22 @@ impl Drop for BitcoindRunning {
 impl BitcoinConfig for Bitcoind {
     type Instance = BitcoindRunning;
 
-    fn new(name: &str) -> Result<Self, io::Error> {
+    fn new(name: &str) -> Result<Self, Error> {
         Ok(Bitcoind {
-            home: Home::new(name, false, true)
-                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
-                    // TODO(mkl): this should be fixed to not delete all bitcoind processes
-                    cleanup("bitcoind");
-                    Home::new(name, true, true)
-                } else {
-                    Err(e)
-                })?,
+            // TODO(mkl): rewrite this part. What is the problem with force delete?
+            home: Home::new(name, false, true)?,
+//                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
+//                    // TODO(mkl): this should be fixed to not delete all bitcoind processes
+//                    cleanup("bitcoind");
+//                    Home::new(name, true, true)
+//                } else {
+//                    Err(e)
+//                })?,
             port: 18333,
         })
     }
 
-    fn run(self) -> Result<Self::Instance, io::Error> {
+    fn run(self) -> Result<Self::Instance, Error> {
         self.run_internal()
     }
 
@@ -93,7 +96,7 @@ impl Bitcoind {
         self.home.ext_path("bitcoind.stderr")
     }
 
-    fn run_internal(self) -> Result<BitcoindRunning, io::Error> {
+    fn run_internal(self) -> Result<BitcoindRunning, Error> {
         let data_dir_path= self.home.ext_path("data");
         fs::create_dir(&data_dir_path).or_else(|e|
             if e.kind() == io::ErrorKind::AlreadyExists {
@@ -102,8 +105,11 @@ impl Bitcoind {
                 Err(e)
             }
         ).map_err(|err| {
-            println!("cannot create data dir for bitcoind: {:?} , error: {:?}", &data_dir_path, err);
-            err
+            new_io_error!(
+                err,
+                "cannot create data dir for bitcoind",
+                data_dir_path.to_string_lossy().into_owned()
+            )
         })?;
 
         let args = vec![
@@ -112,15 +118,22 @@ impl Bitcoind {
         ];
 
         let (stdout, stdout_file) = create_file_for_redirect(self.stdout_path()).map_err(|err|{
-            println!("cannot create file {:?} for bitcoind stdout: {:?}", &self.stdout_path(), err);
-            err
+            new_io_error!(
+                err,
+                "cannot create file for bitcoind stdout",
+                self.stdout_path().to_string_lossy().into_owned()
+            )
         })?;
 
         let (stderr, stderr_file) = create_file_for_redirect(self.stderr_path()).map_err(|err| {
-            println!("cannot create file {:?} for bitcoind stderr: {:?}", &self.stderr_path(), err);
-            err
+            new_io_error!(
+                err,
+                "cannot create file for bitcoind stderr",
+                self.stderr_path().to_string_lossy().into_owned()
+            )
         })?;
 
+        // TODO(mkl): refactor arguments in new method
         Command::new("bitcoind")
             // TODO(mkl): move all this configuration into variables
             // TODO(mkl): check ports if they are not used
@@ -141,6 +154,9 @@ impl Bitcoind {
                 stdout: stdout_file,
                 stderr: stderr_file
             })
+            .map_err(|err| {
+                new_io_error!(err, "cannot launch bitcoind")
+            })
     }
 }
 
@@ -148,6 +164,11 @@ impl BitcoinInstance for BitcoindRunning {
     fn rpc_client(&self) -> Result<Client, Error> {
         use bitcoin_rpc_client::Auth::UserPass;
 
+        // TODO(mkl): refactor config parameters
         Client::new("http://localhost:18443".to_owned(), UserPass("devuser".to_owned(), "devpass".to_owned()))
+            .map_err(|err| {
+                // TODO(mkl): Maybe include exact information about connection like user, password, ...
+                new_bitcoin_rpc_error!(err, "cannot connect to bitcoind")
+            })
     }
 }

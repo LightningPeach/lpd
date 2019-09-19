@@ -8,16 +8,18 @@ mod chain;
 pub use self::chain::*;
 
 mod ln;
-pub use self::ln::{LnDaemon, LnRunning};
+pub use self::ln::{LndConfig, LndProcess};
 
 mod lp;
 pub use self::lp::{LpServer, LpRunning};
+
+mod error;
 
 // abstract lightning node
 mod al;
 // use self::al::AbstractLightningNode;
 
-use std::error::Error;
+use error::Error;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn cleanup(process: &str) {
@@ -31,7 +33,7 @@ pub fn cleanup(name: &str) {
     panic!("cannot stop other instance of `{}`, stop it manually", name)
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
     // TODO(mkl): add possibility to connect to already existing testenv
     // TODO(mkl): add posibility to leave nodes working after tests ends
     println!("Starting testnev");
@@ -51,14 +53,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("End waiting for bitcoind");
 
     // Generate some blocks to activate segwit
-    btc_running.rpc_client()?.generate(500, None)
-        .unwrap_or_else(|err| {
-            println!("error, cannot mine initial blocks: {:?}", err);
-            panic!(err);
-        });
+    btc_running
+        .rpc_client()?
+        .generate(500, None)
+        .map_err(|err| {
+            new_bitcoin_rpc_error!(err, "error, cannot mine initial blocks")
+        })?;
 
     // creating two nodes with base port 9800
-    let nodes = LnRunning::batch(2, 9800, btc_running.as_ref());
+    let nodes = LndProcess::batch(2, 9800, btc_running.as_ref());
     // TODO(mkl): add checking state instead of flat wait
     thread::sleep(Duration::from_secs(15));
     println!("nodes.len={}", nodes.len());
@@ -69,29 +72,23 @@ fn main() -> Result<(), Box<dyn Error>> {
             rez
         })
         .map_err(|err| {
-            println!("ERROR getting getinfo: {:?}", err);
-            err
+            new_grpc_error!(err, "cannot `getinfo` from node 0")
         })?;
-
-
 
     let mining_address = nodes[0].new_address().wait()
         .map_err(|err|{
-            println!("error getting new address: {:?}", err);
-            err
+            new_grpc_error!(err, "error getting new address")
         })?;
     let mining_address = Address::from_str(mining_address.as_str())
         .map_err(|err| {
-            println!("error converting address {:?}", err);
-            err
+            new_bitcoin_encode_error!(err, "error converting address")
         })?;
 
     btc_running.rpc_client()?
         .generate_to_address(400, &mining_address)
-        .unwrap_or_else(|err|{
-            println!("error mining initial money for the first node: {:?}", err);
-            panic!(err);
-        });
+        .map_err(|err| {
+            new_bitcoin_rpc_error!(err, "error mining initial money for the first node")
+        })?;
     println!("Before waiting for mining blocks for money for first node");
     thread::sleep(Duration::from_secs(5));
     println!("After waiting for mining blocks for money for first node");
