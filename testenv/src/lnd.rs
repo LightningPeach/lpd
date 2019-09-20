@@ -1,6 +1,6 @@
 use super::{Home, cleanup};
 use super::chain::BitcoinConfig;
-use super::al::AbstractLightningNode;
+use super::abstract_lightning_node::AbstractLightningNode;
 use crate::home::{create_file_for_redirect, write_to_file};
 use crate::error::Error;
 use crate::{new_io_error, new_error};

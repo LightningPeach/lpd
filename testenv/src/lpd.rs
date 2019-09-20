@@ -1,6 +1,6 @@
 use super::{Home, cleanup};
 use super::chain::BitcoinConfig;
-use super::al::AbstractLightningNode;
+use super::abstract_lightning_node::AbstractLightningNode;
 use crate::error::Error;
 
 use client::LightningPeach;

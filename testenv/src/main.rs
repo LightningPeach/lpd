@@ -14,16 +14,16 @@ use self::home::Home;
 mod chain;
 pub use self::chain::*;
 
-mod ln;
-pub use self::ln::{LndConfig, LndProcess};
+mod lnd;
+pub use self::lnd::{LndConfig, LndProcess};
 
-mod lp;
-pub use self::lp::{LpServer, LpRunning};
+mod lpd;
+pub use self::lpd::{LpServer, LpRunning};
 
 mod error;
 
 // abstract lightning node
-mod al;
+mod abstract_lightning_node;
 // use self::al::AbstractLightningNode;
 
 use error::Error;
