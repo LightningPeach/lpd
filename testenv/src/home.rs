@@ -154,3 +154,41 @@ pub fn write_to_file(path: &PathBuf, s: &str) -> Result<(), Error> {
         })?;
     Ok(())
 }
+
+pub enum ArgsJoinType {
+    /// Space delimited
+    Simple,
+
+    /// One per line with back-slash in the end
+    OnePerLine,
+
+    /// As launch file. Each per line, plus "$@" in the end
+    /// Resulting file is launch script for a command
+    AsLaunchFile
+}
+
+/// Convert program and list of arguments into launch string
+pub fn args_to_str(exec_name: &str, args: &[&str], args_join_type: ArgsJoinType) -> String {
+    let mut body = exec_name.to_owned();
+
+    let sep = match args_join_type {
+        ArgsJoinType::Simple => " ",
+        ArgsJoinType::OnePerLine | ArgsJoinType::AsLaunchFile => "\\\n    "
+    };
+
+    let header = match args_join_type {
+        ArgsJoinType::AsLaunchFile => "#!/usr/bin/env bash\n\n",
+        _ => "",
+    };
+
+    let footer = match args_join_type {
+        ArgsJoinType::AsLaunchFile => format!("{}\"$@\"", sep),
+        _ => "".to_owned(),
+    };
+
+    for arg in args{
+        body = format!("{}{}{}", body, sep, arg);
+    }
+
+    format!("{}{}{}", header, body, footer)
+}

@@ -1,7 +1,7 @@
 use super::{Home, cleanup};
 use super::chain::BitcoinConfig;
 use super::abstract_lightning_node::AbstractLightningNode;
-use crate::home::{create_file_for_redirect, write_to_file};
+use crate::home::{create_file_for_redirect, write_to_file, args_to_str, ArgsJoinType};
 use crate::error::Error;
 use crate::{new_io_error, new_error};
 
@@ -24,6 +24,7 @@ use futures::Future;
 use futures::Stream;
 
 use lazycell::LazyCell;
+use std::env::join_paths;
 
 
 /// LndConfig represents configuration for `lnd` (Lightning Network Daemon)
@@ -41,6 +42,10 @@ pub struct LndConfig {
 
     /// Working dir
     pub home: Home,
+
+    /// Should the process be killed in the end
+    /// It might be useful if you want to play with the lnd process after tests finish
+    pub kill_in_the_end: bool,
 }
 
 /// `LndProcess` represents running instance of `lnd`
@@ -96,6 +101,14 @@ impl LndConfig {
         self.home.ext_path("lnd.pid")
     }
 
+    pub fn lnd_launch_file_path(&self) -> PathBuf {
+        self.home.ext_path("start-lnd.sh")
+    }
+
+    pub fn lncli_launch_file_path(&self) -> PathBuf {
+        self.home.ext_path("lncli.sh")
+    }
+
     pub fn new(
         peer_port: u16, rpc_port: u16, rest_port: u16, name: &str
     ) -> Result<Self, Error> {
@@ -107,7 +120,19 @@ impl LndConfig {
             rpc_port: rpc_port,
             rest_port: rest_port,
             home: home,
+            kill_in_the_end: false,
         })
+    }
+
+    /// returns arguments for lncli command to connect to this lnd
+    pub fn get_lncli_args(&self) -> Vec<String> {
+        let mut args: Vec<String> = vec![];
+
+        args.push("--no-macaroons".to_owned());
+        args.push( format!("--tlscertpath={}", self.home.public_key_path().to_str().unwrap()) );
+        args.push( format!("--rpcserver=localhost:{}", self.rpc_port) );
+
+        args
     }
 
     /// Returns lnd arguments only connected with `lnd`
@@ -139,6 +164,15 @@ impl LndConfig {
         args
     }
 
+    pub fn get_lnd_args<B>(&self, b: &B) -> Vec<String>
+    where
+        B: BitcoinConfig,
+    {
+        let mut args = self.get_pure_lnd_args();
+        args.extend(b.lnd_params().into_iter());
+        args
+    }
+
     pub fn run<B>(self, b: &B) -> Result<LndProcess, Error>
     where
         B: BitcoinConfig,
@@ -161,10 +195,35 @@ impl LndConfig {
             )
         })?;
 
+        let lnd_args =  self.get_lnd_args(b);
+
+        // https://stackoverflow.com/questions/33216514/convert-vecstring-to-vecstr
+        let args_str_vec: Vec<&str> = lnd_args.iter().map(AsRef::as_ref).collect();
+        let lnd_launch_file_content = args_to_str(
+            "lnd",
+            args_str_vec.as_slice(),
+            ArgsJoinType::AsLaunchFile,
+        );
+        write_to_file(&self.lnd_launch_file_path(), &lnd_launch_file_content)
+            .map_err(|err|{
+                new_error!(err, "cannot create lnd launch file")
+            })?;
+
+        let lncli_args = self.get_lncli_args();
+        let lncli_args_str_vec: Vec<&str> = lncli_args.iter().map(AsRef::as_ref).collect();
+        let lncli_launch_file_content = args_to_str(
+            "lncli",
+            lncli_args_str_vec.as_slice(),
+            ArgsJoinType::AsLaunchFile,
+        );
+        write_to_file(&self.lncli_launch_file_path(), &lncli_launch_file_content)
+            .map_err(|err|{
+                new_error!(err, "cannot create lncli launch file")
+            })?;
+
         println!("self.home.ext_path(\"data\"): {:?}", self.data_dir_path());
         let lnd_process = Command::new("lnd")
-            .args(self.get_pure_lnd_args())
-            .args(b.lnd_params())
+            .args(&lnd_args)
             .stdout(stdout)
             .stderr(stderr)
             .spawn()
@@ -317,12 +376,14 @@ impl LndProcess {
 
 impl Drop for LndProcess {
     fn drop(&mut self) {
-        self.process.kill()
-            .or_else(|e| match e.kind() {
-                io::ErrorKind::InvalidInput => Ok(()),
-                _ => Err(e),
-            })
-            .unwrap()
+        if self.config.kill_in_the_end {
+            self.process.kill()
+                .or_else(|e| match e.kind() {
+                    io::ErrorKind::InvalidInput => Ok(()),
+                    _ => Err(e),
+                })
+                .unwrap()
+        }
     }
 }
 
