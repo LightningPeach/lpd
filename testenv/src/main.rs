@@ -28,6 +28,9 @@ mod abstract_lightning_node;
 
 use error::Error;
 use std::process::Command;
+use lnd_rust::rpc_grpc::Lightning;
+use grpc::RequestOptions;
+use interface::common::Void;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn cleanup(process: &str) {
@@ -168,6 +171,28 @@ fn _main() -> Result<(), Error> {
     })?;
     println!("After connecting to peach node");
 
+    let lnd0_resp = nodes[0].client()
+        .list_peers(
+            RequestOptions::new(),
+            lnd_rust::rpc::ListPeersRequest::new()
+        )
+        .drop_metadata()
+        .wait()
+        .unwrap();
+    println!("lnd0_peers: {:#?}", lnd0_resp);
+
+    use interface::routing_grpc::RoutingService;
+    let peach_resp = peach_node
+        .client()
+        .routing()
+        .list_peers(
+            RequestOptions::new(),
+            Void::new(),
+        )
+        .drop_metadata()
+        .wait()
+        .unwrap();
+    println!("peach peers: {:#?}", peach_resp);
 
     let pk_our = peach_node_info.identity_pubkey;
     let update_stream = nodes[0].open_channel(pk_our.as_str());
