@@ -120,6 +120,20 @@ macro_rules! new_error {
     };
 }
 
+#[macro_export]
+macro_rules! new_other_error {
+    ($description:expr) => {
+        {
+            use $crate::get_location;
+            $crate::error::Error {
+                location: get_location!(),
+                description: $description.to_owned(),
+                error: $crate::error::ErrorWrapper::new_other_error(),
+            }
+        }
+    };
+}
+
 #[derive(Debug)]
 pub enum ErrorWrapper {
     IO {
@@ -137,7 +151,8 @@ pub enum ErrorWrapper {
     },
     Error {
         inner: Box<Error>,
-    }
+    },
+    Other,
 }
 
 impl std::fmt::Display for ErrorWrapper {
@@ -177,6 +192,10 @@ impl ErrorWrapper {
             inner: Box::new(err)
         }
     }
+
+    pub fn new_other_error() -> ErrorWrapper {
+        ErrorWrapper::Other
+    }
 }
 
 impl std::error::Error for ErrorWrapper {
@@ -196,6 +215,9 @@ impl std::error::Error for ErrorWrapper {
             },
             ErrorWrapper::Error {inner} => {
                 Some(inner)
+            },
+            ErrorWrapper::Other => {
+                None
             }
         }
     }

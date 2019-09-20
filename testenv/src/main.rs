@@ -74,8 +74,15 @@ fn _main() -> Result<(), Error> {
 
     // creating two nodes with base port 9800
     let nodes = LndProcess::batch(2, 9800, bitcoind_process.as_ref());
-    // TODO(mkl): add checking state instead of flat wait
-    thread::sleep(Duration::from_secs(15));
+    nodes[0].wait_for_sync(10)
+        .map_err(|err|{
+            new_error!(err, "fail waiting node 0")
+        })?;
+    nodes[1].wait_for_sync(10)
+        .map_err(|err|{
+            new_error!(err, "fail waiting node 0")
+        })?;
+
     println!("nodes.len={}", nodes.len());
 
     // Mine some blocks

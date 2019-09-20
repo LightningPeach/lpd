@@ -3,9 +3,11 @@ use super::chain::BitcoinConfig;
 use super::abstract_lightning_node::AbstractLightningNode;
 use crate::home::{create_file_for_redirect, write_to_file, args_to_str, ArgsJoinType};
 use crate::error::Error;
-use crate::{new_io_error, new_error};
+use crate::{new_io_error, new_error, new_grpc_error, new_other_error};
 
 use std::process::{Command, Child};
+use std::thread;
+use std::time::Duration;
 
 use std::io;
 use std::fmt;
@@ -46,6 +48,9 @@ pub struct LndConfig {
     /// Should the process be killed in the end
     /// It might be useful if you want to play with the lnd process after tests finish
     pub kill_in_the_end: bool,
+
+    /// Do not use TLS for API
+    pub no_rpc_tls: bool,
 }
 
 /// `LndProcess` represents running instance of `lnd`
@@ -121,6 +126,7 @@ impl LndConfig {
             rest_port: rest_port,
             home: home,
             kill_in_the_end: false,
+            no_rpc_tls: true,
         })
     }
 
@@ -129,6 +135,9 @@ impl LndConfig {
         let mut args: Vec<String> = vec![];
 
         args.push("--no-macaroons".to_owned());
+        if self.no_rpc_tls {
+            args.push("--no-tls".to_owned());
+        }
         args.push( format!("--tlscertpath={}", self.home.public_key_path().to_str().unwrap()) );
         args.push( format!("--rpcserver=localhost:{}", self.rpc_port) );
 
@@ -147,6 +156,10 @@ impl LndConfig {
 
         // TODO(mkl): make it configurable. Add enum for trace Leveles
         args.push("--debuglevel=trace".to_owned());
+
+        if self.no_rpc_tls {
+            args.push("--no-tls".to_owned());
+        }
 
         // File path related stuff
         args.push( format!("--lnddir={}", self.home.path().to_str().unwrap()) );
@@ -282,18 +295,24 @@ impl LndProcess {
         use grpc::ClientStub;
 
         let daemon = &self.config;
-
-        let certificate = TLSCertificate::from_path(daemon.home.public_key_path())
-            .map_err(grpc::Error::Io)?;
         let localhost = "127.0.0.1";
-        // TODO(mkl): add better error processing
-        let localhost_ip = IpAddr::V4(Ipv4Addr::from_str(localhost).unwrap());
-        let tls = certificate.into_tls(localhost)
-            .map_err(|e| grpc::Error::Io(e.into()))?;
-        let socket_address = SocketAddr::new(localhost_ip, daemon.rpc_port);
 
-        let conf = Default::default();
-        let inner = grpc::Client::new_expl(&socket_address, localhost, tls, conf)?;
+        let inner = if self.config.no_rpc_tls {
+            grpc::Client::new_plain(localhost, self.config.rpc_port, Default::default()).unwrap()
+        } else {
+            // TODO(mkl): TLS do not work. Maybe it is due to a rustls usage?
+            let certificate = TLSCertificate::from_path(daemon.home.public_key_path())
+                .map_err(grpc::Error::Io)?;
+
+            // TODO(mkl): add better error processing
+            let localhost_ip = IpAddr::V4(Ipv4Addr::from_str(localhost).unwrap());
+            let tls = certificate.into_tls(localhost)
+                .map_err(|e| grpc::Error::Io(e.into()))?;
+            let socket_address = SocketAddr::new(localhost_ip, daemon.rpc_port);
+
+            let conf = Default::default();
+            grpc::Client::new_expl(&socket_address, localhost, tls, conf)?
+        };
         Ok(LightningClient::with_client(Arc::new(inner)))
     }
 
@@ -305,6 +324,29 @@ impl LndProcess {
         self.client()
             .get_info(RequestOptions::new(), GetInfoRequest::new())
             .drop_metadata()
+    }
+
+    pub fn wait_for_sync(&self, max_retries: i32) -> Result<(), Error> {
+        let mut i = 0;
+        loop {
+            let info = self.obtain_info().wait();
+            i += 1;
+            match info {
+                Ok(info) => {
+                    if info.synced_to_chain {
+                        return Ok(())
+                    } else if i>= max_retries {
+                        return Err(new_other_error!(&format!("lnd is not synced to chain after retries: {}", max_retries)))
+                    }
+                },
+                Err(err) => {
+                    if i>= max_retries {
+                        return Err(new_grpc_error!(err, "error connecting to lnd. Last error"))
+                    }
+                }
+            }
+            thread::sleep(Duration::from_secs(1));
+        }
     }
 
     /// might panic
