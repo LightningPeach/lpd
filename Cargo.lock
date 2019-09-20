@@ -471,6 +471,7 @@ version = "0.1.0"
 dependencies = [
  "binformat 0.1.0",
  "brontide 0.1.0",
+ "build_info 0.1.0",
  "channel_machine 0.1.0",
  "common-types 0.0.0",
  "dependencies 0.1.0",

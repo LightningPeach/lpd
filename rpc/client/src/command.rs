@@ -114,7 +114,14 @@ impl Command {
                 Ok(())
             },
             GetVersion => {
+                println!("Client's version:");
                 println!("{:#?}", get_build_info!());
+
+                println!("Server's version:");
+                let response = routing_service
+                    .get_info(Default::default(), Void::new())
+                    .drop_metadata().wait().map_err(Error::Grpc)?;
+                println!("{}", response.version);
                 Ok(())
             },
             ListPeers => {

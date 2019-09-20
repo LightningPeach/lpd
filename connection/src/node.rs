@@ -234,7 +234,7 @@ impl Node {
     #[cfg(feature = "rpc")]
     pub fn get_info(&mut self) -> Info {
         use secp256k1::Secp256k1;
-        use std::string::ToString;
+        use build_info::get_build_info;
 
         self.blockchain.sync();
 
@@ -245,6 +245,7 @@ impl Node {
         info.set_num_peers(self.peers.len() as _);
         info.set_block_hash(self.blockchain.hash().to_string());
         info.set_block_height(self.blockchain.height());
+        info.set_version(format!("{:#?}", get_build_info!()));
         info
     }
 
