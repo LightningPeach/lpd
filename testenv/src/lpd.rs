@@ -2,18 +2,22 @@ use super::{Home, cleanup};
 use super::chain::BitcoinConfig;
 use super::abstract_lightning_node::AbstractLightningNode;
 use crate::error::Error;
+use crate::{new_io_error, new_grpc_error};
 
 use client::LightningPeach;
 use std::{process::Child, io};
+use std::thread;
+use std::time::Duration;
 use lazycell::LazyCell;
 use futures::Future;
 use lnd_rust::rpc::LightningAddress;
 use interface::routing::Info;
 
 pub struct LpServer {
-    peer_port: u16,
-    rpc_port: u16,
-    home: Home,
+    pub peer_port: u16,
+    pub rpc_port: u16,
+    pub home: Home,
+    pub kill_in_the_end: bool,
 }
 
 pub struct LpRunning {
@@ -34,7 +38,8 @@ impl LpServer {
         Ok(LpServer {
             peer_port: peer_port,
             rpc_port: rpc_port,
-            home: Home::new(name, false, true)?
+            kill_in_the_end: false,
+            home: Home::new(name, false, false)?
             // TODO(mkl): why is this checks everywhere?
 //                .or_else(|e| if e.kind() == io::ErrorKind::AlreadyExists {
 //                    cleanup("lpd");
@@ -45,7 +50,7 @@ impl LpServer {
         })
     }
 
-    pub fn run<B>(self, b: &B) -> Result<LpRunning, io::Error>
+    pub fn run<B>(self, b: &B) -> Result<LpRunning, Error>
     where
         B: BitcoinConfig,
     {
@@ -57,8 +62,10 @@ impl LpServer {
         Command::new("cargo")
             .args(&["run", "--package", "server", "--"])
             .args(&[
-                format!("--listen=127.0.0.1:{}", self.peer_port),
-                format!("--rpclisten=127.0.0.1:{}", self.rpc_port),
+                format!("--p2p-listen=127.0.0.1:{}", self.peer_port),
+                format!("--rpc-listen=127.0.0.1:{}", self.rpc_port),
+                format!("--db-path={}", self.home.path().to_string_lossy()),
+                format!("--rpc-no-tls"),
             ])
             .spawn()
             .map(|instance| {
@@ -69,18 +76,40 @@ impl LpServer {
                     info: LazyCell::new(),
                 }
             })
+            .map_err(|err| {
+                new_io_error!(err, "cannot start lpd")
+            })
     }
 
 }
 
 impl LpRunning {
     // TODO: get rid of duplicated code
-    fn obtain_info(&self) -> impl Future<Item=Info, Error=grpc::Error> {
+    pub fn obtain_info(&self) -> impl Future<Item=Info, Error=grpc::Error> {
         use interface::{routing_grpc::RoutingService, common::Void};
         use grpc::RequestOptions;
 
         self.client().routing().get_info(RequestOptions::new(), Void::new())
             .drop_metadata()
+    }
+
+    pub fn wait_for_sync(&self, max_retries: i32) -> Result<(), Error> {
+        let mut i = 0;
+        loop {
+            let info = self.obtain_info().wait();
+            i += 1;
+            match info {
+                Ok(info) => {
+                    return Ok(())
+                },
+                Err(err) => {
+                    if i>= max_retries {
+                        return Err(new_grpc_error!(err, "error connecting to lpd. Last error"))
+                    }
+                }
+            }
+            thread::sleep(Duration::from_secs(1));
+        }
     }
 
     /// might panic
@@ -132,12 +161,14 @@ impl LpRunning {
 
 impl Drop for LpRunning {
     fn drop(&mut self) {
-        self.instance.kill()
-            .or_else(|e| match e.kind() {
-                io::ErrorKind::InvalidInput => Ok(()),
-                _ => Err(e),
-            })
-            .unwrap()
+        if self.config.kill_in_the_end {
+            self.instance.kill()
+                .or_else(|e| match e.kind() {
+                    io::ErrorKind::InvalidInput => Ok(()),
+                    _ => Err(e),
+                })
+                .unwrap()
+        }
     }
 }
 

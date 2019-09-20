@@ -21,7 +21,7 @@ pub struct Home {
 
 impl Home {
     // TODO(mkl): maybe it should be configurable
-    fn sandbox() -> &'static Path {
+    pub fn sandbox() -> &'static Path {
         Path::new("/tmp/testenv")
     }
 

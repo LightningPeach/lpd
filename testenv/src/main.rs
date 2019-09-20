@@ -27,6 +27,7 @@ mod abstract_lightning_node;
 // use self::al::AbstractLightningNode;
 
 use error::Error;
+use std::process::Command;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub fn cleanup(process: &str) {
@@ -58,6 +59,26 @@ fn _main() -> Result<(), Error> {
             new_error!(err, "cannot run bitcoind")
         })?;
     println!("After starting bitcoind:");
+
+    // Start electrumx
+    Command::new("electrs")
+        .args(&[
+            format!("-vvv"),
+            format!("--network=regtest"),
+            format!("--jsonrpc-import"),
+            format!("--daemon-dir={}", bitcoind_process.config.data_dir_path().to_string_lossy()),
+            format!("--db-dir={}", {
+                let mut p = Home::sandbox().to_owned();
+                p.push("electrs");
+                p.to_string_lossy().to_string()
+            }),
+            format!("--cookie={}:{}", bitcoind_process.config.rpc_user, bitcoind_process.config.rpc_pass),
+            format!("--daemon-rpc-addr=127.0.0.1:{}", bitcoind_process.config.rpc_port)
+        ])
+        .spawn()
+        .map_err(|err| {
+            new_io_error!(err, "cannot launch electrs")
+        })?;
 
     // TODO(mkl): add checking state instead of flat wait
     println!("Start waiting for bitcoind");
@@ -112,7 +133,7 @@ fn _main() -> Result<(), Error> {
         })?;
 
     bitcoind_process.rpc_client()?
-        .generate_to_address(400, &mining_address)
+        .generate_to_address(110, &mining_address)
         .map_err(|err| {
             new_bitcoin_rpc_error!(err, "error mining initial money for the first node")
         })?;
@@ -120,33 +141,39 @@ fn _main() -> Result<(), Error> {
     thread::sleep(Duration::from_secs(5));
     println!("After waiting for mining blocks for money for first node");
 
-    /*println!("Before starting peach");
+    println!("Before starting peach");
     let peach_node = LpServer::new(9735, 10009, "peach")
         .map_err(|err|{
             println!("cannot create LpServer: {:?}", err);
             err
         })?
-        .run(btc_running.as_ref())
+        .run(bitcoind_process.as_ref())
         .map_err(|err| {
             println!("cannot run LpServer: {:?}", err);
             err
         })?;
     println!("After starting peach");
-    thread::sleep(Duration::from_secs(2));
-    println!("peach_node info: {:?}", peach_node.info());
+    peach_node
+        .wait_for_sync(10)
+        .map_err(|err| {
+            new_error!(err, "fail to wait for lpd to sync")
+        })?;
+    let peach_node_info =  peach_node.obtain_info().wait().unwrap();
+    println!("peach_node info: {:?}", &peach_node_info);
 
     //let _ = nodes[0].connect_peer(&nodes[1]).wait()?;
     //let pk1 = nodes[1].address().pubkey;
     let _ = nodes[0].connect_peer(&peach_node).wait().map_err(|err| {
-        println!("error connecting to peach node: {:?}", err);
-        err
+        new_grpc_error!(err, "error connecting to peach node")
     })?;
     println!("After connecting to peach node");
 
-    let pk_our = peach_node.address().pubkey;
+
+    let pk_our = peach_node_info.identity_pubkey;
     let update_stream = nodes[0].open_channel(pk_our.as_str());
     thread::sleep(Duration::from_secs(5));
-    btc_running.rpc_client()?.generate_to_address(10, &mining_address).unwrap().unwrap();
+    bitcoind_process.rpc_client().unwrap().generate_to_address(10, &mining_address).unwrap();
+    /*
 
     // TODO: run it
     let _ = update_stream.map(|i| {
