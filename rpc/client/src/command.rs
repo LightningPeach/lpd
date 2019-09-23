@@ -62,13 +62,34 @@ pub enum Command{
     /// Generate a new p2wkh or np2wkh address
     #[structopt(name="new-address")]
     NewAddress {
-        #[structopt(name = "address-type")]
+        #[structopt(long = "address-type")]
         address_type: String,
     },
 
     /// Compute and display the wallet's current balance
     #[structopt(name="get-wallet-balance")]
     GetWalletBalance,
+
+    /// Send bitcoin on-chain to multiple addresses
+    #[structopt(name="send-many")]
+    SendMany {
+
+    },
+
+    /// Send bitcoin on-chain to an address
+    #[structopt(name="send-coins")]
+    SendCoins {
+        #[structopt(long = "addr")]
+        address: String,
+        #[structopt(long = "amt")]
+        amount: u64,
+        #[structopt(long = "lock-coins")]
+        lock_coins: bool,
+        #[structopt(long = "submit")]
+        submit: bool,
+        #[structopt(long = "witness-only")]
+        witness_only: bool,
+    },
 }
 
 impl Command {
@@ -78,7 +99,7 @@ impl Command {
             routing_grpc::{RoutingServiceClient, RoutingService},
             routing::{ConnectPeerRequest, LightningAddress as LightningAddressRPC, ChannelGraphRequest},
             wallet_grpc::{WalletClient, Wallet},
-            wallet::{NewAddressRequest, AddressType, WalletBalanceRequest},
+            wallet::{NewAddressRequest, AddressType, WalletBalanceRequest, SendCoinsRequest},
             common::Void,
         };
         use build_info::get_build_info;
@@ -164,6 +185,24 @@ impl Command {
                 let request = WalletBalanceRequest::new();
                 let response = wallet_service
                     .wallet_balance(Default::default(), request)
+                    .drop_metadata().wait().map_err(Error::Grpc)?;
+                println!("{:?}", response);
+                Ok(())
+            },
+            SendMany {
+
+            } => {
+                unimplemented!()
+            },
+            SendCoins { address, amount, lock_coins, submit, witness_only } => {
+                let mut request = SendCoinsRequest::new();
+                request.set_dest_addr(address.clone());
+                request.set_amt(amount.clone());
+                request.set_lock_coins(lock_coins.clone());
+                request.set_submit(submit.clone());
+                request.set_witness_only(witness_only.clone());
+                let response = wallet_service
+                    .send_coins(Default::default(), request)
                     .drop_metadata().wait().map_err(Error::Grpc)?;
                 println!("{:?}", response);
                 Ok(())
