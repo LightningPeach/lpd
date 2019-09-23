@@ -10,13 +10,6 @@ use dependencies::httpbis::Error as HttpbisError;
 use dependencies::futures::future::Future;
 use structopt::StructOpt;
 
-use interface::{
-    routing_grpc::{RoutingServiceClient, RoutingService},
-    routing::{ConnectPeerRequest, LightningAddress as LightningAddressRPC, ChannelGraphRequest},
-    common::Void,
-};
-use build_info::get_build_info;
-
 #[derive(Debug)]
 pub enum Error {
     Grpc(GrpcError),
@@ -45,7 +38,7 @@ pub enum Command{
 
     /// Connect to specified peer
     #[structopt(name="connect-peer")]
-    ConnectPeer{
+    ConnectPeer {
         #[structopt()]
         address: LightningAddress,
     },
@@ -65,13 +58,33 @@ pub enum Command{
     /// List peers
     #[structopt(name="list-peers")]
     ListPeers,
+
+    /// Generate a new p2wkh or np2wkh address
+    #[structopt(name="new-address")]
+    NewAddress {
+        #[structopt(name = "address-type")]
+        address_type: String,
+    },
+
+    /// Compute and display the wallet's current balance
+    #[structopt(name="get-wallet-balance")]
+    GetWalletBalance,
 }
 
 impl Command {
     pub fn execute(&self, client: Arc<Client>) -> Result<(), Error> {
         use self::Command::*;
+        use interface::{
+            routing_grpc::{RoutingServiceClient, RoutingService},
+            routing::{ConnectPeerRequest, LightningAddress as LightningAddressRPC, ChannelGraphRequest},
+            wallet_grpc::{WalletClient, Wallet},
+            wallet::{NewAddressRequest, AddressType, WalletBalanceRequest},
+            common::Void,
+        };
+        use build_info::get_build_info;
 
-        let routing_service = RoutingServiceClient::with_client(client);
+        let routing_service = RoutingServiceClient::with_client(client.clone());
+        let wallet_service = WalletClient::with_client(client.clone());
         match self {
             GetInfo => {
                 let response = routing_service
@@ -80,7 +93,7 @@ impl Command {
                 println!("{:?}", response);
                 Ok(())
             },
-            ConnectPeer{address} => {
+            ConnectPeer { address } => {
                 let mut request = ConnectPeerRequest::new();
 
                 let mut lightning_address_rpc = LightningAddressRPC::new();
@@ -128,6 +141,29 @@ impl Command {
                 let request = Void::new();
                 let response = routing_service
                     .list_peers(Default::default(), request)
+                    .drop_metadata().wait().map_err(Error::Grpc)?;
+                println!("{:?}", response);
+                Ok(())
+            },
+            NewAddress { address_type } => {
+                let mut request = NewAddressRequest::new();
+                if address_type == "p2wkh" {
+                    request.set_addr_type(AddressType::P2WKH);
+                } else if address_type == "np2wkh" {
+                    panic!("nested address type is not available");
+                } else {
+                    panic!("unknown address type: {}", address_type);
+                }
+                let response = wallet_service
+                    .new_address(Default::default(), request)
+                    .drop_metadata().wait().map_err(Error::Grpc)?;
+                println!("{:?}", response);
+                Ok(())
+            },
+            GetWalletBalance => {
+                let request = WalletBalanceRequest::new();
+                let response = wallet_service
+                    .wallet_balance(Default::default(), request)
                     .drop_metadata().wait().map_err(Error::Grpc)?;
                 println!("{:?}", response);
                 Ok(())
