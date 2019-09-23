@@ -66,16 +66,16 @@ impl std::fmt::Debug for TransportError {
 }
 
 // Represent address to which we can connect
-pub trait AbstractAddress : std::fmt::Debug {
+pub trait AbstractAddress: Sized + std::fmt::Debug {
 
     // Inner stream type used for Brontide streams
     type Stream: AsyncRead + AsyncWrite + Send + 'static;
 
     // Represent outgoing connection. When we try to connect to someone
-    type OutgoingConnection: Future<Item=BrontideStream<Self::Stream>, Error=TransportError> + Send + 'static;
+    type OutgoingConnection: Future<Item=(BrontideStream<Self::Stream>, Self), Error=TransportError> + Send + 'static;
 
     // Represent incoming connections.
-    type IncomingConnectionsStream: Stream<Item=BrontideStream<Self::Stream>, Error=TransportError> + Send + 'static;
+    type IncomingConnectionsStream: Stream<Item=(BrontideStream<Self::Stream>, Self), Error=TransportError> + Send + 'static;
 
     // Connect to remote host
     // local_secret_key - our secret_key
@@ -217,7 +217,7 @@ where
     A: AbstractAddress,
     C: Stream<Item=Command<A>, Error=()>,
 {
-    type Item = Connection<A::Stream>;
+    type Item = (Connection<A::Stream>, A);
     type Error = TransportError;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -284,11 +284,11 @@ where
                         Ok(NotReady)
                     },
                     Ok(Ready(None)) => Ok(Ready(None)),
-                    Ok(Ready(Some(brontide_stream))) => {
+                    Ok(Ready(Some((brontide_stream, address)))) => {
                         let (ttx, trx) = oneshot::channel();
                         let (ctx, crx) = mpsc::unbounded();
                         self.pipes.insert(brontide_stream.remote_key(), (ttx, ctx));
-                        Ok(Ready(Some(Connection::new(brontide_stream, trx, crx))))
+                        Ok(Ready(Some((Connection::new(brontide_stream, trx, crx), address))))
                     },
                     Ok(NotReady) => {
                         let mut to_remove = Vec::new();
@@ -305,11 +305,11 @@ where
                                         // it means error of whole `ConnectionStream` and terminate
                                         Err(e) => println!("{:?}", e),
                                         // we have a new connection with successful handshake
-                                        Ok(Ready(brontide_stream)) => {
+                                        Ok(Ready((brontide_stream, address))) => {
                                             let (ttx, trx) = oneshot::channel();
                                             let (ctx, crx) = mpsc::unbounded();
                                             self.pipes.insert(brontide_stream.remote_key(), (ttx, ctx));
-                                            result = Ok(Ready(Some(Connection::new(brontide_stream, trx, crx))));
+                                            result = Ok(Ready(Some((Connection::new(brontide_stream, trx, crx), address))));
                                             break
                                         }
                                     }

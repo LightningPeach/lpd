@@ -27,14 +27,21 @@ use routing::{State, SharedState};
 use channel_machine::ChannelState;
 
 use std::path::Path;
+use std::fmt::Display;
 use either::Either;
 
 #[cfg(feature = "rpc")]
 use interface::routing::{LightningNode, ChannelEdge, Info};
 use std::collections::HashMap;
 
+#[derive(PartialEq, Eq, Clone)]
+pub struct PeerInfo {
+    pub key: PublicKey,
+    pub address: String,
+}
+
 pub struct Node {
-    peers: Vec<PublicKey>,
+    peers: Vec<PeerInfo>,
     channels: HashMap<PublicKey, mpsc::Receiver<ChannelStatus>>,
     shared_state: SharedState,
     db: Arc<RwLock<DB>>,
@@ -119,12 +126,16 @@ impl Node {
         }
     }
 
-    fn add(&mut self, remote_public: PublicKey) -> Either<PublicKey, Remote> {
-        if self.peers.contains(&remote_public) {
+    fn add(&mut self, remote_public: PublicKey, address: String) -> Either<PublicKey, Remote> {
+        let peer_info = PeerInfo {
+            key: remote_public.clone(),
+            address: address,
+        };
+        if self.peers.contains(&peer_info) {
             Either::Left(remote_public)
         } else {
             let (sender, receiver) = mpsc::channel(16);
-            self.peers.push(remote_public.clone());
+            self.peers.push(peer_info);
             self.channels.insert(remote_public.clone(), receiver);
             Either::Right(Remote {
                 db: self.db.clone(),
@@ -170,7 +181,7 @@ impl Node {
 
     pub fn listen<A>(p_self: Arc<RwLock<Self>>, address: &A, control: mpsc::Receiver<Command<A>>) -> Result<(), TransportError>
     where
-        A: AbstractAddress + Send  + 'static,
+        A: AbstractAddress + Send + Display + 'static,
     {
         use tokio::prelude::stream::Stream;
         use futures::future::ok;
@@ -178,11 +189,11 @@ impl Node {
         let secret = p_self.read().unwrap().secret.clone();
         let server = ConnectionStream::listen(address, control, secret)?
             .map_err(|e| println!("{:?}", e))
-            .for_each(move |connection| {
+            .for_each(move |(connection, address)| {
                 let remote_public = connection.remote_key();
-                println!("NEW CONNECTION FROM: {:?}", remote_public);
+                println!("NEW CONNECTION FROM: {:?}@{}", remote_public, address);
                 // TODO(mkl): rewrite this
-                let maybe_peer = p_self.write().unwrap().add(remote_public);
+                let maybe_peer = p_self.write().unwrap().add(remote_public, format!("{}", address));
                 match maybe_peer {
                     Either::Left(pk) => {
                         println!("WARNING: {} is connected, ignoring", pk);
@@ -221,7 +232,7 @@ impl Node {
     //    pub inbound: bool,
     //    pub ping_time: i64,
     #[cfg(feature = "rpc")]
-    pub fn list_peers(&self) -> Vec<PublicKey> {
+    pub fn list_peers(&self) -> Vec<PeerInfo> {
         self.peers.clone()
     }
 
@@ -234,7 +245,7 @@ impl Node {
     #[cfg(feature = "rpc")]
     pub fn get_info(&mut self) -> Info {
         use secp256k1::Secp256k1;
-        use std::string::ToString;
+        use build_info::get_build_info;
 
         self.blockchain.sync();
 
@@ -245,6 +256,7 @@ impl Node {
         info.set_num_peers(self.peers.len() as _);
         info.set_block_hash(self.blockchain.hash().to_string());
         info.set_block_height(self.blockchain.height());
+        info.set_version(format!("{:#?}", get_build_info!()));
         info
     }
 

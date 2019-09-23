@@ -52,13 +52,13 @@ impl AbstractAddress for SocketAddr {
 
 pub struct TcpConnection {
     inner: ConnectFuture,
-    handshake: Option<Box<dyn Future<Item=BrontideStream<TcpStream>, Error=HandshakeError> + Send + 'static>>,
+    handshake: Option<(Box<dyn Future<Item=BrontideStream<TcpStream>, Error=HandshakeError> + Send + 'static>, SocketAddr)>,
     local_secret: SecretKey,
     remote_public: PublicKey,
 }
 
 impl Future for TcpConnection {
-    type Item = BrontideStream<TcpStream>;
+    type Item = (BrontideStream<TcpStream>, SocketAddr);
     type Error = TransportError;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
@@ -77,27 +77,39 @@ impl Future for TcpConnection {
                 match inner_poll {
                     NotReady => Ok(NotReady),
                     Ready(stream) => {
+                        let address = stream.local_addr()
+                            .map_err(|e| TransportError::IOError {
+                                inner: e,
+                                description: "error retrieve socket address".to_owned(),
+                            })?;
                         let handshake = BrontideStream::outgoing(
                             stream,
                             self.local_secret.clone(),
                             self.remote_public.clone()
                         );
-                        self.handshake = Some(Box::new(handshake));
+                        self.handshake = Some((Box::new(handshake), address));
                         self.poll()
                     },
                 }
             },
-            &mut Some(ref mut f) => {
+            &mut Some((ref mut f, ref socket_address)) => {
+                let socket_address = socket_address.clone();
                 match f.poll() {
                     Ok(NotReady) => Ok(NotReady),
                     r @ _ => {
                         self.handshake = None;
-                        r.map_err(|err|{
-                            TransportError::HandshakeError {
-                                inner: err,
-                                description: "error polling from inner from succesfull TcpConnection poll".to_owned()
-                            }
-                        })
+                        r
+                            .map(|a| {
+                                a.map(|stream| {
+                                    (stream, socket_address)
+                                })
+                            })
+                            .map_err(|err|{
+                                TransportError::HandshakeError {
+                                    inner: err,
+                                    description: "error polling from inner from succesfull TcpConnection poll".to_owned()
+                                }
+                            })
                     },
                 }
             }
@@ -107,13 +119,13 @@ impl Future for TcpConnection {
 
 pub struct TcpConnectionStream
 {
-    inner: Box<Stream<Item=TcpStream, Error=io::Error> + Send + Sync>,
-    handshake: Option<Box<dyn Future<Item=BrontideStream<TcpStream>, Error=HandshakeError> + Send + 'static>>,
+    inner: Box<dyn Stream<Item=TcpStream, Error=io::Error> + Send + Sync>,
+    handshake: Option<(Box<dyn Future<Item=BrontideStream<TcpStream>, Error=HandshakeError> + Send + 'static>, SocketAddr)>,
     local_secret: SecretKey,
 }
 
 impl Stream for TcpConnectionStream {
-    type Item = BrontideStream<TcpStream>;
+    type Item = (BrontideStream<TcpStream>, SocketAddr);
     type Error = TransportError;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -123,7 +135,7 @@ impl Stream for TcpConnectionStream {
             &mut None => {
                 let inner_poll = self.inner
                     .poll()
-                    .map_err(|err| TransportError::HandshakeError{
+                    .map_err(|err| TransportError::HandshakeError {
                         inner: HandshakeError::Io(err, "error polling inside TcpConnectionStream".to_owned()),
                         description: "error polling inside TcpConnectionStream".to_owned(),
                     })?;
@@ -131,18 +143,29 @@ impl Stream for TcpConnectionStream {
                     NotReady => Ok(NotReady),
                     Ready(None) => Ok(Ready(None)),
                     Ready(Some(stream)) => {
+                        let address = stream.local_addr()
+                            .map_err(|e| TransportError::IOError {
+                                inner: e,
+                                description: "error retrieve socket address".to_owned(),
+                            })?;
                         let handshake = BrontideStream::incoming(stream, self.local_secret.clone());
-                        self.handshake = Some(Box::new(handshake));
+                        self.handshake = Some((Box::new(handshake), address));
                         self.poll()
                     },
                 }
             },
-            &mut Some(ref mut f) => {
+            &mut Some((ref mut f, ref socket_address)) => {
+                let socket_address = socket_address.clone();
                 match f.poll() {
                     Ok(NotReady) => Ok(NotReady),
                     r @ _ => {
                         self.handshake = None;
-                        r.map(|a| a.map(Some))
+                        r
+                            .map(|a| {
+                                a.map(|stream| {
+                                    Some((stream, socket_address.clone()))
+                                })
+                            })
                             .map_err(|err| {
                                 TransportError::HandshakeError {
                                     inner: err,

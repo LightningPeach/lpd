@@ -35,8 +35,6 @@ fn error<E>(e: E) -> Error where E: Debug {
 
 impl RoutingService for RoutingImpl<SocketAddr> {
     fn sign_message(&self, o: RequestOptions, p: SignMessageRequest) -> SingleResponse<SignMessageResponse> {
-        use std::string::ToString;
-
         let _ = o;
 
         let signature = self.node.read().unwrap().sign_message(p.message);
@@ -79,17 +77,16 @@ impl RoutingService for RoutingImpl<SocketAddr> {
     }
 
     fn list_peers(&self, o: RequestOptions, p: Void) -> SingleResponse<PeerList> {
-        use std::string::ToString;
         use interface::routing::Peer;
 
         let _ = (o, p);
 
         let peers = self.node.read().unwrap().list_peers()
             .iter()
-            .map(ToString::to_string)
-            .map(|pub_key| {
+            .map(|peer_info| {
                 let mut peer = Peer::new();
-                peer.set_pub_key(pub_key);
+                peer.set_pub_key(peer_info.key.to_string());
+                peer.set_address(peer_info.address.clone());
                 peer
             })
             .collect();

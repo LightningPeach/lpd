@@ -19,4 +19,3 @@ build_info = { path = "../../build_info" }
 
 [build-dependencies]
 build_info = { path = "../../build_info" }
-
