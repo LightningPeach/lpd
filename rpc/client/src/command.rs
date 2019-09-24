@@ -66,6 +66,9 @@ pub enum Command{
         address_type: String,
     },
 
+    #[structopt(name="get-utxo-list")]
+    GetUtxoList,
+
     /// Compute and display the wallet's current balance
     #[structopt(name="get-wallet-balance")]
     GetWalletBalance,
@@ -99,7 +102,7 @@ impl Command {
             routing_grpc::{RoutingServiceClient, RoutingService},
             routing::{ConnectPeerRequest, LightningAddress as LightningAddressRPC, ChannelGraphRequest},
             wallet_grpc::{WalletClient, Wallet},
-            wallet::{NewAddressRequest, AddressType, WalletBalanceRequest, SendCoinsRequest},
+            wallet::{NewAddressRequest, AddressType, GetUtxoListRequest, WalletBalanceRequest, SyncWithTipRequest, SendCoinsRequest},
             common::Void,
         };
         use build_info::get_build_info;
@@ -181,7 +184,19 @@ impl Command {
                 println!("{:?}", response);
                 Ok(())
             },
+            GetUtxoList => {
+                let request = GetUtxoListRequest::new();
+                let response = wallet_service
+                    .get_utxo_list(Default::default(), request)
+                    .drop_metadata().wait().map_err(Error::Grpc)?;
+                println!("{:?}", response);
+                Ok(())
+            },
             GetWalletBalance => {
+                let response = wallet_service
+                    .sync_with_tip(Default::default(), SyncWithTipRequest::new())
+                    .drop_metadata().wait().map_err(Error::Grpc)?;
+                println!("{:?}", response);
                 let request = WalletBalanceRequest::new();
                 let response = wallet_service
                     .wallet_balance(Default::default(), request)

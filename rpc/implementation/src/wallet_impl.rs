@@ -61,7 +61,7 @@ struct WalletImpl<A>
 where
     A: AbstractAddress,
 {
-    af: Arc<Mutex<Box<WalletInterface + Send>>>,
+    af: Arc<Mutex<Box<dyn WalletInterface + Send>>>,
     shutdown: Sender<Command<A>>,
 }
 
@@ -69,7 +69,7 @@ impl<A> WalletImpl<A>
 where
     A: AbstractAddress,
 {
-    fn new(af: Arc<Mutex<Box<WalletInterface + Send>>>, shutdown: Sender<Command<A>>) -> Self {
+    fn new(af: Arc<Mutex<Box<dyn WalletInterface + Send>>>, shutdown: Sender<Command<A>>) -> Self {
         WalletImpl {
             af: af,
             shutdown: shutdown,
@@ -188,8 +188,7 @@ where
         let _ = (o, p);
 
         let resp = SyncWithTipResponse::new();
-        let _ = self.af.lock().unwrap().sync_with_tip();
-        SingleResponse::completed(resp)
+        grpc_result(self.af.lock().unwrap().sync_with_tip().map(|_| resp))
     }
 
     fn make_tx(&self, o: RequestOptions, p: MakeTxRequest) -> SingleResponse<MakeTxResponse> {
