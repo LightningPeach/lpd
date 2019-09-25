@@ -69,7 +69,7 @@ fn main() -> Result<(), Error> {
             config.address.ip().to_string().as_str(),
             ClientTlsOption::Plain,
             Default::default()
-        ).map_err(Error::Grpc)?
+        ).map_err(|e| Error::new(e, "cannot create GRPC client"))?
     };
     if let Some(command) = config.command {
         command.execute(Arc::new(client))
