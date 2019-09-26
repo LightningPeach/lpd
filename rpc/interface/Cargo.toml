@@ -9,7 +9,7 @@ dependencies = { path = "../../dependencies" }
 
 # TODO(mkl): move them into `dependencies`. Currently atomatically generated code does not work with reexported crates.
 grpc = "0.6"
-protobuf = "2.3"
+protobuf = "2.8"
 
 [build-dependencies]
 protoc-rust-grpc = "0.6"
